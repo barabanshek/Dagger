@@ -1,0 +1,518 @@
+// Author: Cornell University
+//
+// Module Name :    nic
+// Project :        F-NIC
+// Description :    NIC top-level
+
+`include "afu_json_info.vh"
+`include "platform_if.vh"
+
+`include "async_fifo_channel.sv"
+`include "nic_defs.vh"
+`include "rpc_defs.vh"
+`include "rpc.sv"
+`include "single_clock_wr_ram.sv"
+
+module nic
+    #(
+        // used for debug prints
+        parameter NIC_ID = 32'h0,
+        // MMIO base address
+        parameter SRF_BASE_MMIO_ADDRESS = 32'h0,
+        // MMIO base address for the AFU_ID register;
+        // currently should be 0x00
+        parameter SRF_BASE_MMIO_ADDRESS_AFU_ID = 32'h0,
+        // Number of upper-level NICs;
+        // need to know due to some limitations of CCI-P MUX
+        parameter NUM_SUB_AFUS = 0
+     )
+    (
+    input logic clk,
+    input logic clk_div_2,
+    input logic clk_div_4,
+    input logic reset,
+
+    // CPU interface
+    input  t_if_ccip_Rx sRx,
+    output t_if_ccip_Tx sTx,
+
+    // Network interface
+    output NetworkPacketInternal network_tx_out,
+    output logic                 network_tx_valid_out,
+
+    input NetworkPacketInternal network_rx_in,
+    input logic                 network_rx_valid_in
+
+    );
+
+    // =============================================================
+    // General config
+    // =============================================================
+    // Max number of NIC flows
+    localparam LMAX_NUM_OF_FLOWS = 2; // 4 flows
+    // CCI-P polling rate
+    localparam POLL_FRQ_DIV      = 8; // poll frq div
+
+
+    // =============================================================
+    // Clocks
+    // =============================================================
+    logic ccip_clk;
+    assign ccip_clk = clk;
+
+    logic rpc_clk;
+    assign rpc_clk = clk_div_4;
+
+    logic network_clk;
+    assign network_clk = clk_div_4;
+
+
+    // =============================================================
+    // AFU ID
+    // =============================================================
+    logic [127:0] afu_id = `AFU_ACCEL_UUID;
+
+
+    // =============================================================
+    // MMIO CSR
+    // =============================================================
+    logic is_csr_read;
+    assign is_csr_read = sRx.c0.mmioRdValid;
+
+    logic is_csr_write;
+    assign is_csr_write = sRx.c0.mmioWrValid;
+
+    t_ccip_c0_ReqMmioHdr mmio_req_hdr;
+    assign mmio_req_hdr = t_ccip_c0_ReqMmioHdr'(sRx.c0.hdr);
+
+    logic[3:0] iRegNicStatus;
+
+    // CSR read logic
+    // So far we only read AFU metadata, so the base address should
+    // always be 0
+    always_ff @(posedge clk) begin
+        if (reset) begin
+            sTx.c2.mmioRdValid <= 1'b0;
+        end else begin
+            // Always respond with something
+            sTx.c2.mmioRdValid <= is_csr_read;
+            sTx.c2.hdr.tid     <= mmio_req_hdr.tid;
+
+            // Addresses are of 32-bit objects in MMIO space.  Addresses
+            // of 64-bit objects are thus multiples of 2.
+            case (mmio_req_hdr.address)
+                // AFU DFH (device feature header)
+                SRF_BASE_MMIO_ADDRESS_AFU_ID + 0: begin
+                    // Here we define a trivial feature list.  In this
+                    // example, our AFU is the only entry in this list.
+                    sTx.c2.data <= t_ccip_mmioData'(0);
+                    // Feature type is AFU
+                    sTx.c2.data[63:60] <= 4'h1;
+                    // End of list (last entry in list)
+                    sTx.c2.data[40] <= 1'b1;
+                  end
+
+                // AFU_ID_L
+                SRF_BASE_MMIO_ADDRESS_AFU_ID + 2: begin
+                    sTx.c2.data <= afu_id[63:0];
+                end
+
+                // AFU_ID_H
+                SRF_BASE_MMIO_ADDRESS_AFU_ID + 4: begin
+                    sTx.c2.data <= afu_id[127:64];
+                end
+
+                // DFH_RSVD0
+                SRF_BASE_MMIO_ADDRESS_AFU_ID + 6: begin
+                    sTx.c2.data <= t_ccip_mmioData'(0);
+                end
+
+                // DFH_RSVD1
+                SRF_BASE_MMIO_ADDRESS_AFU_ID + 8: begin
+                    sTx.c2.data <= t_ccip_mmioData'(0);
+                end
+
+                // Status
+                SRF_BASE_MMIO_ADDRESS + 10: begin
+                    sTx.c2.data[3:0] <= iRegNicStatus;
+                end
+
+                default: sTx.c2.data <= t_ccip_mmioData'(0);
+            endcase
+        end
+    end
+
+    // CSR write logic
+    // Write addredss map
+    localparam t_ccip_mmioAddr addrRegMemTxAddr   = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 0);
+    localparam t_ccip_mmioAddr addrRegMemRxAddr   = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 2);
+    localparam t_ccip_mmioAddr addrRegNicStart    = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 4);
+    localparam t_ccip_mmioAddr addrRegNumOfFlows  = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 6);
+    localparam t_ccip_mmioAddr addrRegInit        = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 8);
+
+    // Write registers and their decoupling pairs
+    t_ccip_clAddr iRegMemTxAddr;
+    t_ccip_clAddr iRegMemRxAddr;
+    logic         iRegNicStart;
+    logic[7:0]    iRegNumOfFlows;   // TODO: bound by 2**LMAX_NUM_OF_FLOWS
+    logic         iRegNicInit;
+
+    // Serve writes, combinational part
+    logic is_mem_tx_addr_csr_write;
+    assign is_mem_tx_addr_csr_write = is_csr_write &&
+                                      (mmio_req_hdr.address == addrRegMemTxAddr);
+
+    logic is_mem_rx_addr_csr_write;
+    assign is_mem_rx_addr_csr_write = is_csr_write &&
+                                      (mmio_req_hdr.address == addrRegMemRxAddr);
+
+    logic is_nic_start_csr_write;
+    assign is_nic_start_csr_write = is_csr_write &&
+                                    (mmio_req_hdr.address == addrRegNicStart);
+
+    logic is_num_of_flows_csr_write;
+    assign is_num_of_flows_csr_write = is_csr_write &&
+                                       (mmio_req_hdr.address == addrRegNumOfFlows);
+
+    logic is_init_csr_write;
+    assign is_init_csr_write = is_csr_write &&
+                               (mmio_req_hdr.address == addrRegInit);
+
+    // Serve writes, sequential part
+    always_ff @(posedge clk) begin
+        if (reset) begin
+            iRegNicStart   <= 1'b0;
+            iRegMemTxAddr  <= t_ccip_mmioAddr'(0);
+            iRegMemRxAddr  <= t_ccip_mmioAddr'(0);
+            iRegNumOfFlows <= {($bits(iRegNumOfFlows)){1'b0}};
+            iRegNicInit          <= 1'b0;
+
+        end else begin
+            if (is_mem_tx_addr_csr_write) begin
+                $display("NIC%d: iRegMemTxAddr configured: %08h", NIC_ID, sRx.c0.data);
+                iRegMemTxAddr <= t_ccip_clAddr'(sRx.c0.data);
+            end
+
+            if (is_mem_rx_addr_csr_write) begin
+                $display("NIC%d: iRegMemRxAddr configured: %08h", NIC_ID, sRx.c0.data);
+                iRegMemRxAddr <= t_ccip_clAddr'(sRx.c0.data);
+            end
+
+            if (is_nic_start_csr_write) begin
+                $display("NIC%d: iRegNicStart configured: %08h", NIC_ID, sRx.c0.data);
+                iRegNicStart <= sRx.c0.data[0];
+            end
+
+            if (is_num_of_flows_csr_write) begin
+                $display("NIC%d: iRegNumOfFlows configured: %08h", NIC_ID, sRx.c0.data);
+                iRegNumOfFlows <= sRx.c0.data[7:0];
+            end
+
+            if (is_init_csr_write) begin
+                $display("NIC%d: iRegNicInit received", NIC_ID);
+                iRegNicInit <= 1;
+            end
+        end
+    end
+
+
+    // =============================================================
+    // CPU - NIC datapath
+    // - polling mode over PCIe
+    // - POLL_FRQ_DIV controls polling rate
+    // =============================================================
+
+    // N MSBs of *.c0.hdr.mdata are reserved for the upper-level CCI-P MUX;
+    // Always ensure MDATA_W <= 16 - N
+    localparam MDATA_W      = LMAX_NUM_OF_FLOWS;
+    localparam META_PATTERN = {(MDATA_W){1'b1}};
+    generate
+        if (MDATA_W > 16 - $clog2(NUM_SUB_AFUS)) begin
+            $error("** Illegal Condition ** MDATA_W(%d) > MAX_ALLOWED(%d)", MDATA_W, 16 - $clog2(NUM_SUB_AFUS));
+        end
+    endgenerate
+
+    // Poll
+    logic[MDATA_W-1:0]  flow_poll_cnt;
+    logic[7:0]          flow_poll_frq_div_cnt;
+
+    always_ff @(posedge clk) begin
+        if (reset) begin
+            sTx.c0.valid          <= 1'b0;
+            flow_poll_cnt         <= {($bits(flow_poll_cnt)){1'b0}};
+            flow_poll_frq_div_cnt <= {($bits(flow_poll_frq_div_cnt)){1'b0}};
+
+        end else begin
+            // Initial vals
+            sTx.c0.valid <= 1'b0;
+
+            if (iRegNicStart) begin
+                if (flow_poll_frq_div_cnt == POLL_FRQ_DIV) begin
+                    if (!sRx.c0TxAlmFull) begin
+                        sTx.c0.hdr         <= t_ccip_c0_ReqMemHdr'(0);
+
+                        sTx.c0.hdr.address            <= iRegMemTxAddr + flow_poll_cnt;
+                        sTx.c0.hdr.mdata[MDATA_W-1:0] <= META_PATTERN ^ flow_poll_cnt;
+                        sTx.c0.hdr.vc_sel             <= eVC_VH0;
+
+                        sTx.c0.valid       <= 1'b1;
+
+                        if (flow_poll_cnt != iRegNumOfFlows - 1) begin
+                            flow_poll_cnt <= flow_poll_cnt + 1;
+                        end else begin
+                            flow_poll_cnt <= {($bits(flow_poll_cnt)){1'b0}};
+                        end
+                    end
+
+                    flow_poll_frq_div_cnt <= {($bits(flow_poll_frq_div_cnt)){1'b0}};
+                end else begin
+                    flow_poll_frq_div_cnt <= flow_poll_frq_div_cnt + 1;
+                end
+            end
+
+        end
+    end
+
+    // Get answer
+    RpcPckt            sRx_casted, ccip_read_poll_data;
+    logic[MDATA_W-1:0] ccip_read_poll_cl;
+    logic              ccip_read_poll_data_valid;
+
+    always_ff @(posedge clk) begin
+        if (reset) begin
+            ccip_read_poll_data_valid <= 1'b0;
+            ccip_read_poll_cl         <= {(MDATA_W){1'b0}};
+            ccip_read_poll_data       <= {($bits(RpcPckt)){1'b0}};
+
+        end else begin
+            // Initial vals
+            ccip_read_poll_data_valid <= 1'b0;
+
+            if (iRegNicStart && sRx.c0.rspValid) begin
+                sRx_casted = sRx.c0.data[$bits(RpcPckt)-1:0];
+                if (sRx_casted.hdr.ctl.valid) begin
+                    ccip_read_poll_data_valid <= 1'b1;
+                    ccip_read_poll_cl         <= sRx.c0.hdr.mdata[MDATA_W-1:0] ^ META_PATTERN;
+                    ccip_read_poll_data       <= sRx_casted;
+                end
+            end
+        end
+    end
+
+    // Compare to see if the CL is updated
+    RpcPckt            ccip_read_data;
+    logic[MDATA_W-1:0] ccip_read_cl;
+    logic              ccip_read_data_valid;
+
+    // TODO: making this table based on SRAM is a very BAD but fast solution;
+    //       !!! replace with BRAM !!!
+    //logic [15:0] rpc_id_table [2**LMAX_NUM_OF_FLOWS];
+
+    logic rpc_id_table_q, rpc_id_table_d;
+    logic [LMAX_NUM_OF_FLOWS-1:0] rpc_id_table_wr_addr, rpc_id_table_rd_addr;
+    logic rpc_id_table_wr_en;
+
+    single_clock_wr_ram #(1, LMAX_NUM_OF_FLOWS) rpc_id_table (
+            .clk(clk),
+            .q(rpc_id_table_q),
+            .d(rpc_id_table_d),
+            .write_address(rpc_id_table_wr_addr),
+            .read_address(rpc_id_table_rd_addr),
+            .we(rpc_id_table_wr_en)
+        );
+
+    // Combinationally assign read signal so we don't waste 1 cycle
+    assign rpc_id_table_rd_addr = sRx.c0.hdr.mdata[MDATA_W-1:0] ^ META_PATTERN;
+
+    logic [LMAX_NUM_OF_FLOWS-1:0] rpc_id_table_init_cnt;
+    logic rpc_id_table_inited;
+    assign iRegNicStatus = rpc_id_table_inited;
+
+    always_ff @(posedge clk) begin
+        if (reset) begin
+            //for (int i=0; i<2**LMAX_NUM_OF_FLOWS; i=i+1) begin
+            //    rpc_id_table[ccip_read_poll_cl] <= 0;
+            //end
+            rpc_id_table_init_cnt <= {(LMAX_NUM_OF_FLOWS){1'b0}};
+            rpc_id_table_inited   <= 1'b0;
+            ccip_read_data_valid  <= 1'b0;
+            rpc_id_table_wr_en    <= 1'b0;
+
+        end else begin
+            ccip_read_data_valid <= 1'b0;
+            rpc_id_table_wr_en   <= 1'b0;
+
+            // Init rpc_id_table
+            if (iRegNicInit && ~rpc_id_table_inited) begin
+                if (rpc_id_table_init_cnt != 2**LMAX_NUM_OF_FLOWS - 1) begin
+                    rpc_id_table_wr_addr <= rpc_id_table_init_cnt;
+                    rpc_id_table_d       <= 1'b0;
+                    rpc_id_table_wr_en   <= 1'b1;
+
+                    rpc_id_table_init_cnt <= rpc_id_table_init_cnt + 1;
+                end else begin
+                    $display("NIC%d: rpc_id_table is initialized", NIC_ID);
+
+                    rpc_id_table_init_cnt <= {(LMAX_NUM_OF_FLOWS){1'b0}};
+                    rpc_id_table_inited   <= 1'b1;
+                end
+            end
+
+            if (rpc_id_table_inited && ccip_read_poll_data_valid) begin
+                if (rpc_id_table_q != ccip_read_poll_data.hdr.ctl.update_flag) begin
+                    $display("NIC%d: new value read from CL=%d", NIC_ID, ccip_read_poll_cl);
+                    $display("NIC%d:        value= %p", NIC_ID, sRx_casted);
+
+                    // Send RPC further
+                    ccip_read_data       <= ccip_read_poll_data;
+                    ccip_read_cl         <= ccip_read_poll_cl;
+                    ccip_read_data_valid <= ccip_read_poll_data_valid;
+
+                    // Update rpc_id_table entry
+                    rpc_id_table_wr_addr <= ccip_read_poll_cl;
+                    rpc_id_table_d       <= ccip_read_poll_data.hdr.ctl.update_flag;
+                    rpc_id_table_wr_en   <= 1'b1;
+                end
+            end
+        end
+    end
+
+    // Process
+    /*RpcRespPckt write_data;
+    assign write_data.hdr     = ccip_read_data.hdr;
+    assign write_data.ret_val = ccip_read_data.arg1 + 2;*/
+
+
+    // =============================================================
+    // NIC - CPU datapath
+    // - eREQ_WRPUSH_I mode over PCIe
+    // =============================================================
+    RpcPckt     ccip_write_data;
+    logic[7:0]  ccip_write_cl;
+    logic       ccip_write_data_valid;
+
+    always_ff @(posedge clk) begin
+        if (reset) begin
+            sTx.c1.valid <= 1'b0; 
+
+        end else begin
+            // Initial value
+            sTx.c1.valid <= 1'b0;
+            sTx.c1.data  <= {($bits(t_ccip_clData)){1'b0}};
+
+           if (iRegNicStart && ccip_write_data_valid) begin
+                $display("NIC%d: Writing back to CL=%d", NIC_ID, ccip_write_cl);
+                $display("NIC%d:           value= %p", NIC_ID, ccip_write_data);
+
+                sTx.c1.hdr          <= t_ccip_c1_ReqMemHdr'(0);
+
+                sTx.c1.hdr.address  <= iRegMemRxAddr + ccip_write_cl;
+                sTx.c1.hdr.sop      <= 1'b1;
+                sTx.c1.hdr.vc_sel   <= eVC_VH0;
+                sTx.c1.hdr.req_type <= eREQ_WRPUSH_I;
+
+                sTx.c1.data[$bits(RpcPckt)-1:0] <= ccip_write_data;
+
+                sTx.c1.valid        <= 1'b1; 
+            end
+
+        end
+    end
+
+    /*assign ccip_write_data_valid = ccip_read_data_valid;
+    assign ccip_write_cl = ccip_read_cl;
+    assign ccip_write_data.hdr = ccip_read_data.hdr;
+    assign ccip_write_data.ret_val = ccip_read_data.arg1 + 2;*/
+
+
+    // =============================================================
+    // RPC layer
+    // =============================================================
+    localparam FIFO_DEPTH_LOG = 3;
+
+    // CCIP - FIFO
+    RpcIf from_ccip;
+    logic from_ccip_valid;
+    assign from_ccip.flow_id  = ccip_read_cl;
+    assign from_ccip.rpc_data = ccip_read_data;
+    assign from_ccip_valid    = ccip_read_data_valid;
+
+    // FIFO - RPC
+    RpcIf to_rpc;
+    logic to_rpc_valid;
+
+    // RPC - FIFO
+    RpcIf from_rpc;
+    logic from_rpc_valid;
+
+    // FIFO - CCIP
+    RpcIf to_ccip;
+    logic to_ccip_valid;
+    assign ccip_write_cl         = to_ccip.flow_id;
+    assign ccip_write_data       = to_ccip.rpc_data;
+    assign ccip_write_data_valid = to_ccip_valid;
+
+    // To RPC channel
+    async_fifo_channel #(
+            .DATA_WIDTH($bits(RpcIf)),
+            .LOG_DEPTH(FIFO_DEPTH_LOG)
+        )
+    ccip_to_rpc_fifo_channel (
+            .clear(reset),
+            .clk_1(clk),
+            .push_en(from_ccip_valid),
+            .push_data(from_ccip),
+            .clk_2(rpc_clk),
+            .pop_valid(to_rpc_valid),
+            .pop_data(to_rpc),
+            .error()    // TODO: connect
+        );
+
+    // RPC processing
+    rpc #(NIC_ID) rpc_ (
+            .clk(rpc_clk),
+            .reset(reset),
+
+            .rpc_valid_in(to_rpc_valid),
+            .rpc_in(to_rpc),
+            .rpc_valid_out(from_rpc_valid),
+            .rpc_out(from_rpc),
+
+            .network_tx_out(network_tx_out),
+            .network_tx_valid_out(network_tx_valid_out),
+            .network_rx_in(network_rx_in),
+            .network_rx_valid_in(network_rx_valid_in)
+        );
+
+    // From RPC channel
+    async_fifo_channel #(
+            .DATA_WIDTH($bits(RpcIf)),
+            .LOG_DEPTH(FIFO_DEPTH_LOG)
+        )
+    rpc_to_ccip_fifo_channel (
+            .clear(reset),
+            .clk_1(rpc_clk),
+            .push_en(from_rpc_valid),
+            .push_data(from_rpc),
+            .clk_2(clk),
+            .pop_valid(to_ccip_valid),
+            .pop_data(to_ccip),
+            .error()    // TODO: connect
+        );
+
+
+    // =============================================================
+    // Networking layer
+    // =============================================================
+    // Dump network packets (as $display so far)
+    always @(posedge rpc_clk) begin
+        if (network_tx_valid_out) begin
+            $display("NIC%d: network TX packet requested %p", NIC_ID, network_tx_out);
+        end
+        if (network_rx_valid_in) begin
+            $display("NIC%d: network RX packet requested %p", NIC_ID, network_rx_in);
+        end
+    end
+
+
+endmodule
