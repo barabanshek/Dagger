@@ -32,14 +32,10 @@ public:
     int foo(uint32_t a, uint32_t b);
     int boo(uint32_t a);
 
-    void init_latency(uint64_t* latency_client_1,
-                      uint64_t* latency_client_2);
-
-    uint64_t rdtsc(){
-        unsigned int lo, hi;
-        __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
-        return ((uint64_t)hi << 32) | lo;
-    }
+#ifdef PROFILE_LATENCY
+    void init_latency_profile(uint64_t* timestamp_send,
+                              uint64_t* timestamp_recv);
+#endif
 
 private:
     // client_id - a part of rpc_id
@@ -56,8 +52,10 @@ private:
     // rpc_id counter - not really needed for blocking calls
     uint16_t rpc_id_cnt_;
 
-    //hash map for latencies
-    uint64_t* latency;
+#ifdef PROFILE_LATENCY
+    // Latency profiler
+    uint64_t* lat_prof_timestamp;
+#endif
 
 };
 

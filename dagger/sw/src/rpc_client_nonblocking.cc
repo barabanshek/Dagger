@@ -1,12 +1,13 @@
 #include "rpc_client_nonblocking.h"
 
-#include <assert.h>
+#include <immintrin.h>
+
+#include <cassert>
 #include <iostream>
 
 #include "config.h"
 #include "logger.h"
-
-#include <immintrin.h>
+#include "utils.h"
 
 namespace frpc {
 
@@ -39,12 +40,13 @@ CompletionQueue* RpcClientNonBlock::get_completion_queue() const {
     return cq_.get();
 }
 
-void RpcClientNonBlock::init_latency(uint64_t* latency_client_1,
-                                     uint64_t* latency_client_2){
-    latency = latency_client_1;
-    cq_->init_latency(latency_client_2);
-    cq_->bind();
+#ifdef PROFILE_LATENCY
+void RpcClientNonBlock::init_latency_profile(uint64_t* timestamp_send,
+                                             uint64_t* timestamp_recv) {
+    lat_prof_timestamp = timestamp_send;
+    cq_->init_latency_profile(timestamp_recv);
 }
+#endif
 
 int RpcClientNonBlock::foo(uint32_t a, uint32_t b) {
     // Get current buffer pointer
@@ -70,9 +72,11 @@ int RpcClientNonBlock::foo(uint32_t a, uint32_t b) {
     _mm_mfence();
     (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.ctl.valid = 1;
 
+#ifdef PROFILE_LATENCY
     // Add to latency hash table
-    //uint32_t hash = (a + b);
-    //latency[hash] = rdtsc();
+    uint64_t hash = a + b;
+    lat_prof_timestamp[hash] = frpc::utils::rdtsc();
+#endif
 
     ++rpc_id_cnt_;
 
@@ -103,9 +107,11 @@ int RpcClientNonBlock::boo(uint32_t a) {
     _mm_mfence();
     (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.ctl.valid = 1;
 
+#ifdef PROFILE_LATENCY
     // Add to latency hash table
-    //uint32_t hash = (a + b);
-    //latency[hash] = rdtsc();
+    uint64_t hash = a;
+    lat_prof_timestamp[hash] = frpc::utils::rdtsc();
+#endif
 
     ++rpc_id_cnt_;
 

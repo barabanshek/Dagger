@@ -2,25 +2,23 @@
 
 #include "config.h"
 #include "logger.h"
+#include "utils.h"
 
 namespace frpc {
 
 CompletionQueue::CompletionQueue():
     rpc_client_id_(0),
     stop_signal_(0) {
-
 }
 
 CompletionQueue::CompletionQueue(size_t rpc_client_id, volatile char* rx_buff, size_t mtu_size_bytes):
     rpc_client_id_(rpc_client_id),
-    stop_signal_(0),
-    rx_buff_(rx_buff) {
+    stop_signal_(0) {
     // Allocate RX queue
     rx_queue_ = RxQueue(rx_buff, mtu_size_bytes, cfg::nic::l_rx_queue_size);
 }
 
 CompletionQueue::~CompletionQueue() {
-
 }
 
 void CompletionQueue::bind() {
@@ -34,9 +32,11 @@ void CompletionQueue::unbind() {
     FRPC_INFO("Completion queue is unbound from RPC client %d\n", rpc_client_id_);
 }
 
-void CompletionQueue::init_latency(uint64_t* latency_client){
-    latency=latency_client;
+#ifdef PROFILE_LATENCY
+void CompletionQueue::init_latency_profile(uint64_t* timestamp_recv) {
+    lat_prof_timestamp = timestamp_recv;
 }
+#endif
 
 void CompletionQueue::_PullListen() {
     FRPC_INFO("Completion queue is bound to RPC client %d\n", rpc_client_id_);
@@ -53,9 +53,11 @@ void CompletionQueue::_PullListen() {
 
         if (stop_signal_) continue;
 
+#ifdef PROFILE_LATENCY
         // Mark recv time
-        //uint32_t hash = resp_pckt->ret_val;
-        //latency[hash] = rdtsc();
+        uint64_t hash = resp_pckt->ret_val;
+        lat_prof_timestamp[hash] = frpc::utils::rdtsc();
+#endif
 
         rx_queue_.update_rpc_id(resp_pckt->hdr.rpc_id);
 
