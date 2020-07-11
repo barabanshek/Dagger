@@ -24,17 +24,13 @@ public:
     void bind();
     void unbind();
 
-    void init_latency(uint64_t* latency);
-
     size_t get_number_of_completed_requests() const;
 
     RpcRespPckt pop_response();
 
-    uint64_t rdtsc(){
-        unsigned int lo, hi;
-        __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
-        return ((uint64_t)hi << 32) | lo;
-    }
+#ifdef PROFILE_LATENCY
+    void init_latency_profile(uint64_t* timestamp_recv);
+#endif
 
 private:
     void _PullListen();
@@ -55,10 +51,10 @@ private:
     // Sync
     std::mutex cq_lock_;
 
-    //latency hash table
-    uint64_t* latency;
-
-    volatile char* rx_buff_;
+#ifdef PROFILE_LATENCY
+    // Latency profiler
+    uint64_t* lat_prof_timestamp;
+#endif
 
 };
 

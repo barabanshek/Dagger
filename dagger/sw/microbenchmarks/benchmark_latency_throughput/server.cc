@@ -1,7 +1,7 @@
-#include <iostream>
+#include <unistd.h>
 
 #include <cstdlib>
-#include <unistd.h>
+#include <iostream>
 
 #include "rpc_threaded_server.h"
 
@@ -12,16 +12,16 @@
 static uint32_t foo(uint32_t a, uint32_t b);
 static uint32_t boo(uint32_t a);
 
-static int mc_call();
-
-uint64_t rdtsc(){
+static uint64_t rdtsc(){
     unsigned int lo, hi;
     __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
     return ((uint64_t)hi << 32) | lo;
 }
 
+// <max number of threads, run duration>
 int main(int argc, char* argv[]) {
     size_t num_of_threads = atoi(argv[1]);
+    size_t duration_of_run = atoi(argv[2]);
 
     frpc::RpcThreadedServer server(NIC_ADDR, num_of_threads);
 
@@ -35,13 +35,6 @@ int main(int argc, char* argv[]) {
     if (res != 0)
         return res;
 
-    // Run memory contention threads
-    //std::vector<std::thread> mc_threads;
-    //for (int i=0; i<4; ++i) {
-    //    std::thread thr = std::thread(&mc_call);
-    //    mc_threads.push_back(std::move(thr));
-    //}
-
     // Register RPC functions
     std::vector<const void*> fn_ptr;
     fn_ptr.push_back(reinterpret_cast<const void*>(&foo));
@@ -54,13 +47,13 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << "------- Server is running... -------" << std::endl;
-    sleep(120); // Run server for 10 sec
+    sleep(duration_of_run);
 
     res = server.stop_all_listening_threads();
     if (res != 0)
         return res;
 
-    std::cout << "Server is stopped!" << std::endl;
+    std::cout << "------- Server is stopped. -------" << std::endl;
 
     // Check for HW errors
     res = server.check_hw_errors();
@@ -78,11 +71,9 @@ int main(int argc, char* argv[]) {
 }
 
 static uint32_t foo(uint32_t a, uint32_t b) {
-    //std::cout << "foo is called with a= " << a << ", b= " << b << std::endl;
     return a + b;
 }
 
 static uint32_t boo(uint32_t a) {
-    //std::cout << "boo is called with a= " << a << std::endl;
-    return a + 10;
+    return a;
 }
