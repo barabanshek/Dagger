@@ -275,7 +275,7 @@ void NicCCIP::get_perf() const {
             FRPC_ERROR("Nic configuration error, failed to read performance counter"
                         "nic returned: %d\n", res);
         }
-        FRPC_INFO("Nic returned performance counter(ccip rps)= %d\n", perf_cnt);
+        FRPC_INFO("Nic #%x returned performance counter(ccip rps)= %d\n", base_nic_addr_, perf_cnt);
 
         // Get status
         NicHwStatus status;

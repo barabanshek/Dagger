@@ -4,6 +4,8 @@
 #include "logger.h"
 #include "utils.h"
 
+#include "unistd.h"
+
 namespace frpc {
 
 CompletionQueue::CompletionQueue():
@@ -15,7 +17,10 @@ CompletionQueue::CompletionQueue(size_t rpc_client_id, volatile char* rx_buff, s
     rpc_client_id_(rpc_client_id),
     stop_signal_(0) {
     // Allocate RX queue
-    rx_queue_ = RxQueue(rx_buff, mtu_size_bytes, cfg::nic::l_rx_queue_size);
+    rx_queue_ = std::unique_ptr<RxQueue>(
+                        new RxQueue(rx_buff,
+                                    mtu_size_bytes,
+                                    cfg::nic::l_rx_queue_size));
 }
 
 CompletionQueue::~CompletionQueue() {
@@ -46,7 +51,8 @@ void CompletionQueue::_PullListen() {
     while (stop_signal_ == 0) {
         // wait response
         uint32_t rx_rpc_id;
-        resp_pckt = reinterpret_cast<RpcRespPckt*>(rx_queue_.get_read_ptr(rx_rpc_id));
+        resp_pckt = reinterpret_cast<RpcRespPckt*>(rx_queue_->get_read_ptr(rx_rpc_id));
+
         while((resp_pckt->hdr.ctl.valid == 0 ||
                resp_pckt->hdr.rpc_id == rx_rpc_id) &&
               !stop_signal_);
@@ -59,7 +65,7 @@ void CompletionQueue::_PullListen() {
         lat_prof_timestamp[hash] = frpc::utils::rdtsc();
 #endif
 
-        rx_queue_.update_rpc_id(resp_pckt->hdr.rpc_id);
+        rx_queue_->update_rpc_id(resp_pckt->hdr.rpc_id);
 
         // Append to queue
         // TODO: there is a potential optimization here:

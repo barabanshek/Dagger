@@ -44,9 +44,6 @@ public:
     #elif NIC_CCIP_MMIO
         // MMIO intefrace only works either with write-combine buffering or AVX
         // intrinsics
-        #ifndef AVX2_WRITE
-            #error Running Nic in MMIO mode requires AVX2_WRITE enabled
-        #endif
         #pragma message "compiling Nic to run in MMIO mode"
         // Simple case so far: number of NIC flows = max_pool_size_
         nic_ = std::unique_ptr<Nic>(
@@ -72,9 +69,6 @@ public:
     #elif NIC_CCIP_MMIO
         // MMIO intefrace only works either with write-combine buffering or AVX
         // intrinsics
-        #ifndef AVX2_WRITE
-            #error Running Nic in MMIO mode requires AVX2_WRITE enabled
-        #endif
         #pragma message "compiling Nic to run in MMIO mode"
         // Simple case so far: number of NIC flows = max_pool_size_
         nic_ = std::unique_ptr<Nic>(

@@ -51,7 +51,7 @@ int NicPollingCCIP::configure_data_plane() {
     if (ccip_mode != iConstCcipQueuePolling) {
         FRPC_ERROR("Nic configuration error, "
                    "the harwdare is not CCI-P queue polling compatible\n");
-        //return 1;
+        return 1;
     }
 
     // Allocate Rx and Tx buffers

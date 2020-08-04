@@ -12,6 +12,7 @@
 parameter CL_SIZE_BYTES = 64;
 parameter CL_SIZE_WORDS = 16;
 parameter LMAX_CCIP_BATCH = 2;
+parameter LMAX_CCIP_DMA_BATCH = 6;
 
 // Status
 // NOTE: this should be consistent with the NicHwStatus in nic.h

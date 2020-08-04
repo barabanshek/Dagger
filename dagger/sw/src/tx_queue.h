@@ -14,6 +14,9 @@ class TxQueue {
 public:
     TxQueue();
     TxQueue(char* tx_flow_buff, size_t bucket_size_bytes, size_t l_depth);
+    TxQueue(const TxQueue&) = delete;
+    TxQueue& operator=(const TxQueue&) = delete;
+
     virtual ~TxQueue();
 
     inline char* get_write_ptr(uint8_t& change_bit) __attribute__((always_inline)) {

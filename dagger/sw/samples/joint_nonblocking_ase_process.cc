@@ -21,7 +21,7 @@
 #include "rpc_client_pool.h"
 #include "rpc_threaded_server.h"
 
-#define NUMBER_OF_THREADS 4
+#define NUMBER_OF_THREADS 1
 
 static int run_server();
 static int run_client();
@@ -92,7 +92,7 @@ static uint32_t foo(uint32_t a, uint32_t b) {
     std::cout << "foo is called with a= " << a << ", b= " << b << std::endl;
     return a + b;
 }
-
+    
 // RPC function #1
 static uint32_t boo(uint32_t a) {
     std::cout << "boo is called with a= " << a << std::endl;
@@ -104,7 +104,7 @@ static uint32_t boo(uint32_t a) {
 // Client part
 //
 #define CLIENT_NIC_ADDR 0x00000
-#define NUM_OF_REQUESTS 4
+#define NUM_OF_REQUESTS 20
 
 static int client(frpc::RpcClientNonBlock* rpc_client, size_t thread_id, size_t num_of_requests) {
     // Get completion queue
@@ -115,10 +115,16 @@ static int client(frpc::RpcClientNonBlock* rpc_client, size_t thread_id, size_t 
     for (int i=0; i<num_of_requests; ++i) {
         int res = rpc_client->boo(thread_id*10 + i);
         assert(res == 0);
+
+        usleep(100000);
+
+        for (int delay=0; delay<13; ++delay) {
+            asm("");
+        }
     }
 
     // Wait a bit
-    sleep(20);
+    sleep(30);
 
     // Read completion queue
     size_t n_of_cq_entries = cq->get_number_of_completed_requests();
@@ -140,7 +146,7 @@ static int run_client() {
         return res;
 
     // Start NIC
-    res = rpc_client_pool.start_nic();
+    res = rpc_client_pool.start_nic(true);
     if (res != 0)
         return res;
 

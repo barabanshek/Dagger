@@ -6,6 +6,8 @@
 
 #include "nic_ccip.h"
 
+#include "iostream"
+
 namespace frpc {
 
 #define CL(x) ((x) * NicCCIP::cacheline_size_bytes)
@@ -28,7 +30,7 @@ public:
 
     virtual int configure_data_plane();
 
-    virtual int notify_nic_of_new_dma(size_t flow) const {
+    virtual int notify_nic_of_new_dma(size_t flow, size_t bucket) const {
         // No needs to explicitly notify NIC
         return 0;
     }
@@ -41,7 +43,9 @@ public:
         return buf_ + CL(rx_cl_offset_) + CL(flow);
     }
 
-    virtual const char* get_tx_buff_end() const { return nullptr; }
+    virtual const char* get_tx_buff_end() const {
+        return reinterpret_cast<char*>(tx_mmio_buf_) + tx_cl_offset_ + CL(num_of_flows_);
+    }
     virtual const char* get_rx_buff_end() const { return nullptr; }
 
 private:
@@ -64,6 +68,7 @@ private:
     uint64_t* tx_mmio_buf_;
     // Offset
     uint64_t tx_cl_offset_;
+    size_t rx_queue_size_bytes_;
 
 };
 

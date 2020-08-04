@@ -16,8 +16,12 @@ NicDmaCCIP::NicDmaCCIP(uint64_t base_nic_addr, size_t num_of_flows, bool master_
     dp_configured_(false),
     num_of_flows_(num_of_flows),
     buf_(nullptr),
-    tx_cl_offset_(0),
-    rx_cl_offset_(0) {
+    tx_offset_bytes_(0),
+    rx_offset_bytes_(0),
+    tx_buff_size_bytes_(0),
+    rx_buff_size_bytes_(0),
+    tx_queue_size_bytes_(0),
+    rx_queue_size_bytes_(0) {
 
 }
 
@@ -51,7 +55,12 @@ int NicDmaCCIP::configure_data_plane() {
     }
 
     // Allocate Rx and Tx buffers
-    size_t buff_size_bytes = 2 * num_of_flows_ * get_mtu_size_bytes();
+    tx_queue_size_bytes_ = get_mtu_size_bytes() * (1 << cfg::nic::l_tx_queue_size);
+    tx_buff_size_bytes_ = num_of_flows_ * tx_queue_size_bytes_;
+    rx_queue_size_bytes_ = get_mtu_size_bytes() * (1 << cfg::nic::l_rx_queue_size);
+    rx_buff_size_bytes_ = num_of_flows_ * rx_queue_size_bytes_;
+
+    size_t buff_size_bytes = tx_buff_size_bytes_ + rx_buff_size_bytes_;
     buf_ = (volatile char*)alloc_buffer(accel_handle_,
                                         buff_size_bytes,
                                         &wsid_,
@@ -68,13 +77,13 @@ int NicDmaCCIP::configure_data_plane() {
 
     // Configure Rx and Tx buffers
     // NIC's side data are cache line aligned
-    tx_cl_offset_ = 0;
-    rx_cl_offset_ = tx_cl_offset_ + num_of_flows_;
+    tx_offset_bytes_ = 0;
+    rx_offset_bytes_ = tx_offset_bytes_ + tx_buff_size_bytes_;
 
     res = fpgaWriteMMIO64(accel_handle_,
                           0,
                           base_nic_addr_ + iRegMemTxAddr,
-                          buf_pa_ / CL(1) + tx_cl_offset_);
+                          buf_pa_ / CL(1) + tx_offset_bytes_ / CL(1));
     if (res != FPGA_OK) {
         FRPC_ERROR("Nic configuration error, failed to configure Tx buffer,"
                     "nic returned %d\n", res);
@@ -84,7 +93,7 @@ int NicDmaCCIP::configure_data_plane() {
     res = fpgaWriteMMIO64(accel_handle_,
                           0,
                           base_nic_addr_ + iRegMemRxAddr,
-                          buf_pa_ / CL(1) + rx_cl_offset_);
+                          buf_pa_ / CL(1) + rx_offset_bytes_ / CL(1));
     if (res != FPGA_OK) {
         FRPC_ERROR("Nic configuration error, failed to configure Rx buffer,"
                     "nic returned %d\n", res);
@@ -102,17 +111,42 @@ int NicDmaCCIP::configure_data_plane() {
         return 1;
     }
 
+    // Configure tx DMA batch size
+    res = fpgaWriteMMIO64(accel_handle_,
+                          0,
+                          base_nic_addr_ + lRegRxBatchSize,
+                          cfg::nic::tx_batch_size);
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Nic configuration error, failed to configure tx queue depth,"
+                    "nic returned %d\n", res);
+        return 1;
+    }
+
+    // Configure rx batch size
+    res = fpgaWriteMMIO64(accel_handle_,
+                          0,
+                          base_nic_addr_ + lRegTxBatchSize,
+                          cfg::nic::l_rx_batch_size);
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Nic configuration error, failed to configure rx batch size,"
+                    "nic returned %d\n", res);
+        return 1;
+    }
+
     dp_configured_ = true;
     FRPC_INFO("Nic dataplane is configured\n");
     return 0;
 }
 
-int NicDmaCCIP::notify_nic_of_new_dma(size_t flow) const {
+int NicDmaCCIP::notify_nic_of_new_dma(size_t flow, size_t bucket) const {
+    assert(flow < num_of_flows_);
+    assert(bucket < tx_queue_size_bytes_);
+
     dma_notification_lock_.lock();
     int res = fpgaWriteMMIO64(accel_handle_,
                               0,
                               base_nic_addr_ + iRegCcipDmaTrg,
-                              flow);
+                              flow + bucket); // TODO: remove hardcode
     if (res != FPGA_OK) {
         FRPC_ERROR("Nic DMA notification error, nic returned %d\n", res);
         return 1;

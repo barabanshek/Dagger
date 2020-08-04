@@ -49,7 +49,8 @@ int NicMmioCCIP::configure_data_plane() {
     }
 
     // Allocate Rx buffer
-    size_t buff_size_bytes = num_of_flows_ * get_mtu_size_bytes();
+    rx_queue_size_bytes_ = get_mtu_size_bytes() * (1 << cfg::nic::l_rx_queue_size);
+    size_t buff_size_bytes = num_of_flows_ * rx_queue_size_bytes_;
     buf_ = (volatile char*)alloc_buffer(accel_handle_,
                                         buff_size_bytes,
                                         &wsid_,
@@ -76,7 +77,20 @@ int NicMmioCCIP::configure_data_plane() {
         return 1;
     }
 
+    // Configure rx batch size
+    res = fpgaWriteMMIO64(accel_handle_,
+                          0,
+                          base_nic_addr_ + lRegTxBatchSize,
+                          cfg::nic::l_rx_batch_size);
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Nic configuration error, failed to configure rx batch size,"
+                    "nic returned %d\n", res);
+        return 1;
+    }
+
     // Allocate Tx buffer
+    // In MMIO mode, each Tx buffer has exactly one entry
+    assert(cfg::nic::l_tx_queue_size == 0);
     res = fpgaMapMMIO(accel_handle_, 0, &tx_mmio_buf_);
     if (res != FPGA_OK) {
         FRPC_ERROR("Failed to allocate MMIO buffer, nic returned %d\n", res);
@@ -117,17 +131,7 @@ int NicMmioCCIP::configure_data_plane() {
 
 int NicMmioCCIP::start(bool perf) {
     assert(dp_configured_ == true);
-
-    int r = start_nic(perf);
-
-
-    //fpgaWriteMMIO64(accel_handle_,
-    //                0,
-    //                tx_cl_offset_,
-    //                123);
-
-
-    return r;
+    return start_nic(perf);;
 }
 
 int NicMmioCCIP::stop() {
