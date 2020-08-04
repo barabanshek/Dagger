@@ -56,11 +56,11 @@ module nic
     // CCI-P mode
     //`define CCIP_MMIO
     //`define CCIP_POLLING
-    //`define CCIP_DMA
-    `define CCIP_QUEUE_POLLING
+    `define CCIP_DMA
+    //`define CCIP_QUEUE_POLLING
     // log number of NIC flows
     localparam LMAX_NUM_OF_FLOWS  = 3;   // 2**3=8 flows
-    localparam LMAX_RX_QUEUE_SIZE = 3;   // 2**3=8
+    localparam LMAX_RX_QUEUE_SIZE = 5;   // 2**5=32
     // CCI-P VCs
     localparam CCIP_FORWARD_VC       = eVC_VH0; // PCIe
     localparam CCIP_FORWARD_RD_TYPE  = eREQ_RDLINE_I;
@@ -124,21 +124,24 @@ module nic
                         = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 22);
     localparam t_ccip_mmioAddr addrTxBatchSize
                         = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 24);
+    localparam t_ccip_mmioAddr addrRxBatchSize
+                        = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 26);
 
 
     // Registers
-    t_ccip_clAddr                 iRegMemTxAddr;
-    t_ccip_clAddr                 iRegMemRxAddr;
-    logic                         iRegNicStart;
-    logic[LMAX_NUM_OF_FLOWS-1:0]  iRegNumOfFlows;    // iRegNumOfFlows = number of flows - 1
-    logic                         iRegNicInit;
-    NicStatus                     iRegNicStatus;
-    logic[31:0]                   iRegCcipRps;
-    logic[7:0]                    iRegGetPckCnt;
-    logic[63:0]                   iRegPckCnt;
-    CcipMode[1:0]                 iRegCcipMode;
-    logic[LMAX_RX_QUEUE_SIZE-1:0] iRegRxQueueSize;  // iRegRxQueueSize = rx queue size - 1
-    logic[LMAX_CCIP_BATCH-1:0]    lRegTxBatchSize;
+    t_ccip_clAddr                  iRegMemTxAddr;
+    t_ccip_clAddr                  iRegMemRxAddr;
+    logic                          iRegNicStart;
+    logic[LMAX_NUM_OF_FLOWS-1:0]   iRegNumOfFlows;    // iRegNumOfFlows = number of flows - 1
+    logic                          iRegNicInit;
+    NicStatus                      iRegNicStatus;
+    logic[31:0]                    iRegCcipRps;
+    logic[7:0]                     iRegGetPckCnt;
+    logic[63:0]                    iRegPckCnt;
+    CcipMode[1:0]                  iRegCcipMode;
+    logic[LMAX_RX_QUEUE_SIZE-1:0]  iRegRxQueueSize;  // iRegRxQueueSize = rx queue size - 1
+    logic[LMAX_CCIP_BATCH-1:0]     lRegTxBatchSize;
+    logic[LMAX_CCIP_DMA_BATCH-1:0] iRegRxBatchSize;
 
     // CSR read logic
     logic is_csr_read;
@@ -250,6 +253,10 @@ module nic
     assign is_tx_batch_size_csr_write = is_csr_write &&
                                         (mmio_req_hdr.address == addrTxBatchSize);
 
+    logic is_rx_batch_size_csr_write;
+    assign is_rx_batch_size_csr_write = is_csr_write &&
+                                        (mmio_req_hdr.address == addrRxBatchSize);
+
     always_ff @(posedge ccip_clk) begin
         if (reset) begin
             iRegNicStart        <= 1'b0;
@@ -298,6 +305,11 @@ module nic
                 $display("NIC%d: lRegTxBatchSize received: %08h", NIC_ID, sRx.c0.data);
                 lRegTxBatchSize <= sRx.c0.data[LMAX_CCIP_BATCH-1:0];
             end
+
+            if (is_rx_batch_size_csr_write) begin
+                $display("NIC%d: iRegRxBatchSize received: %08h", NIC_ID, sRx.c0.data);
+                iRegRxBatchSize <= sRx.c0.data[LMAX_CCIP_DMA_BATCH-1:0];
+            end
         end
     end
 
@@ -321,20 +333,20 @@ module nic
 
     ccip_mmio #(
         .NIC_ID(NIC_ID),
-        .LMAX_NUM_OF_FLOWS(LMAX_NUM_OF_FLOWS),
-        .BACKWARD_VC(CCIP_BACKWARD_VC),
-        .BACKWARD_WR_TYPE(CCIP_BACKWARD_WR_TYPE)
+        .LMAX_NUM_OF_FLOWS(LMAX_NUM_OF_FLOWS)
     ) ccip_mmio (
         .clk(ccip_clk),
         .reset(reset),
 
+        .number_of_flows(iRegNumOfFlows),
         .rx_base_addr(iRegMemRxAddr),
         .tx_base_addr(iRegMemTxAddr),
-        .number_of_flows(iRegNumOfFlows),
+        .l_tx_batch_size(lRegTxBatchSize),
         .start(iRegNicStart),
 
         .initialize(iRegNicInit),
         .initialized(ccip_layer_initialized),
+        .error(ccip_error),
 
         .sRx_c0TxAlmFull(sRx.c0TxAlmFull),
         .sRx_c1TxAlmFull(sRx.c1TxAlmFull),
@@ -398,17 +410,18 @@ module nic
     ccip_dma #(
         .NIC_ID(NIC_ID),
         .LMAX_NUM_OF_FLOWS(LMAX_NUM_OF_FLOWS),
-        .NUM_SUB_AFUS(NUM_SUB_AFUS),
-        .FORWARD_VC(CCIP_FORWARD_VC),
-        .BACKWARD_VC(CCIP_BACKWARD_VC),
-        .BACKWARD_WR_TYPE(CCIP_BACKWARD_WR_TYPE)
+        .NUM_SUB_AFUS(NUM_SUB_AFUS)
     ) ccip_dma (
         .clk(ccip_clk),
         .reset(reset),
 
+        .number_of_flows(iRegNumOfFlows),
         .rx_mmio_addr(addrCcipDmaMmio),
         .rx_base_addr(iRegMemRxAddr),
+        .rx_batch_size(iRegRxBatchSize),
         .tx_base_addr(iRegMemTxAddr),
+        .l_tx_batch_size(lRegTxBatchSize),
+
         .start(iRegNicStart),
 
         .initialize(iRegNicInit),

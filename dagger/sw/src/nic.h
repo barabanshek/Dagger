@@ -26,7 +26,7 @@ public:
     virtual int start(bool perf=false) = 0;
     virtual int stop() = 0;
     virtual int check_hw_errors() const = 0;
-    virtual int notify_nic_of_new_dma(size_t flow) const = 0;
+    virtual int notify_nic_of_new_dma(size_t flow, size_t bucket) const = 0;
     virtual char* get_tx_flow_buffer(size_t flow) const = 0;
     virtual volatile char* get_rx_flow_buffer(size_t flow) const = 0;
     virtual const char* get_tx_buff_end() const = 0;

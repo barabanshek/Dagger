@@ -44,6 +44,7 @@ public:
     static constexpr uint8_t iRegCcipDmaTrg  = 80;   // hw: 20, W
     static constexpr uint8_t iRegRxQueueSize = 88;   // hw: 22, W
     static constexpr uint8_t lRegTxBatchSize = 96;   // hw: 24, W
+    static constexpr uint8_t lRegRxBatchSize = 104;   // hw: 26, W
     static constexpr uint16_t iMMIOSpaceStart = 256;  // hw: 64, -
 
     // Hardware register map constants
@@ -71,7 +72,7 @@ public:
     virtual int configure_data_plane() = 0;
     virtual int start(bool perf=false) = 0;
     virtual int stop() = 0;
-    virtual int notify_nic_of_new_dma(size_t flow) const = 0;
+    virtual int notify_nic_of_new_dma(size_t flow, size_t bucket) const = 0;
     virtual char* get_tx_flow_buffer(size_t flow) const = 0;
     virtual volatile char* get_rx_flow_buffer(size_t flow) const = 0;  // TODO: make const char*
     virtual const char* get_tx_buff_end() const = 0;

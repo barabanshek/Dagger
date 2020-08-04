@@ -49,8 +49,13 @@ private:
     std::unique_ptr<TxQueue> tx_queue_;
     std::unique_ptr<CompletionQueue> cq_;
 
-    // rpc_id counter - not really needed for blocking calls
+    // rpc_id counter
     uint16_t rpc_id_cnt_;
+
+#ifdef NIC_CCIP_DMA
+    uint32_t current_batch_ptr;
+    size_t batch_counter;
+#endif
 
 #ifdef PROFILE_LATENCY
     // Latency profiler

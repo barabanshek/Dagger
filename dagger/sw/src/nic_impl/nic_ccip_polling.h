@@ -31,7 +31,7 @@ public:
 
     virtual int configure_data_plane();
 
-    virtual int notify_nic_of_new_dma(size_t flow) const {
+    virtual int notify_nic_of_new_dma(size_t flow, size_t bucket) const {
         // No needs to explicitly notify NIC
         return 0;
     }

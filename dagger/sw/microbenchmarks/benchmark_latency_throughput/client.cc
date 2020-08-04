@@ -51,6 +51,8 @@ int main(int argc, char* argv[]) {
     if (res != 0)
         return res;
 
+    sleep(1);
+
     // Run client threads
     std::vector<std::thread> threads;
     for (int i=0; i<num_of_threads; ++i) {
@@ -118,6 +120,9 @@ static int run_benchmark(frpc::RpcClientNonBlock* rpc_client,
     size_t cq_size = cq->get_number_of_completed_requests();
     std::cout << "Thread #" << thread_id
               << ": CQ size= " << cq_size << std::endl;
+    //for (int i=0; i<cq_size; ++i) {
+    //    std::cout << cq->pop_response().ret_val << std::endl;
+    //}
 
     // Get latency profile
     std::vector<std::pair<uint32_t, uint64_t>> latency_results;

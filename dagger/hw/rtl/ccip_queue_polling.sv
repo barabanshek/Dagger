@@ -4,9 +4,17 @@
 // Project :        F-NIC
 // Description :    implements bi-directional CPU-NIC interface
 //                    - CPU-NIC: polling based over UPI
-//                    - NIC-CPU: eREQ_WRLINE_I over PCIe
+//                    - NIC-CPU: batched eREQ_WRLINE_I over PCIe
 //                    - book-keeping: TODO
-
+//
+// Known bugs:
+//                  1) Some requests are duplicated
+//                    - symptoms: some requests are duplicated
+//                    - reason: ccip_dirty_tb table takes 1 cycle for the dirty
+//                              flag update. If two requests from the same entry
+//                              are coming next to each other, the dirty_bit won't
+//                              be updated.
+//
 
 `include "async_fifo_channel.sv"
 `include "platform_if.vh"
@@ -66,6 +74,7 @@ module ccip_queue_polling
     // =============================================================
     // CPU - NIC datapath
     // =============================================================
+    localparam RX_BATCH_SIZE = 4;
 
     // N MSBs of *.c0.hdr.mdata are reserved for the upper-level CCI-P MUX;
     // Always ensure MDATA_W <= 16 - N
@@ -81,12 +90,18 @@ module ccip_queue_polling
     //   - poll local cache and bring data over UPI
     //   - allocate in S state so we don't burn UPI bandwidth
     //   - do bookkiping over PCIe
+    typedef enum logic { RxIdle, RxDelay } RxState;
+
+    RxState rx_state;
+    logic[1:0] rx_batch_cnt;
     logic[MDATA_W-1:0]  queue_poll_cnt;
     logic[MDATA_W-1:0]  flow_poll_cnt;
     logic[7:0]          poll_frq_div_cnt;
 
     always_ff @(posedge clk) begin
         if (reset) begin
+            rx_state         <= RxIdle;
+            rx_batch_cnt     <= {($bits(rx_batch_cnt)){1'b0}};
             sTx_c0.valid     <= 1'b0;
             queue_poll_cnt   <= {($bits(queue_poll_cnt)){1'b0}};
             flow_poll_cnt    <= {($bits(flow_poll_cnt)){1'b0}};
@@ -95,43 +110,50 @@ module ccip_queue_polling
         end else begin
             // Data
             sTx_c0.hdr                    <= t_ccip_c0_ReqMemHdr'(0);
+            sTx_c0.hdr.cl_len             <= eCL_LEN_4;
+            sTx_c0.hdr.vc_sel             <= eVC_VL0;
+            sTx_c0.hdr.req_type           <= eREQ_RDLINE_I;
             sTx_c0.hdr.address            <= tx_base_addr +
                                              (flow_poll_cnt << LMAX_RX_QUEUE_SIZE) +
                                              queue_poll_cnt;
             sTx_c0.hdr.mdata[MDATA_W-1:0] <= META_PATTERN ^
                                              ((flow_poll_cnt << LMAX_RX_QUEUE_SIZE) +
                                                queue_poll_cnt);
-            sTx_c0.hdr.vc_sel             <= eVC_VL0;
-            sTx_c0.hdr.req_type           <= eREQ_RDLINE_I;
 
             // Control
             sTx_c0.valid <= 1'b0;
 
-            if (start) begin
-                if (poll_frq_div_cnt == POLLING_RATE) begin
-                    if (!sRx_c0TxAlmFull) begin
-                        sTx_c0.valid <= 1'b1;
-
-                        // Switch entry in the queue
-                        if (queue_poll_cnt == rx_queue_size) begin
-                            queue_poll_cnt <= {($bits(queue_poll_cnt)){1'b0}};
-
-                            // Switch queue
-                            if (flow_poll_cnt == number_of_flows) begin
-                                flow_poll_cnt <= {($bits(flow_poll_cnt)){1'b0}};
-                            end else begin
-                                flow_poll_cnt <= flow_poll_cnt + 1;
-                            end
-                        end else begin
-                            queue_poll_cnt <= queue_poll_cnt + 1;
-                        end
-                    end
-                    poll_frq_div_cnt <= {($bits(poll_frq_div_cnt)){1'b0}};
-                end else begin
-                    poll_frq_div_cnt <= poll_frq_div_cnt + 1;
+            if (rx_state == RxIdle) begin
+                if (start && !sRx_c0TxAlmFull) begin
+                    // Start batch read
+                    sTx_c0.valid <= 1'b1;
+                    rx_state     <= RxDelay;
                 end
             end
 
+            if (rx_state == RxDelay) begin
+                if (poll_frq_div_cnt == POLLING_RATE) begin
+                    // Switch entry/queue
+                    if (queue_poll_cnt == rx_queue_size - RX_BATCH_SIZE + 1) begin
+                        queue_poll_cnt <= {($bits(queue_poll_cnt)){1'b0}};
+
+                        // Switch queue
+                        if (flow_poll_cnt == number_of_flows) begin
+                            flow_poll_cnt <= {($bits(flow_poll_cnt)){1'b0}};
+                        end else begin
+                            flow_poll_cnt <= flow_poll_cnt + 1;
+                        end
+                    end else begin
+                        queue_poll_cnt <= queue_poll_cnt + RX_BATCH_SIZE;
+                    end
+
+                    poll_frq_div_cnt <= {($bits(poll_frq_div_cnt)){1'b0}};
+                    rx_state         <= RxIdle;
+                end else begin
+                    poll_frq_div_cnt <= poll_frq_div_cnt + 1;
+                    rx_state         <= RxDelay;
+                end
+            end
         end
     end
 
@@ -139,14 +161,16 @@ module ccip_queue_polling
     RpcPckt                       sRx_casted;
     RpcPckt                       ccip_read_poll_data;
     logic[MDATA_W-1:0]            ccip_read_poll_cl_casted;
+    logic[1:0]                    ccip_read_poll_cl_batch_line;
     logic[MDATA_W-1:0]            ccip_read_poll_cl;
     logic[LMAX_RX_QUEUE_SIZE-1:0] ccip_queue_cnt;
     logic[LMAX_NUM_OF_FLOWS-1:0]  ccip_flow_cnt;
     logic                         ccip_read_poll_data_valid;
 
     always_comb begin
-        sRx_casted               = sRx_c0.data[$bits(RpcPckt)-1:0];
-        ccip_read_poll_cl_casted = sRx_c0.hdr.mdata[MDATA_W-1:0] ^ META_PATTERN;
+        sRx_casted                   = sRx_c0.data[$bits(RpcPckt)-1:0];
+        ccip_read_poll_cl_casted     = sRx_c0.hdr.mdata[MDATA_W-1:0] ^ META_PATTERN;
+        ccip_read_poll_cl_batch_line = sRx_c0.hdr.cl_num;
     end
 
     always_ff @(posedge clk) begin
@@ -157,9 +181,10 @@ module ccip_queue_polling
 
         end else begin
             // Data
-            ccip_queue_cnt      <= ccip_read_poll_cl_casted[LMAX_RX_QUEUE_SIZE-1:0];
+            ccip_queue_cnt      <= ccip_read_poll_cl_casted[LMAX_RX_QUEUE_SIZE-1:0] +
+                                   ccip_read_poll_cl_batch_line;
             ccip_flow_cnt       <= (ccip_read_poll_cl_casted >> LMAX_RX_QUEUE_SIZE);
-            ccip_read_poll_cl   <= ccip_read_poll_cl_casted;
+            ccip_read_poll_cl   <= ccip_read_poll_cl_casted + ccip_read_poll_cl_batch_line;
             ccip_read_poll_data <= sRx_casted;
 
             // Control

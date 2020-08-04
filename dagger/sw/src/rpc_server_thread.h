@@ -4,6 +4,7 @@
 #include <atomic>
 #include <thread>
 #include <vector>
+#include <utility>
 
 #include "nic.h"
 #include "tx_queue.h"
@@ -33,8 +34,8 @@ private:
     size_t nic_flow_id_;
 
     // Tx and RX queue
-    TxQueue tx_queue_;
-    RxQueue rx_queue_;
+    std::unique_ptr<TxQueue> tx_queue_;
+    std::unique_ptr<RxQueue> rx_queue_;
 
     // RPC function pointer
     std::vector<const void*> rpc_fn_ptr_;
@@ -42,6 +43,11 @@ private:
     // Thread
     std::thread thread_;
     std::atomic<bool> stop_signal_;
+
+#ifdef NIC_CCIP_DMA
+    uint32_t current_batch_ptr;
+    size_t batch_counter;
+#endif
 
 };
 

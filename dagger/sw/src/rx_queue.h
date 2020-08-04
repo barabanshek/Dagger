@@ -14,6 +14,9 @@ class RxQueue {
 public:
     RxQueue();
     RxQueue(volatile char* rx_flow_buff, size_t bucket_size_bytes, size_t l_depth);
+    RxQueue(const RxQueue&) = delete;
+    RxQueue& operator=(const RxQueue&) = delete;
+
     virtual ~RxQueue();
 
     inline char* get_read_ptr(uint32_t& rpc_id) __attribute__((always_inline)) {

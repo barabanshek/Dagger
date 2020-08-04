@@ -66,7 +66,7 @@ uint32_t RpcClient::foo(uint32_t a, uint32_t b) {
     _mm_mfence();
 #ifdef NIC_CCIP_DMA
     // Explicitly notify NIC to initiate a DMA
-    nic_->notify_nic_of_new_dma(nic_flow_id_);
+    //nic_->notify_nic_of_new_dma(nic_flow_id_);
 #endif
 #else
     // As alternative, send request with simple word-by-word writes
@@ -79,7 +79,7 @@ uint32_t RpcClient::foo(uint32_t a, uint32_t b) {
 #ifdef NIC_CCIP_DMA
     // Explicitly notify NIC to initiate a DMA
     _mm_mfence();
-    nic_->notify_nic_of_new_dma(nic_flow_id_);
+    //nic_->notify_nic_of_new_dma(nic_flow_id_);
 #endif
 #endif
 
@@ -130,7 +130,7 @@ uint32_t RpcClient::boo(uint32_t a) {
     _mm_mfence();
 #ifdef NIC_CCIP_DMA
     // Explicitly notify NIC to initiate a DMA
-    nic_->notify_nic_of_new_dma(nic_flow_id_);
+    //nic_->notify_nic_of_new_dma(nic_flow_id_);
 #endif
 #else
     // As alternative, send request with simple word-by-word writes
@@ -143,7 +143,7 @@ uint32_t RpcClient::boo(uint32_t a) {
 #ifdef NIC_CCIP_DMA
     // Explicitly notify NIC to initiate a DMA
     _mm_mfence();
-    nic_->notify_nic_of_new_dma(nic_flow_id_);
+    //nic_->notify_nic_of_new_dma(nic_flow_id_);
 #endif
 #endif
 

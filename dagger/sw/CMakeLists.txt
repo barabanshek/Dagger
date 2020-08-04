@@ -13,15 +13,14 @@ add_definitions(-Wno-unused-function)
 add_definitions(-D_FORTIFY_SOURCE=2)
 
 # Debug and logging
-add_definitions(-DFRPC_LOG_LEVEL=3)
+#add_definitions(-DFRPC_LOG_LEVEL=3)
 #add_definitions(-DENABLE_DEBUG=1)
 #add_definitions(-DENABLE_ASSERT=1)
 
 # CCI-P config
-add_definitions(-DNIC_CCIP_POLLING)
+#add_definitions(-DNIC_CCIP_POLLING)
 #add_definitions(-DNIC_CCIP_MMIO)
-#add_definitions(-DNIC_CCIP_DMA)
-#add_definitions(-DAVX2_WRITE)
+add_definitions(-DNIC_CCIP_DMA)
 
 set(LIBRARIES ${LIBRARIES} -z noexecstack)
 set(LIBRARIES ${LIBRARIES} -z relro -z now)
