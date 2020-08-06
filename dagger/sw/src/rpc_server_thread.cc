@@ -29,15 +29,15 @@ RpcServerThread::RpcServerThread(const Nic* nic,
 #endif
 
     // Allocate queues
-    tx_queue_ = std::unique_ptr<TxQueue>(
-                        new TxQueue(nic_->get_tx_flow_buffer(nic_flow_id_),
-                                    nic_->get_mtu_size_bytes(),
-                                    cfg::nic::l_tx_queue_size));
+    tx_queue_ = TxQueue(nic_->get_tx_flow_buffer(nic_flow_id_),
+                        nic_->get_mtu_size_bytes(),
+                        cfg::nic::l_tx_queue_size);
+    tx_queue_.init();
 
-    rx_queue_ = std::unique_ptr<RxQueue>(
-                        new RxQueue(nic_->get_rx_flow_buffer(nic_flow_id_),
-                                    nic_->get_mtu_size_bytes(),
-                                    cfg::nic::l_rx_queue_size));
+    rx_queue_ = RxQueue(nic_->get_rx_flow_buffer(nic_flow_id_),
+                        nic_->get_mtu_size_bytes(),
+                        cfg::nic::l_rx_queue_size);
+    rx_queue_.init();
 
 #ifdef NIC_CCIP_DMA
     current_batch_ptr = 0;
@@ -80,7 +80,7 @@ void RpcServerThread::_PullListen() {
         for(int i=0; i<batch_size && !stop_signal_; ++i) {
             // wait response
             uint32_t rx_rpc_id;
-            req_pckt = reinterpret_cast<RpcReqPckt*>(rx_queue_->get_read_ptr(rx_rpc_id));
+            req_pckt = reinterpret_cast<RpcReqPckt*>(rx_queue_.get_read_ptr(rx_rpc_id));
             while((req_pckt->hdr.ctl.valid == 0 ||
                    req_pckt->hdr.rpc_id == rx_rpc_id) &&
                   !stop_signal_) {
@@ -88,7 +88,7 @@ void RpcServerThread::_PullListen() {
 
             if (stop_signal_) continue;
 
-            rx_queue_->update_rpc_id(req_pckt->hdr.rpc_id);
+            rx_queue_.update_rpc_id(req_pckt->hdr.rpc_id);
 
             req_pckt_1[i] = *req_pckt;
 
@@ -115,7 +115,7 @@ void RpcServerThread::_PullListen() {
 
             // Get current buffer pointer
             uint8_t change_bit;
-            char* tx_ptr = tx_queue_->get_write_ptr(change_bit);
+            char* tx_ptr = tx_queue_.get_write_ptr(change_bit);
 
             // return value
 #ifdef NIC_CCIP_POLLING

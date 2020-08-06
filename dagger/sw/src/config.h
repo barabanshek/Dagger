@@ -10,7 +10,7 @@ namespace frpc {
             //   - in MTUs
             //   - see NicCCIP for MTU definition
             //   - only used with CCI-P DMA mode enabled
-            constexpr size_t tx_batch_size = 7;
+            constexpr size_t tx_batch_size = 0;
 
             // Log tx queue size
             //   - in MTUs
@@ -19,7 +19,7 @@ namespace frpc {
             //   - in UPI polling mode, any size allowed
             //   - in MMIO mode, must be equal to 0
             //   - in DMA mode, must be multiple of DMA batch size
-            constexpr size_t l_tx_queue_size = 4;
+            constexpr size_t l_tx_queue_size = 5;
             static_assert((1 << l_tx_queue_size) >= tx_batch_size,
                           "tx queue size should be multiple of tx batch size");
 
