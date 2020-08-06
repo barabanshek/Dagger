@@ -46,7 +46,7 @@ private:
     size_t nic_flow_id_;
 
     // Tx and Completion (Rx) queue
-    std::unique_ptr<TxQueue> tx_queue_;
+    TxQueue tx_queue_;
     std::unique_ptr<CompletionQueue> cq_;
 
     // rpc_id counter

@@ -34,8 +34,8 @@ private:
     size_t nic_flow_id_;
 
     // Tx and RX queue
-    std::unique_ptr<TxQueue> tx_queue_;
-    std::unique_ptr<RxQueue> rx_queue_;
+    TxQueue tx_queue_;
+    RxQueue rx_queue_;
 
     // RPC function pointer
     std::vector<const void*> rpc_fn_ptr_;

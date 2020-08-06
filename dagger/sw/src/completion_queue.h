@@ -39,7 +39,7 @@ private:
     size_t rpc_client_id_;
 
     // Rx queue
-    std::unique_ptr<RxQueue> rx_queue_;
+    RxQueue rx_queue_;
 
     // Thread
     std::thread thread_;

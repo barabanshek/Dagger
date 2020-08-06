@@ -14,7 +14,6 @@ RpcClientNonBlock::RpcClientNonBlock(const Nic* nic, size_t nic_flow_id, uint16_
         client_id_(client_id),
         nic_(nic),
         nic_flow_id_(nic_flow_id),
-        tx_queue_(nullptr),
         cq_(nullptr),
         rpc_id_cnt_(0) {
 #ifdef NIC_CCIP_MMIO
@@ -25,10 +24,10 @@ RpcClientNonBlock::RpcClientNonBlock(const Nic* nic, size_t nic_flow_id, uint16_
 #endif
 
     // Allocate tx-queue
-    tx_queue_ = std::unique_ptr<TxQueue>(
-                        new TxQueue(nic_->get_tx_flow_buffer(nic_flow_id_),
-                                    nic_->get_mtu_size_bytes(),
-                                    cfg::nic::l_tx_queue_size));    // TODO: either pointer of value, should be same as server
+    tx_queue_ = TxQueue(nic_->get_tx_flow_buffer(nic_flow_id_),
+                        nic_->get_mtu_size_bytes(),
+                        cfg::nic::l_tx_queue_size);
+    tx_queue_.init();
 
     // Allocate completion queue
     cq_ = std::unique_ptr<CompletionQueue>(
@@ -62,7 +61,7 @@ void RpcClientNonBlock::init_latency_profile(uint64_t* timestamp_send,
 int RpcClientNonBlock::foo(uint32_t a, uint32_t b) {
     // Get current buffer pointer
     uint8_t change_bit;
-    char* tx_ptr = tx_queue_->get_write_ptr(change_bit);
+    char* tx_ptr = tx_queue_.get_write_ptr(change_bit);
     if (tx_ptr >= nic_->get_tx_buff_end()) {
         FRPC_ERROR("Nic tx buffer overflow \n");
         assert(false);
@@ -141,7 +140,7 @@ int RpcClientNonBlock::foo(uint32_t a, uint32_t b) {
 int RpcClientNonBlock::boo(uint32_t a) {
     // Get current buffer pointer
     uint8_t change_bit;
-    char* tx_ptr = tx_queue_->get_write_ptr(change_bit);
+    char* tx_ptr = tx_queue_.get_write_ptr(change_bit);
     if (tx_ptr >= nic_->get_tx_buff_end()) {
         FRPC_ERROR("Nic tx buffer overflow \n");
         assert(false);

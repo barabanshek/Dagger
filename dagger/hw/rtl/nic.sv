@@ -56,8 +56,8 @@ module nic
     // CCI-P mode
     //`define CCIP_MMIO
     //`define CCIP_POLLING
-    `define CCIP_DMA
-    //`define CCIP_QUEUE_POLLING
+    //`define CCIP_DMA
+    `define CCIP_QUEUE_POLLING
     // log number of NIC flows
     localparam LMAX_NUM_OF_FLOWS  = 3;   // 2**3=8 flows
     localparam LMAX_RX_QUEUE_SIZE = 5;   // 2**5=32
@@ -67,7 +67,7 @@ module nic
     localparam CCIP_BACKWARD_VC      = eVC_VH0; // PCIe
     localparam CCIP_BACKWARD_WR_TYPE = eREQ_WRPUSH_I;
     // CCI-P polling rate
-    localparam CCIP_POLLING_RATE = 0;
+    localparam CCIP_POLLING_RATE = 5;
     // Log depth of the RPC I/O FIFO
     localparam RPC_IO_FIFO_LDEPTH= 3;
 

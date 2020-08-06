@@ -18,9 +18,9 @@ add_definitions(-D_FORTIFY_SOURCE=2)
 #add_definitions(-DENABLE_ASSERT=1)
 
 # CCI-P config
-#add_definitions(-DNIC_CCIP_POLLING)
+add_definitions(-DNIC_CCIP_POLLING)
 #add_definitions(-DNIC_CCIP_MMIO)
-add_definitions(-DNIC_CCIP_DMA)
+#add_definitions(-DNIC_CCIP_DMA)
 
 set(LIBRARIES ${LIBRARIES} -z noexecstack)
 set(LIBRARIES ${LIBRARIES} -z relro -z now)
