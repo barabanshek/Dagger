@@ -68,6 +68,70 @@ static int new_socket(struct addrinfo *ai);
 static ssize_t tcp_read(conn *arg, void *buf, size_t count);
 static ssize_t tcp_sendmsg(conn *arg, struct msghdr *msg, int flags);
 static ssize_t tcp_write(conn *arg, void *buf, size_t count);
+static rel_time_t realtime(const time_t exptime);
+
+// Dagger RPC layer
+#include "rpc_threaded_server_wrapper.h"
+
+// Build with the follwoing comand
+// make -j12 CPPFLAGS="-I../../src/" LDFLAGS="-L/homes/nikita/dagger/sw/build" LIBS="-ldagger -lhugetlbfs -levent"
+
+// Export before run
+// export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/homes/nikita/dagger/sw/build/
+
+static int process_SET_from_dagger(int key, int val) {
+    //printf("Dagger: new request\n");
+
+    char command_key[16];
+    sprintf(command_key, "%d", key);
+
+    char command_val[16];
+    sprintf(command_val, "%d\r\n", val);
+
+    // Allocate item
+    item *it;
+    it = item_alloc(command_key, strlen(command_key), 0, realtime(60), strlen(command_val));
+    if (it == 0) {
+        printf("Dagger: failed to allocate memcached item\n");
+        return 1;
+    }
+
+    uint64_t req_cas_id=0;
+    ITEM_set_cas(it, req_cas_id);
+
+    // Copy data
+    memcpy(ITEM_data(it), command_val, strlen(command_val));
+
+    // Check is chunked
+    if ((it->it_flags & ITEM_CHUNKED) != 0) {
+        printf("Dagger: chunked items used, unsupported!\n");
+        return 1;
+    }
+    if (strncmp(ITEM_data(it) + it->nbytes - 2, "\r\n", 2) != 0) {
+        printf("Dagger: BAD data chunk\n");
+        return 1;
+    }
+
+    // Link item in
+    uint32_t hv;
+    hv = hash(ITEM_key(it), it->nkey);
+    item_lock(hv);
+    do_item_link(it, hv);
+    item_unlock(hv);
+
+    return key + val;
+
+    // Check is there
+    //it = assoc_find(command_key, strlen(command_key), hv);
+    //if (it == NULL) {
+    //    printf("Dagger: inserted failed!\n");
+    //    return 1;
+    //} else {
+    //    printf("Dagger: inserted!\n");
+    //    return key + val;
+    //}
+}
+
 
 enum try_read_result {
     READ_DATA_RECEIVED,
@@ -10297,6 +10361,15 @@ int main (int argc, char **argv) {
 
     /* Initialize the uriencode lookup table. */
     uriencode_init();
+
+    /* init Dagger RPC */
+    int r = rpc_server_thread_wrapper_init_and_start_server();
+    if (r != 0)
+        return r;
+    r = rpc_server_thread_wrapper_register_new_listening_thread(&process_SET_from_dagger);
+    if (r != 0)
+        return r;
+    fprintf(stderr, "Dagger layer initialized\n");
 
     /* enter the event loop */
     while (!stop_main_loop) {
