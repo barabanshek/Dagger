@@ -26,6 +26,7 @@ set(LIBRARIES ${LIBRARIES} -z noexecstack)
 set(LIBRARIES ${LIBRARIES} -z relro -z now)
 set(LIBRARIES ${LIBRARIES} pthread -pie)
 set(LIBRARIES ${LIBRARIES} -luuid)
+set(LIBRARIES ${LIBRARIES} -shared)
 
 # Testing
 enable_testing()
@@ -49,7 +50,8 @@ set(SOURCES
     src/tx_queue.cc
     src/rx_queue.cc
     src/completion_queue.cc
-    src/rpc_client_nonblocking.cc)
+    src/rpc_client_nonblocking.cc
+    src/rpc_threaded_server_wrapper.cc)
 
 set(TEST_SOURCES
     tests/client_pool_test.cc
@@ -107,3 +109,8 @@ set(ASE_SAMPLE_NONBLOCK_SRC ${CMAKE_SOURCE_DIR}/samples/joint_nonblocking_ase_pr
 add_executable(rpc_joint_nonblocking_ase ${ASE_SAMPLE_NONBLOCK_SRC} ${SOURCES})
 target_compile_definitions(rpc_joint_nonblocking_ase PUBLIC -DASE_SIMULATION)
 target_link_libraries(rpc_joint_nonblocking_ase ${ASE_LIBS} ${LIBRARIES})
+
+# Compile Dagger as a static library with a C wrapper
+add_library(dagger SHARED ${SOURCES})
+target_compile_definitions(dagger PRIVATE PROFILE_LATENCY=1)
+target_link_libraries(dagger ${FPGA_LIBS} ${LIBRARIES})

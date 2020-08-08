@@ -8,6 +8,8 @@
 #include "logger.h"
 #include "utils.h"
 
+#include <iostream>
+
 namespace frpc {
 
 RpcClientNonBlock::RpcClientNonBlock(const Nic* nic, size_t nic_flow_id, uint16_t client_id):
