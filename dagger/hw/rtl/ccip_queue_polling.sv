@@ -16,9 +16,10 @@
 //                              be updated.
 //
 
-`include "async_fifo_channel.sv"
 `include "platform_if.vh"
 `include "nic_defs.vh"
+`include "async_fifo_channel.sv"
+`include "ccip_transmitter.sv"
 
 module ccip_queue_polling
     #(
@@ -285,7 +286,7 @@ module ccip_queue_polling
 
             if (ccip_read_poll_data_valid_1d) begin
                 if (d_bit_rd_1d != ccip_read_poll_data_update_flag_1d) begin
-                    $display("NIC%d: new value read from flow %d, queue %d", NIC_ID, ccip_flow_cnt_1d, ccip_queue_cnt_1d);
+                    $display("NIC%d: new value read from flow %d, queue entry %d", NIC_ID, ccip_flow_cnt_1d, ccip_queue_cnt_1d);
                     $display("NIC%d:        value= %p", NIC_ID, ccip_read_poll_data_1d);
 
                     // Increment update flag and forward RPC
@@ -310,138 +311,41 @@ module ccip_queue_polling
 
     // =============================================================
     // NIC - CPU datapath
-    // - eREQ_WRPUSH_I mode
     // =============================================================
-    localparam LTX_FIFO_DEPTH = 6;
+    localparam LTX_FIFO_DEPTH = 3;
 
-    logic tx_fifo_pop;
-    logic [LTX_FIFO_DEPTH-1:0] tx_fifo_dw;
-    logic tx_fifo_pop_valid;
-    RpcIf tx_fifo_pop_data;
+    logic ccip_transmitter_initialized;
+    logic ccip_transmitter_error;
 
-    async_fifo_channel #(
-            .DATA_WIDTH($bits(RpcIf)),
-            .LOG_DEPTH(LTX_FIFO_DEPTH)
-        )
-    tx_batching_fifo (
-            .clear(reset),
-            .clk_1(clk),
-            .push_en(start && rpc_in_valid),
-            .push_data({rpc_in}),
-            .clk_2(clk),
-            .pop_enable(tx_fifo_pop),
-            .pop_valid(tx_fifo_pop_valid),
-            .pop_data({tx_fifo_pop_data}),
-            .pop_dw(tx_fifo_dw),
-            .error(error)
+    ccip_transmitter #(
+            .NIC_ID(NIC_ID),
+            .LMAX_NUM_OF_FLOWS(LMAX_NUM_OF_FLOWS)
+        ) ccip_tx (
+            .clk(clk),
+            .reset(reset),
+
+            .number_of_flows(number_of_flows),
+            .tx_base_addr(rx_base_addr),
+            .l_tx_batch_size(l_tx_batch_size),
+            .start(start),
+
+            .initialize(initialize),
+            .initialized(ccip_transmitter_initialized),
+            .error(ccip_transmitter_error),
+
+            .sRx_c1TxAlmFull(sRx_c1TxAlmFull),
+            .sTx_c1(sTx_c1),
+
+            .ccip_tx_ready(ccip_tx_ready),
+            .rpc_in(rpc_in),
+            .rpc_in_valid(rpc_in_valid),
+            .rpc_flow_id_in(rpc_flow_id_in)
         );
 
-    typedef enum logic { TxIdle, TxReadFIFO } TxState;
-
-    TxState tx_state;
-    logic [LMAX_CCIP_BATCH-1:0] tx_in_cnt;
-    logic [LMAX_CCIP_BATCH-1:0] tx_out_cnt;
-    logic [LMAX_NUM_OF_FLOWS-1:0] tx_out_flow;
-    logic [LMAX_NUM_OF_FLOWS+LMAX_CCIP_BATCH:0] tx_out_flow_shift;
-
-    // Batching shifts
-    logic [LMAX_CCIP_BATCH:0] tx_batch_size;
-    t_ccip_clLen tx_cl_len;
-    always_comb begin
-        if (l_tx_batch_size == 0) begin
-            tx_batch_size     = 1;
-            tx_cl_len         = eCL_LEN_1;
-            tx_out_flow_shift = tx_out_flow;
-        end else if (l_tx_batch_size == 1) begin
-            tx_batch_size     = 2;
-            tx_cl_len         = eCL_LEN_2;
-            tx_out_flow_shift = tx_out_flow << 1;
-        end else if (l_tx_batch_size == 2) begin
-            tx_batch_size     = 4;
-            tx_cl_len         = eCL_LEN_4;
-            tx_out_flow_shift = tx_out_flow << 2;
-        end
-    end
-
-    // Read from TX FIFO
-    always_ff @(posedge clk) begin
-        if (reset) begin
-            tx_state    <= TxIdle;
-            tx_in_cnt   <= {($bits(tx_in_cnt)){1'b0}};
-            tx_fifo_pop <= 1'b0;
-
-        end else begin
-            tx_fifo_pop <= 1'b0;
-
-            if (tx_state == TxIdle && tx_fifo_dw >= tx_batch_size) begin
-                tx_fifo_pop <= 1'b1;
-                tx_state    <= TxReadFIFO;
-            end
-
-            if (tx_state == TxReadFIFO) begin
-                if (tx_in_cnt == tx_batch_size - 1) begin
-                    tx_in_cnt   <= {($bits(tx_in_cnt)){1'b0}};
-                    tx_state    <= TxIdle;
-                end else begin
-                    tx_fifo_pop <= 1'b1;
-                    tx_in_cnt   <= tx_in_cnt + 1;
-                    tx_state    <= TxReadFIFO;
-                end
-            end
-        end
-    end
-
-    // Delay
-    t_ccip_clAddr rx_base_addr_d;
-    always_ff @(posedge clk) begin
-        rx_base_addr_d <= rx_base_addr;
-    end
-
-    // Write to CCI-P
-    always_ff @(posedge clk) begin
-        if (reset) begin
-            sTx_c1.valid   <= 1'b0;
-            tx_out_cnt     <= {($bits(tx_out_cnt)){1'b0}};
-            tx_out_flow    <= {($bits(tx_out_flow)){1'b0}};
-
-        end else begin
-            // Data
-            sTx_c1.hdr                    <= t_ccip_c1_ReqMemHdr'(0);
-            sTx_c1.hdr.cl_len             <= tx_cl_len;
-            sTx_c1.hdr.vc_sel             <= eVC_VH0;
-            sTx_c1.hdr.req_type           <= eREQ_WRLINE_I;
-            sTx_c1.hdr.address            <= rx_base_addr_d + tx_out_flow_shift + tx_out_cnt;
-            sTx_c1.hdr.sop                <= tx_out_cnt == 0;
-            sTx_c1.data[$bits(RpcIf)-1:0] <= tx_fifo_pop_data;
-
-            // Control
-            sTx_c1.valid <= 1'b0;
-            if (tx_fifo_pop_valid) begin
-                $display("NIC%d: Writing back to flow %d", NIC_ID, tx_out_flow);
-                $display("NIC%d:         %dth value= %p", NIC_ID, tx_out_cnt, tx_fifo_pop_data);
-
-                sTx_c1.valid                  <= 1'b1;
-
-                // Counters
-                if (tx_out_cnt == tx_batch_size - 1) begin
-                    if (tx_out_flow == number_of_flows) begin
-                        tx_out_flow <= {($bits(tx_out_flow)){1'b0}};
-                    end else begin
-                        tx_out_flow <= tx_out_flow + 1;
-                    end
-                    tx_out_cnt <= {($bits(tx_out_cnt)){1'b0}};
-                end else begin
-                    tx_out_cnt <= tx_out_cnt + 1;
-                end
-            end
-        end
-    end
-
-    // Assert CCI-P tx ready signal
-    assign ccip_tx_ready =  ~sRx_c1TxAlmFull;
 
     // Status
-    assign initialized = d_bit_tb_initialized;
+    assign initialized = d_bit_tb_initialized & ccip_transmitter_initialized;
+    assign error = ccip_transmitter_error;
 
 
 endmodule

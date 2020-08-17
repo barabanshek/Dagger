@@ -266,6 +266,9 @@ module nic
             iRegNicInit         <= 1'b0;
 
         end else begin
+            // Default values
+            iRegNicInit <= 1'b0;
+
             if (is_mem_tx_addr_csr_write) begin
                 $display("NIC%d: iRegMemTxAddr configured: %08h", NIC_ID, sRx.c0.data);
                 iRegMemTxAddr <= t_ccip_clAddr'(sRx.c0.data);

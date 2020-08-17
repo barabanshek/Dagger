@@ -22,6 +22,7 @@ module async_fifo_channel
     output logic                  pop_valid,
     output logic [DATA_WIDTH-1:0] pop_data,
     output logic [LOG_DEPTH-1:0]  pop_dw,
+    output logic                  pop_empty,
 
     output logic error
     );
@@ -90,5 +91,6 @@ module async_fifo_channel
     end
     assign error = packet_lost_detected;
 
+    assign pop_empty = fifo_empty;
 
 endmodule
