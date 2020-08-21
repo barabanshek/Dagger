@@ -10,7 +10,8 @@
 #endif
 
 EXTERNC int rpc_server_thread_wrapper_init_and_start_server();
-EXTERNC int rpc_server_thread_wrapper_register_new_listening_thread(int (*foo)(int, int));
+EXTERNC int rpc_server_thread_wrapper_register_new_listening_thread(int (*set)(int, int),
+																	int (*get)(int));
 
 #undef EXTERNC
 
