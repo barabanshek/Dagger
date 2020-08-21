@@ -93,6 +93,7 @@ static int process_SET_from_dagger(int key, int val) {
     it = item_alloc(command_key, strlen(command_key), 0, realtime(60), strlen(command_val));
     if (it == 0) {
         printf("Dagger: failed to allocate memcached item\n");
+        assert(false);
         return 1;
     }
 
@@ -120,16 +121,28 @@ static int process_SET_from_dagger(int key, int val) {
     item_unlock(hv);
 
     return key + val;
+}
 
-    // Check is there
-    //it = assoc_find(command_key, strlen(command_key), hv);
-    //if (it == NULL) {
-    //    printf("Dagger: inserted failed!\n");
-    //    return 1;
-    //} else {
-    //    printf("Dagger: inserted!\n");
-    //    return key + val;
-    //}
+static int process_GET_from_dagger(int key) {
+    char command_key[16];
+    sprintf(command_key, "%d", key);
+    size_t nkey = strlen(command_key);
+
+    uint32_t hv;
+    hv = hash(command_key, nkey);
+    item_lock(hv);
+    item *it = assoc_find(command_key, nkey, hv);
+    if (it != NULL) {
+        refcount_incr(it);
+    }
+    item_unlock(hv);
+
+    if (it != NULL) {
+        char* val = ITEM_data(it);
+        return atoi(val);
+    } else {
+        return 0;
+    }
 }
 
 
@@ -9316,7 +9329,7 @@ int main (int argc, char **argv) {
                     fprintf(stderr, "Initial hashtable multiplier of %d is too low\n",
                         settings.hashpower_init);
                     return 1;
-                } else if (settings.hashpower_init > 32) {
+                } else if (settings.hashpower_init > 128) {
                     fprintf(stderr, "Initial hashtable multiplier of %d is too high\n"
                         "Choose a value based on \"STAT hash_power_level\" from a running instance\n",
                         settings.hashpower_init);
@@ -10366,9 +10379,13 @@ int main (int argc, char **argv) {
     int r = rpc_server_thread_wrapper_init_and_start_server();
     if (r != 0)
         return r;
-    r = rpc_server_thread_wrapper_register_new_listening_thread(&process_SET_from_dagger);
-    if (r != 0)
-        return r;
+    int ti;
+    for (ti=0; ti<settings.num_threads; ++ti) {
+        r = rpc_server_thread_wrapper_register_new_listening_thread(&process_SET_from_dagger,
+                                                                    &process_GET_from_dagger);
+        if (r != 0)
+            return r;
+    }
     fprintf(stderr, "Dagger layer initialized\n");
 
     /* enter the event loop */
