@@ -124,6 +124,17 @@ int NicPollingCCIP::configure_data_plane() {
         return 1;
     }
 
+    // Configure polling rate
+    res = fpgaWriteMMIO64(accel_handle_,
+                          0,
+                          base_nic_addr_ + iRegPollingRate,
+                          cfg::nic::polling_rate);
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Nic configuration error, failed to configure polling rate,"
+                    "nic returned %d\n", res);
+        return 1;
+    }
+
     // Configure rx batch size
     res = fpgaWriteMMIO64(accel_handle_,
                           0,

@@ -19,7 +19,7 @@ namespace frpc {
             //   - in UPI polling mode, any size allowed
             //   - in MMIO mode, must be equal to 0
             //   - in DMA mode, must be multiple of DMA batch size
-            constexpr size_t l_tx_queue_size = 5;
+            constexpr size_t l_tx_queue_size = 4;
             static_assert((1 << l_tx_queue_size) >= tx_batch_size,
                           "tx queue size should be multiple of tx batch size");
 
@@ -36,6 +36,10 @@ namespace frpc {
             constexpr size_t l_rx_queue_size = 0;
             static_assert(l_rx_queue_size == l_rx_batch_size,
                           "rx queue size should be equal to rx batch size");
+
+            // Polling rate
+            //   - only used with CCI-P polling mode enabled
+            constexpr size_t polling_rate = 10;
 
         } // namespace nic
 

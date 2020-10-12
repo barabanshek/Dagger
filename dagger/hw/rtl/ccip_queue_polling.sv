@@ -28,7 +28,7 @@ module ccip_queue_polling
         // total number of NICs in the system
         parameter NUM_SUB_AFUS = 1,
         // polling rate
-        parameter POLLING_RATE = 0,
+        parameter LMAX_POLLING_RATE = 8,
         // log # of NIC flows
         parameter LMAX_NUM_OF_FLOWS = 1,
         // log depth of queues in each flow
@@ -46,6 +46,7 @@ module ccip_queue_polling
         input logic[LMAX_RX_QUEUE_SIZE-1:0] rx_queue_size,
         input t_ccip_clAddr                 tx_base_addr,
         input logic[LMAX_CCIP_BATCH-1:0]  l_tx_batch_size,
+        input logic[LMAX_POLLING_RATE-1:0]  tx_polling_rate,
         input logic                         start,
 
         // Status
@@ -97,7 +98,7 @@ module ccip_queue_polling
     logic[1:0] rx_batch_cnt;
     logic[MDATA_W-1:0]  queue_poll_cnt;
     logic[MDATA_W-1:0]  flow_poll_cnt;
-    logic[7:0]          poll_frq_div_cnt;
+    logic[LMAX_POLLING_RATE-1:0] poll_frq_div_cnt;
 
     always_ff @(posedge clk) begin
         if (reset) begin
@@ -133,7 +134,7 @@ module ccip_queue_polling
             end
 
             if (rx_state == RxDelay) begin
-                if (poll_frq_div_cnt == POLLING_RATE) begin
+                if (poll_frq_div_cnt == tx_polling_rate) begin
                     // Switch entry/queue
                     if (queue_poll_cnt == rx_queue_size - RX_BATCH_SIZE + 1) begin
                         queue_poll_cnt <= {($bits(queue_poll_cnt)){1'b0}};

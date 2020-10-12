@@ -44,7 +44,8 @@ public:
     static constexpr uint8_t iRegCcipDmaTrg  = 80;   // hw: 20, W
     static constexpr uint8_t iRegRxQueueSize = 88;   // hw: 22, W
     static constexpr uint8_t lRegTxBatchSize = 96;   // hw: 24, W
-    static constexpr uint8_t lRegRxBatchSize = 104;   // hw: 26, W
+    static constexpr uint8_t lRegRxBatchSize = 104;  // hw: 26, W
+    static constexpr uint8_t iRegPollingRate = 112;  // hw: 28, W
     static constexpr uint16_t iMMIOSpaceStart = 256;  // hw: 64, -
 
     // Hardware register map constants
