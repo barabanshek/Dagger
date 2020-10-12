@@ -172,7 +172,7 @@ void RpcServerThread::_PullListen() {
         }
     }
 
-    FRPC_INFO("Thread %d is stoped\n", thread_id_);
+    FRPC_INFO("Thread %d is stopped\n", thread_id_);
 }
 
 }  // namespace frpc

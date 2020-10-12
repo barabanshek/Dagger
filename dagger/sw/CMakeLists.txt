@@ -3,7 +3,7 @@ project(F-RPC)
 
 set(CMAKE_CXX_COMPILER g++)
 
-add_definitions(-std=c++11 -march=native)
+add_definitions(-std=c++11 -O1 -march=native)
 add_definitions(-Wall -Wextra -Wabi -Wsign-conversion -Wformat -Wformat-security)
 # TODO: make it compilable with -Werror
 #add_definitions(-Werror)
@@ -26,7 +26,7 @@ set(LIBRARIES ${LIBRARIES} -z noexecstack)
 set(LIBRARIES ${LIBRARIES} -z relro -z now)
 set(LIBRARIES ${LIBRARIES} pthread -pie)
 set(LIBRARIES ${LIBRARIES} -luuid)
-set(LIBRARIES ${LIBRARIES} -shared)
+#set(LIBRARIES ${LIBRARIES} -shared)
 
 # Testing
 enable_testing()
@@ -111,6 +111,6 @@ target_compile_definitions(rpc_joint_nonblocking_ase PUBLIC -DASE_SIMULATION)
 target_link_libraries(rpc_joint_nonblocking_ase ${ASE_LIBS} ${LIBRARIES})
 
 # Compile Dagger as a static library with a C wrapper
-add_library(dagger SHARED ${SOURCES})
-target_compile_definitions(dagger PRIVATE PROFILE_LATENCY=1)
-target_link_libraries(dagger ${FPGA_LIBS} ${LIBRARIES})
+#add_library(dagger SHARED ${SOURCES})
+#target_compile_definitions(dagger PRIVATE PROFILE_LATENCY=1)
+#target_link_libraries(dagger ${FPGA_LIBS} ${LIBRARIES})

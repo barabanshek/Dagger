@@ -60,14 +60,14 @@ module nic
     `define CCIP_QUEUE_POLLING
     // log number of NIC flows
     localparam LMAX_NUM_OF_FLOWS  = 3;   // 2**3=8 flows
-    localparam LMAX_RX_QUEUE_SIZE = 5;   // 2**5=32
+    localparam LMAX_RX_QUEUE_SIZE = 4;   // 2**4=16
     // CCI-P VCs
     localparam CCIP_FORWARD_VC       = eVC_VH0; // PCIe
     localparam CCIP_FORWARD_RD_TYPE  = eREQ_RDLINE_I;
     localparam CCIP_BACKWARD_VC      = eVC_VH0; // PCIe
     localparam CCIP_BACKWARD_WR_TYPE = eREQ_WRPUSH_I;
-    // CCI-P polling rate
-    localparam CCIP_POLLING_RATE = 5;
+    // Log max CCI-P polling rate
+    localparam LMAX_POLLING_RATE = 8;
     // Log depth of the RPC I/O FIFO
     localparam RPC_IO_FIFO_LDEPTH= 3;
 
@@ -126,6 +126,8 @@ module nic
                         = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 24);
     localparam t_ccip_mmioAddr addrRxBatchSize
                         = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 26);
+    localparam t_ccip_mmioAddr addrPollingRate
+                        = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 28);
 
 
     // Registers
@@ -142,6 +144,7 @@ module nic
     logic[LMAX_RX_QUEUE_SIZE-1:0]  iRegRxQueueSize;  // iRegRxQueueSize = rx queue size - 1
     logic[LMAX_CCIP_BATCH-1:0]     lRegTxBatchSize;
     logic[LMAX_CCIP_DMA_BATCH-1:0] iRegRxBatchSize;
+    logic[LMAX_POLLING_RATE-1:0]   iRegPollingRate;
 
     // CSR read logic
     logic is_csr_read;
@@ -257,6 +260,10 @@ module nic
     assign is_rx_batch_size_csr_write = is_csr_write &&
                                         (mmio_req_hdr.address == addrRxBatchSize);
 
+    logic is_polling_rate_csr_write;
+    assign is_polling_rate_csr_write = is_csr_write &&
+                                        (mmio_req_hdr.address == addrPollingRate);
+
     always_ff @(posedge ccip_clk) begin
         if (reset) begin
             iRegNicStart        <= 1'b0;
@@ -312,6 +319,11 @@ module nic
             if (is_rx_batch_size_csr_write) begin
                 $display("NIC%d: iRegRxBatchSize received: %08h", NIC_ID, sRx.c0.data);
                 iRegRxBatchSize <= sRx.c0.data[LMAX_CCIP_DMA_BATCH-1:0];
+            end
+
+            if (is_polling_rate_csr_write) begin
+                $display("NIC%d: iRegPollingRate received: %08h", NIC_ID, sRx.c0.data);
+                iRegPollingRate <= sRx.c0.data[LMAX_POLLING_RATE-1:0];
             end
         end
     end
@@ -454,7 +466,7 @@ module nic
     ccip_queue_polling #(
         .NIC_ID(NIC_ID),
         .NUM_SUB_AFUS(NUM_SUB_AFUS),
-        .POLLING_RATE(CCIP_POLLING_RATE),
+        .LMAX_POLLING_RATE(LMAX_POLLING_RATE),
         .LMAX_NUM_OF_FLOWS(LMAX_NUM_OF_FLOWS),
         .LMAX_RX_QUEUE_SIZE(LMAX_RX_QUEUE_SIZE)
     ) ccip_queue_poll (
@@ -467,6 +479,7 @@ module nic
         .rx_queue_size(iRegRxQueueSize),
         .tx_base_addr(iRegMemTxAddr),
         .l_tx_batch_size(lRegTxBatchSize),
+        .tx_polling_rate(iRegPollingRate),
 
         .start(iRegNicStart),
 
