@@ -75,25 +75,41 @@ int RpcClientNonBlock::foo(uint32_t a, uint32_t b) {
 
     // Send request
 #ifdef NIC_CCIP_POLLING
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.rpc_id          = rpc_id;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.num_of_args     = 2;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.fn_id           = 0;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.ctl.direction   = DirReq;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.ctl.update_flag = change_bit;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->arg1                = a;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->arg2                = b;
-    _mm_mfence();
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.ctl.valid = 1;
-#elif NIC_CCIP_MMIO
-    RpcReqPckt request __attribute__ ((aligned (64)));
+    RpcPckt* tx_ptr_casted = reinterpret_cast<RpcPckt*>(tx_ptr);
 
-    request.hdr.rpc_id          = rpc_id;
-    request.hdr.num_of_args     = 2;
-    request.hdr.fn_id           = 0;
-    request.hdr.ctl.direction   = DirReq;
-    request.hdr.ctl.valid       = 1;
-    request.arg1                = a;
-    request.arg2                = b;
+    tx_ptr_casted->hdr.rpc_id      = rpc_id;
+    tx_ptr_casted->hdr.n_of_frames = 1;
+    tx_ptr_casted->hdr.frame_id    = 0;
+
+    tx_ptr_casted->hdr.fn_id  = 0;
+    tx_ptr_casted->hdr.argl   = 8;
+
+    tx_ptr_casted->hdr.ctl.req_type    = rpc_request;
+    tx_ptr_casted->hdr.ctl.update_flag = change_bit;
+
+    // Make data layout
+    *(reinterpret_cast<uint32_t*>(tx_ptr_casted->argv))                    = a;
+    *(reinterpret_cast<uint32_t*>(tx_ptr_casted->argv + sizeof(uint32_t))) = b;
+
+    // Set valid
+    _mm_mfence();
+    tx_ptr_casted->hdr.ctl.valid = 1;
+#elif NIC_CCIP_MMIO
+    RpcPckt request __attribute__ ((aligned (64)));
+
+    request.hdr.rpc_id      = rpc_id;
+    request.hdr.n_of_frames = 1;
+    request.hdr.frame_id    = 0;
+
+    request.hdr.fn_id = 0;
+    request.hdr.argl  = 8;
+
+    request.hdr.ctl.req_type = rpc_request;
+    request.hdr.ctl.valid    = 1;
+
+    // Make data layout
+    *(reinterpret_cast<uint32_t*>(request.argv))                    = a;
+    *(reinterpret_cast<uint32_t*>(request.argv + sizeof(uint32_t))) = b;
 
     // MMIO only supports AVX writes
     _mm256_store_si256(reinterpret_cast<__m256i*>(tx_ptr),
@@ -102,14 +118,23 @@ int RpcClientNonBlock::foo(uint32_t a, uint32_t b) {
                        *(reinterpret_cast<__m256i*>(&request)));
     _mm_mfence();
 #elif NIC_CCIP_DMA
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.rpc_id          = rpc_id;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.num_of_args     = 2;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.fn_id           = 0;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.ctl.direction   = DirReq;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.ctl.update_flag = change_bit;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->arg1                = a;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->arg2                = b;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.ctl.valid       = 1;
+    RpcPckt* tx_ptr_casted = reinterpret_cast<RpcPckt*>(tx_ptr);
+
+    tx_ptr_casted->hdr.rpc_id      = rpc_id;
+    tx_ptr_casted->hdr.n_of_frames = 1;
+    tx_ptr_casted->hdr.frame_id    = 0;
+
+    tx_ptr_casted->hdr.fn_id = 0;
+    tx_ptr_casted->hdr.argl  = 8;
+
+    tx_ptr_casted->hdr.ctl.req_type    = rpc_request;
+    tx_ptr_casted->hdr.ctl.update_flag = change_bit;
+
+    // Make data layout
+    *(reinterpret_cast<uint32_t*>(tx_ptr_casted->argv))                    = a;
+    *(reinterpret_cast<uint32_t*>(tx_ptr_casted->argv + sizeof(uint32_t))) = b;
+
+    tx_ptr_casted->hdr.ctl.valid = 1;
     _mm_mfence();
 
     if (batch_counter == cfg::nic::tx_batch_size - 1) {
@@ -154,25 +179,39 @@ int RpcClientNonBlock::boo(uint32_t a) {
 
     // Send request
 #ifdef NIC_CCIP_POLLING
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.rpc_id          = rpc_id;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.num_of_args     = 1;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.fn_id           = 1;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.ctl.direction   = DirReq;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.ctl.update_flag = change_bit;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->arg1                = a;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->arg2                = ARG_NOT_DEFINED;
-    _mm_mfence();
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.ctl.valid = 1;
-#elif NIC_CCIP_MMIO
-    RpcReqPckt request __attribute__ ((aligned (64)));
+    RpcPckt* tx_ptr_casted = reinterpret_cast<RpcPckt*>(tx_ptr);
 
-    request.hdr.rpc_id          = rpc_id;
-    request.hdr.num_of_args     = 1;
-    request.hdr.fn_id           = 1;
-    request.hdr.ctl.direction   = DirReq;
-    request.hdr.ctl.valid       = 1;
-    request.arg1                = a;
-    request.arg2                = ARG_NOT_DEFINED;
+    tx_ptr_casted->hdr.rpc_id      = rpc_id;
+    tx_ptr_casted->hdr.n_of_frames = 1;
+    tx_ptr_casted->hdr.frame_id    = 0;
+
+    tx_ptr_casted->hdr.fn_id  = 1;
+    tx_ptr_casted->hdr.argl   = 4;
+
+    tx_ptr_casted->hdr.ctl.req_type    = rpc_request;
+    tx_ptr_casted->hdr.ctl.update_flag = change_bit;
+
+    // Make data layout
+    *(reinterpret_cast<uint32_t*>(tx_ptr_casted->argv)) = a;
+
+    // Set valid
+    _mm_mfence();
+    tx_ptr_casted->hdr.ctl.valid = 1;
+#elif NIC_CCIP_MMIO
+    RpcPckt request __attribute__ ((aligned (64)));
+
+    request.hdr.rpc_id      = rpc_id;
+    request.hdr.n_of_frames = 1;
+    request.hdr.frame_id    = 0;
+
+    request.hdr.fn_id = 1;
+    request.hdr.argl  = 4;
+
+    request.hdr.ctl.req_type = rpc_request;
+    request.hdr.ctl.valid    = 1;
+
+    // Make data layout
+    *(reinterpret_cast<uint32_t*>(request.argv)) = a;
 
     // MMIO only supports AVX writes
     _mm256_store_si256(reinterpret_cast<__m256i*>(tx_ptr),
@@ -181,14 +220,22 @@ int RpcClientNonBlock::boo(uint32_t a) {
                        *(reinterpret_cast<__m256i*>(&request)));
     _mm_mfence();
 #elif NIC_CCIP_DMA
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.rpc_id          = rpc_id;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.num_of_args     = 1;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.fn_id           = 1;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.ctl.direction   = DirReq;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.ctl.update_flag = change_bit;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->arg1                = a;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->arg2                = ARG_NOT_DEFINED;
-    (reinterpret_cast<RpcReqPckt*>(tx_ptr))->hdr.ctl.valid       = 1;
+    RpcPckt* tx_ptr_casted = reinterpret_cast<RpcPckt*>(tx_ptr);
+
+    tx_ptr_casted->hdr.rpc_id      = rpc_id;
+    tx_ptr_casted->hdr.n_of_frames = 1;
+    tx_ptr_casted->hdr.frame_id    = 0;
+
+    tx_ptr_casted->hdr.fn_id = 1;
+    tx_ptr_casted->hdr.argl  = 4;
+
+    tx_ptr_casted->hdr.ctl.req_type    = rpc_request;
+    tx_ptr_casted->hdr.ctl.update_flag = change_bit;
+
+    // Make data layout
+    *(reinterpret_cast<uint32_t*>(tx_ptr_casted->argv)) = a;
+
+    tx_ptr_casted->hdr.ctl.valid = 1;
     _mm_mfence();
 
     if (batch_counter == cfg::nic::tx_batch_size - 1) {

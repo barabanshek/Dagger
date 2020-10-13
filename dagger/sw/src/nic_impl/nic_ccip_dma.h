@@ -12,7 +12,7 @@
 
 namespace frpc {
 
-#define CL(x) ((x) * NicCCIP::cacheline_size_bytes)
+#define CL(x) ((x) * cfg::sys::cl_size_bytes)
 
 /// DMA-based CCIP NIC.
 /// Provides software support for CCI-P DMA.

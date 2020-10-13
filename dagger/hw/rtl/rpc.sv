@@ -31,17 +31,9 @@ module rpc
 
     );
 
+    parameter DIV_TO_SHIFT_8 = 3;
 
     // Serialization
-    RpcReqPckt  rpc_req_pck_ser;
-    RpcRespPckt rpc_resp_pck_ser;
-
-    always_comb begin
-        // convert RpcPckt to RpcReqPckt and RpcRespPckt
-        rpc_req_pck_ser  = rpc_in.rpc_data;
-        rpc_resp_pck_ser = rpc_in.rpc_data;
-    end
-
     always_ff @(posedge clk) begin
         if (reset) begin
             network_tx_out       <= {($bits(NetworkPacketInternal)){1'b0}};
@@ -54,35 +46,18 @@ module rpc
 
             // Serialize rpc to network
             if (rpc_valid_in) begin
-                if (rpc_in.rpc_data.hdr.ctl.req_type == rpcReq) begin
-                    // serialize requests
-                    $display("NIC%d::RPC serializing rpc as request %p", NIC_ID, rpc_req_pck_ser);
+                $display("NIC%d::RPC serializing rpc data %p", NIC_ID, rpc_in.rpc_data);
 
-                    // **********************************
-                    //
-                    // More complex RPC data transformation should be placed here:
-                    // - compression
-                    // - encryption
-                    // - etc.
-                    //
-                    // **********************************
-                    network_tx_out.hdr.payload_size               <= $bits(RpcReqPckt);
-                    network_tx_out.payload[$bits(RpcReqPckt)-1:0] <= rpc_req_pck_ser;
-                end else begin
-                    // serialize responses
-                    $display("NIC%d::RPC serializing rpc as response %p", NIC_ID, rpc_resp_pck_ser);
-
-                    // **********************************
-                    //
-                    // More complex RPC data transformation should be placed here:
-                    // - compression
-                    // - encryption
-                    // - etc.
-                    //
-                    // **********************************
-                    network_tx_out.hdr.payload_size                <= $bits(RpcRespPckt);
-                    network_tx_out.payload[$bits(RpcRespPckt)-1:0] <= rpc_resp_pck_ser;
-                end
+                // **********************************
+                //
+                // More complex RPC data transformation should be placed here:
+                // - compression
+                // - encryption
+                // - etc.
+                //
+                // **********************************
+                network_tx_out.hdr.payload_size <= ($bits(RpcHeader) >> DIV_TO_SHIFT_8) + rpc_in.rpc_data.hdr.argl;
+                network_tx_out.payload[$bits(RpcPckt)-1:0] <= rpc_in.rpc_data;
 
                 network_tx_out.hdr.conn_id <= rpc_in.flow_id;
                 network_tx_valid_out       <= 1'b1;
@@ -92,18 +67,6 @@ module rpc
 
 
     // Deserialization
-    RpcReqPckt  rpc_req_pck_deser;
-    RpcRespPckt rpc_resp_pck_deser;
-    RpcPckt     rpc_pck;
-
-    always_comb begin
-        // get header
-        rpc_pck = network_rx_in.payload[$bits(RpcPckt)-1:0];
-        // convert RpcPckt to RpcReqPckt and RpcRespPckt
-        rpc_req_pck_deser  = network_rx_in.payload[$bits(RpcReqPckt)-1:0];
-        rpc_resp_pck_deser = network_rx_in.payload[$bits(RpcRespPckt)-1:0];
-    end
-
     always_ff @(posedge clk) begin
         if (reset) begin
             rpc_valid_out <= 1'b0;
@@ -114,33 +77,18 @@ module rpc
             rpc_valid_out <= 1'b0;
 
             if (network_rx_valid_in) begin
-                if (rpc_pck.hdr.ctl.req_type == rpcReq) begin
-                    // deserialize as request
-                    $display("NIC%d::RPC DeSerializing rpc as request %p", NIC_ID, rpc_req_pck_deser);
+                // deserialize as request
+                $display("NIC%d::RPC DeSerializing rpc %p", NIC_ID, network_rx_in.payload[$bits(RpcPckt)-1:0]);
 
-                    // **********************************
-                    //
-                    // More complex RPC data transformation should be placed here:
-                    // - compression
-                    // - encryption
-                    // - etc.
-                    //
-                    // **********************************
-                    rpc_out.rpc_data <= rpc_req_pck_deser;
-                end else begin
-                    // deserialize as response
-                    $display("NIC%d::RPC DeSerializing rpc as response %p", NIC_ID, rpc_resp_pck_deser);
-
-                    // **********************************
-                    //
-                    // More complex RPC data transformation should be placed here:
-                    // - compression
-                    // - encryption
-                    // - etc.
-                    //
-                    // **********************************
-                    rpc_out.rpc_data <= rpc_resp_pck_deser;
-                end
+                // **********************************
+                //
+                // More complex RPC data transformation should be placed here:
+                // - compression
+                // - encryption
+                // - etc.
+                //
+                // **********************************
+                rpc_out.rpc_data <= network_rx_in.payload[$bits(RpcPckt)-1:0];
 
                 rpc_out.flow_id <= network_rx_in.hdr.conn_id;
                 rpc_valid_out   <= 1'b1;

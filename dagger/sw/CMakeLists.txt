@@ -44,7 +44,7 @@ set(SOURCES
     src/nic_impl/nic_ccip_polling.cc
     src/nic_impl/nic_ccip_mmio.cc
     src/nic_impl/nic_ccip_dma.cc
-    src/rpc_client.cc
+#    src/rpc_client.cc
     src/rpc_server_thread.cc
     src/rpc_threaded_server.cc
     src/tx_queue.cc
@@ -72,8 +72,8 @@ endif()
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 # Compile tests
-add_executable(rpc_tests ${SOURCES} ${TEST_SOURCES})
-target_link_libraries(rpc_tests ${GTEST_LIBRARIES} ${FPGA_LIBS} ${LIBRARIES})
+#add_executable(rpc_tests ${SOURCES} ${TEST_SOURCES})
+#target_link_libraries(rpc_tests ${GTEST_LIBRARIES} ${FPGA_LIBS} ${LIBRARIES})
 
 # Compile microbenchmarks
 set(MBENCH_LAT_THR_CLIENT_SRC ${CMAKE_SOURCE_DIR}/microbenchmarks/benchmark_latency_throughput/client.cc)
@@ -100,10 +100,10 @@ target_link_libraries(dagger_benchmark_server ${FPGA_LIBS} ${LIBRARIES})
 #target_link_libraries(rpc_server ${FPGA_LIBS} ${LIBRARIES})
 
 # Compile ASE samples
-set(ASE_SAMPLE_SRC ${CMAKE_SOURCE_DIR}/samples/joint_ase_process.cc)
-add_executable(rpc_joint_ase ${ASE_SAMPLE_SRC} ${SOURCES})
-target_compile_definitions(rpc_joint_ase PUBLIC -DASE_SIMULATION)
-target_link_libraries(rpc_joint_ase ${ASE_LIBS} ${LIBRARIES})
+#set(ASE_SAMPLE_SRC ${CMAKE_SOURCE_DIR}/samples/joint_ase_process.cc)
+#add_executable(rpc_joint_ase ${ASE_SAMPLE_SRC} ${SOURCES})
+#target_compile_definitions(rpc_joint_ase PUBLIC -DASE_SIMULATION)
+#target_link_libraries(rpc_joint_ase ${ASE_LIBS} ${LIBRARIES})
 
 set(ASE_SAMPLE_NONBLOCK_SRC ${CMAKE_SOURCE_DIR}/samples/joint_nonblocking_ase_process.cc)
 add_executable(rpc_joint_nonblocking_ase ${ASE_SAMPLE_NONBLOCK_SRC} ${SOURCES})

@@ -26,7 +26,7 @@ public:
 
     size_t get_number_of_completed_requests() const;
 
-    RpcRespPckt pop_response();
+    RpcPckt pop_response();
 
 #ifdef PROFILE_LATENCY
     void init_latency_profile(uint64_t* timestamp_recv);
@@ -46,7 +46,7 @@ private:
     std::atomic<bool> stop_signal_;
 
     // CQ
-    std::vector<RpcRespPckt> cq_;
+    std::vector<RpcPckt> cq_;
 
     // Sync
     std::mutex cq_lock_;
