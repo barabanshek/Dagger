@@ -44,12 +44,12 @@ void CompletionQueue::init_latency_profile(uint64_t* timestamp_recv) {
 void CompletionQueue::_PullListen() {
     FRPC_INFO("Completion queue is bound to RPC client %d\n", rpc_client_id_);
 
-    RpcRespPckt* resp_pckt;
+    RpcPckt* resp_pckt;
 
     while (stop_signal_ == 0) {
         // wait response
         uint32_t rx_rpc_id;
-        resp_pckt = reinterpret_cast<RpcRespPckt*>(rx_queue_.get_read_ptr(rx_rpc_id));
+        resp_pckt = reinterpret_cast<RpcPckt*>(rx_queue_.get_read_ptr(rx_rpc_id));
 
         while((resp_pckt->hdr.ctl.valid == 0 ||
                resp_pckt->hdr.rpc_id == rx_rpc_id) &&
@@ -59,7 +59,7 @@ void CompletionQueue::_PullListen() {
 
 #ifdef PROFILE_LATENCY
         // Mark recv time
-        uint64_t hash = resp_pckt->ret_val;
+        uint64_t hash = *reinterpret_cast<uint32_t*>(resp_pckt->argv);
         lat_prof_timestamp[hash] = frpc::utils::rdtsc();
 #endif
 
@@ -70,7 +70,7 @@ void CompletionQueue::_PullListen() {
         //       the NIC hardware can directly write to this queue without
         //       the needs to explicitly copy data
         cq_lock_.lock();
-        cq_.push_back(*const_cast<RpcRespPckt*>(resp_pckt));
+        cq_.push_back(*const_cast<RpcPckt*>(resp_pckt));
         cq_lock_.unlock();
     }
 }
@@ -79,7 +79,7 @@ size_t CompletionQueue::get_number_of_completed_requests() const {
     return cq_.size();
 }
 
-RpcRespPckt CompletionQueue::pop_response() {
+RpcPckt CompletionQueue::pop_response() {
     auto res = cq_.back();
 
     cq_lock_.lock();

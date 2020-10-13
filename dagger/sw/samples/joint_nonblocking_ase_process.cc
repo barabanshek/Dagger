@@ -113,7 +113,7 @@ static int client(frpc::RpcClientNonBlock* rpc_client, size_t thread_id, size_t 
 
     // Make an RPC call
     for (int i=0; i<num_of_requests; ++i) {
-        int res = rpc_client->boo(thread_id*10 + i);
+        int res = rpc_client->foo(thread_id*10 + i, 12);
         assert(res == 0);
 
         usleep(100000);
@@ -130,7 +130,8 @@ static int client(frpc::RpcClientNonBlock* rpc_client, size_t thread_id, size_t 
     size_t n_of_cq_entries = cq->get_number_of_completed_requests();
     std::cout << "Thread " << thread_id << ", CQ entries: " << n_of_cq_entries << std::endl;
     for (int i=0; i<n_of_cq_entries; ++i) {
-        std::cout << "Thread " << thread_id << ", RPC returned: " << cq->pop_response().ret_val << std::endl;
+        std::cout << "Thread " << thread_id << ", RPC returned: " << 
+                         *reinterpret_cast<uint32_t*>(cq->pop_response().argv[0]) << std::endl;
     }
 
     return 0;

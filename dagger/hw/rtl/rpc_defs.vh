@@ -20,27 +20,17 @@ typedef struct packed {
 } RpcHeaderCtl;
 
 typedef struct packed {
-    logic [7:0]  num_of_args;
-    logic [7:0]  fn_id;
+    logic [7:0]  padding;
+    logic [15:0] argl;
+    logic [15:0] fn_id;
+    logic [7:0]  frame_id;
+    logic [7:0]  n_of_frames;
     logic [31:0] rpc_id;
     RpcHeaderCtl ctl;
-} RpcHeader;
+} RpcHeader;    // Size is 96B
 
 typedef struct packed {
-    logic [31:0] arg2;
-    logic [31:0] arg1;
-    RpcHeader hdr;
-} RpcReqPckt;
-
-typedef struct packed {
-    logic [31:0] ret_val;
-    RpcHeader hdr;
-} RpcRespPckt;
-
-// Abstract RPC packet
-typedef struct packed {
-    logic [31:0] padding_1;
-    logic [31:0] padding_0;
+    logic [63:0] argv;
     RpcHeader hdr;
 } RpcPckt;
 

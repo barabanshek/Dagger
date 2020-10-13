@@ -67,7 +67,7 @@ module ccip_queue_polling
         output logic[LMAX_NUM_OF_FLOWS-1:0] rpc_flow_id_out,
 
         output logic                       ccip_tx_ready,
-        input RpcIf                        rpc_in,
+        input RpcIf                        rpc_in,  // TODO: why RpcIf here if rpc_flow_id is still used?
         input logic                        rpc_in_valid,
         input logic[LMAX_NUM_OF_FLOWS-1:0] rpc_flow_id_in
     );

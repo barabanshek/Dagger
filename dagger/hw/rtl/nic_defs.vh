@@ -35,16 +35,6 @@ typedef struct packed {
     RpcPckt     rpc_data;
 } RpcIf;
 
-typedef struct packed {
-    logic [7:0] flow_id;    //TODO: it's a temporary solution, will have an RPC descriptor table later
-    RpcReqPckt  rpc_data;
-} RpcReqIf;
-
-typedef struct packed {
-    logic [7:0] flow_id;    //TODO: it's a temporary solution, will have an RPC descriptor table later
-    RpcRespPckt rpc_data;
-} RpcRespIf;
-
 // Network interfaces
 // TODO: define w.r.t interfaces to the transport layer
 localparam TRANSPORT_DATA_WIDTH = 512;

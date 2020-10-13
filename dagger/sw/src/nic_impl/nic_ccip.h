@@ -10,6 +10,7 @@
 #include <opae/fpga.h>
 #include <uuid/uuid.h>
 
+#include "config.h"
 #include "nic.h"
 
 namespace frpc {
@@ -25,7 +26,6 @@ namespace frpc {
 class NicCCIP: public Nic {
 public:
     // CL size and MTU
-    static constexpr size_t cacheline_size_bytes = 64;
     static constexpr size_t mtu_cls = 1;
     // MMIO CPU/FPGA view: nic_addr = cpu_addr/4
     static constexpr size_t mmio_cpu_nic_view = 4;
@@ -66,7 +66,7 @@ public:
     virtual int initialize_nic();
     virtual int check_hw_errors() const;
     virtual size_t get_mtu_size_bytes() const {
-        return mtu_cls * cacheline_size_bytes;
+        return mtu_cls * cfg::sys::cl_size_bytes;
     }
 
     // CCI-P implementation dependent functionality

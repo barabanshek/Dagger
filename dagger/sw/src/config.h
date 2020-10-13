@@ -5,6 +5,14 @@
 
 namespace frpc {
     namespace cfg {
+        namespace sys {
+            // Cache line size
+            //   - in Bytes
+            //   - do not change unless the system has changed
+            constexpr size_t cl_size_bytes = 64;
+
+        } // namespace sys
+
         namespace nic {
             // tx DMA batch size
             //   - in MTUs
