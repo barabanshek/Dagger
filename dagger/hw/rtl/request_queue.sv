@@ -131,32 +131,30 @@ module request_queue
     end
 
     always @(posedge clk) begin
+        queue_wr_en   <= 1'b0;
+        push_done_out <= 1'b0;
+
+        if (fr_pop_valid) begin
+            // The address of a free entry is here, write request in it
+            queue_wr_addr <= fr_addr_pop;
+            queue_in      <= push_data_in_d;
+            queue_wr_en   <= 1'b1;
+            // Output the address of the data
+            push_slot_id_out  <= fr_addr_pop;
+            push_done_out     <= 1'b1;
+        end
+
+        // Catch the full error if there is no free slot available
+        if (push_en_in && fr_pop_empty) begin
+            no_free_slot_error <= 1'b1;
+        end
+
         if (reset) begin
             queue_wr_addr      <= {($bits(queue_wr_addr)){1'b0}};
-            queue_in           <= {($bits(queue_in)){1'b0}};
-            push_slot_id_out   <= {($bits(push_slot_id_out)){1'b0}};
+            push_slot_id_out   <= {($bits(push_slot_id_out)){1'b0}};    // TODO: remove
             queue_wr_en        <= 1'b0;
             no_free_slot_error <= 1'b0;
             push_done_out      <= 1'b0;
-
-        end else begin
-            queue_wr_en   <= 1'b0;
-            push_done_out <= 1'b0;
-
-            if (fr_pop_valid) begin
-                // The address of a free entry is here, write request in it
-                queue_wr_addr <= fr_addr_pop;
-                queue_in      <= push_data_in_d;
-                queue_wr_en   <= 1'b1;
-                // Output the address of the data
-                push_slot_id_out  <= fr_addr_pop;
-                push_done_out     <= 1'b1;
-            end
-
-            // Catch the full error if there is no free slot available
-            if (push_en_in && fr_pop_empty) begin
-                no_free_slot_error <= 1'b1;
-            end
         end
     end
 

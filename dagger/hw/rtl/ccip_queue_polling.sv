@@ -101,61 +101,61 @@ module ccip_queue_polling
     logic[LMAX_POLLING_RATE-1:0] poll_frq_div_cnt;
 
     always_ff @(posedge clk) begin
+        // Data
+        sTx_c0.hdr                    <= t_ccip_c0_ReqMemHdr'(0);
+        sTx_c0.hdr.cl_len             <= eCL_LEN_4;
+        sTx_c0.hdr.vc_sel             <= eVC_VL0;
+        sTx_c0.hdr.req_type           <= eREQ_RDLINE_I;
+        sTx_c0.hdr.address            <= tx_base_addr +
+                                         (flow_poll_cnt << LMAX_RX_QUEUE_SIZE) +
+                                         queue_poll_cnt;
+        sTx_c0.hdr.mdata[MDATA_W-1:0] <= META_PATTERN ^
+                                         ((flow_poll_cnt << LMAX_RX_QUEUE_SIZE) +
+                                           queue_poll_cnt);
+
+        // Control
+        sTx_c0.valid <= 1'b0;
+
+        if (rx_state == RxIdle) begin
+            if (start && !sRx_c0TxAlmFull) begin
+                // Start batch read
+                sTx_c0.valid <= 1'b1;
+                rx_state     <= RxDelay;
+            end
+        end
+
+        if (rx_state == RxDelay) begin
+            if (poll_frq_div_cnt == tx_polling_rate) begin
+                // Switch entry/queue
+                if (queue_poll_cnt == rx_queue_size - RX_BATCH_SIZE + 1) begin
+                    queue_poll_cnt <= {($bits(queue_poll_cnt)){1'b0}};
+
+                    // Switch queue
+                    if (flow_poll_cnt == number_of_flows) begin
+                        flow_poll_cnt <= {($bits(flow_poll_cnt)){1'b0}};
+                    end else begin
+                        flow_poll_cnt <= flow_poll_cnt + 1;
+                    end
+                end else begin
+                    queue_poll_cnt <= queue_poll_cnt + RX_BATCH_SIZE;
+                end
+
+                poll_frq_div_cnt <= {($bits(poll_frq_div_cnt)){1'b0}};
+                rx_state         <= RxIdle;
+            end else begin
+                poll_frq_div_cnt <= poll_frq_div_cnt + 1;
+                rx_state         <= RxDelay;
+            end
+        end
+
         if (reset) begin
             rx_state         <= RxIdle;
             rx_batch_cnt     <= {($bits(rx_batch_cnt)){1'b0}};
-            sTx_c0.valid     <= 1'b0;
             queue_poll_cnt   <= {($bits(queue_poll_cnt)){1'b0}};
             flow_poll_cnt    <= {($bits(flow_poll_cnt)){1'b0}};
             poll_frq_div_cnt <= {($bits(poll_frq_div_cnt)){1'b0}};
 
-        end else begin
-            // Data
-            sTx_c0.hdr                    <= t_ccip_c0_ReqMemHdr'(0);
-            sTx_c0.hdr.cl_len             <= eCL_LEN_4;
-            sTx_c0.hdr.vc_sel             <= eVC_VL0;
-            sTx_c0.hdr.req_type           <= eREQ_RDLINE_I;
-            sTx_c0.hdr.address            <= tx_base_addr +
-                                             (flow_poll_cnt << LMAX_RX_QUEUE_SIZE) +
-                                             queue_poll_cnt;
-            sTx_c0.hdr.mdata[MDATA_W-1:0] <= META_PATTERN ^
-                                             ((flow_poll_cnt << LMAX_RX_QUEUE_SIZE) +
-                                               queue_poll_cnt);
-
-            // Control
-            sTx_c0.valid <= 1'b0;
-
-            if (rx_state == RxIdle) begin
-                if (start && !sRx_c0TxAlmFull) begin
-                    // Start batch read
-                    sTx_c0.valid <= 1'b1;
-                    rx_state     <= RxDelay;
-                end
-            end
-
-            if (rx_state == RxDelay) begin
-                if (poll_frq_div_cnt == tx_polling_rate) begin
-                    // Switch entry/queue
-                    if (queue_poll_cnt == rx_queue_size - RX_BATCH_SIZE + 1) begin
-                        queue_poll_cnt <= {($bits(queue_poll_cnt)){1'b0}};
-
-                        // Switch queue
-                        if (flow_poll_cnt == number_of_flows) begin
-                            flow_poll_cnt <= {($bits(flow_poll_cnt)){1'b0}};
-                        end else begin
-                            flow_poll_cnt <= flow_poll_cnt + 1;
-                        end
-                    end else begin
-                        queue_poll_cnt <= queue_poll_cnt + RX_BATCH_SIZE;
-                    end
-
-                    poll_frq_div_cnt <= {($bits(poll_frq_div_cnt)){1'b0}};
-                    rx_state         <= RxIdle;
-                end else begin
-                    poll_frq_div_cnt <= poll_frq_div_cnt + 1;
-                    rx_state         <= RxDelay;
-                end
-            end
+            sTx_c0.valid     <= 1'b0;
         end
     end
 
@@ -176,24 +176,21 @@ module ccip_queue_polling
     end
 
     always_ff @(posedge clk) begin
+        // Data
+        ccip_queue_cnt      <= ccip_read_poll_cl_casted[LMAX_RX_QUEUE_SIZE-1:0] +
+                               ccip_read_poll_cl_batch_line;
+        ccip_flow_cnt       <= (ccip_read_poll_cl_casted >> LMAX_RX_QUEUE_SIZE);
+        ccip_read_poll_cl   <= ccip_read_poll_cl_casted + ccip_read_poll_cl_batch_line;
+        ccip_read_poll_data <= sRx_casted;
+
+        // Control
+        ccip_read_poll_data_valid <= 1'b0;
+        if (start && sRx_c0.rspValid && sRx_casted.hdr.ctl.valid) begin
+            ccip_read_poll_data_valid <= 1'b1;
+        end
+
         if (reset) begin
             ccip_read_poll_data_valid <= 1'b0;
-            ccip_read_poll_cl         <= {(MDATA_W){1'b0}};
-            ccip_read_poll_data       <= {($bits(RpcPckt)){1'b0}};
-
-        end else begin
-            // Data
-            ccip_queue_cnt      <= ccip_read_poll_cl_casted[LMAX_RX_QUEUE_SIZE-1:0] +
-                                   ccip_read_poll_cl_batch_line;
-            ccip_flow_cnt       <= (ccip_read_poll_cl_casted >> LMAX_RX_QUEUE_SIZE);
-            ccip_read_poll_cl   <= ccip_read_poll_cl_casted + ccip_read_poll_cl_batch_line;
-            ccip_read_poll_data <= sRx_casted;
-
-            // Control
-            ccip_read_poll_data_valid <= 1'b0;
-            if (start && sRx_c0.rspValid && sRx_casted.hdr.ctl.valid) begin
-                ccip_read_poll_data_valid <= 1'b1;
-            end
         end
     end
 
@@ -223,24 +220,23 @@ module ccip_queue_polling
 
     // ccip_dirty_tb init logic
     always_ff @(posedge clk) begin
+        if (db_tb_init_state == DBInitIdle && ~d_bit_tb_initialized && initialize) begin
+            db_tb_init_state <= DBInit;
+        end
+
+        if (db_tb_init_state == DBInit) begin
+            if (d_bit_wr_addr_init == MAX_POLL_ENTRIES - 1) begin
+                db_tb_init_state     <= DBInitIdle;
+                d_bit_tb_initialized <= 1'b1;
+            end else begin
+                d_bit_wr_addr_init <= d_bit_wr_addr_init + 1;
+            end
+        end
+
         if (reset) begin
             db_tb_init_state     <= DBInitIdle;
             d_bit_wr_addr_init   <= {($bits(d_bit_wr_addr_init)){1'b0}};
             d_bit_tb_initialized <= 1'b0;
-
-        end else begin
-            if (db_tb_init_state == DBInitIdle && ~d_bit_tb_initialized && initialize) begin
-                db_tb_init_state <= DBInit;
-            end
-
-            if (db_tb_init_state == DBInit) begin
-                if (d_bit_wr_addr_init == MAX_POLL_ENTRIES - 1) begin
-                    db_tb_init_state     <= DBInitIdle;
-                    d_bit_tb_initialized <= 1'b1;
-                end else begin
-                    d_bit_wr_addr_init <= d_bit_wr_addr_init + 1;
-                end 
-            end
         end
     end
 
@@ -276,37 +272,36 @@ module ccip_queue_polling
 
     // Control
     always_ff @(posedge clk) begin
+        d_bit_we      <= 1'b0;
+        rpc_out_valid <= 1'b0;
+
+        if (ccip_read_poll_data_valid_1d) begin
+            if (d_bit_rd_1d != ccip_read_poll_data_update_flag_1d) begin
+                $display("NIC%d: new value read from flow %d, queue entry %d", NIC_ID, ccip_flow_cnt_1d, ccip_queue_cnt_1d);
+                $display("NIC%d:        value= %p", NIC_ID, ccip_read_poll_data_1d);
+
+                // Increment update flag and forward RPC
+                d_bit_we        <= 1'b1;
+                rpc_out_valid   <= 1'b1;
+
+                // Do CPU bookkeeping
+                //sTx_c1.hdr               <= t_ccip_c1_ReqMemHdr'(0);
+                //sTx_c1.hdr.address       <= rx_bk_base_addr + bk_counter;
+                //sTx_c1.hdr.sop           <= 1'b1;
+                //sTx_c1.hdr.vc_sel        <= eVC_VH0;
+                //sTx_c1.hdr.req_type      <= eREQ_WRPUSH_I;
+                //sTx_c1.data[MDATA_W-1:0] <= ccip_read_poll_cl;
+                //sTx_c1.valid             <= 1'b1;
+
+                //bk_counter <= bk_counter + 1;
+            end
+        end
+
         if (reset) begin
             rpc_out_valid <= 1'b0;
             d_bit_we      <= 1'b0;
             //bk_counter    <= {(MDATA_W){1'b0}};
-
-        end else begin
-            d_bit_we      <= 1'b0;
-            rpc_out_valid <= 1'b0;
-
-            if (ccip_read_poll_data_valid_1d) begin
-                if (d_bit_rd_1d != ccip_read_poll_data_update_flag_1d) begin
-                    $display("NIC%d: new value read from flow %d, queue entry %d", NIC_ID, ccip_flow_cnt_1d, ccip_queue_cnt_1d);
-                    $display("NIC%d:        value= %p", NIC_ID, ccip_read_poll_data_1d);
-
-                    // Increment update flag and forward RPC
-                    d_bit_we        <= 1'b1;
-                    rpc_out_valid   <= 1'b1;
-
-                    // Do CPU bookkeeping
-                    //sTx_c1.hdr               <= t_ccip_c1_ReqMemHdr'(0);
-                    //sTx_c1.hdr.address       <= rx_bk_base_addr + bk_counter;
-                    //sTx_c1.hdr.sop           <= 1'b1;
-                    //sTx_c1.hdr.vc_sel        <= eVC_VH0;
-                    //sTx_c1.hdr.req_type      <= eREQ_WRPUSH_I;
-                    //sTx_c1.data[MDATA_W-1:0] <= ccip_read_poll_cl;
-                    //sTx_c1.valid             <= 1'b1;
-
-                    //bk_counter <= bk_counter + 1;
-                end
-            end
-        end
+        end 
     end
 
 

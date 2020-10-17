@@ -196,19 +196,15 @@ module ccip_std_afu (
     assign network_rst = ccip_mux2pe_reset[0];
 
     always @(posedge network_clk) begin
+        network_Rx_line_strobe <= network_Tx_line_strobe_1;
+        network_Rx_line_data   <= network_Tx_line_data_1;
+
+        network_Rx_line_strobe_1 <= network_Tx_line_strobe;
+        network_Rx_line_data_1   <= network_Tx_line_data;
+
         if (network_rst) begin
             network_Rx_line_strobe <= 1'b0;
-            network_Rx_line_data   <= {(TRANSPORT_DATA_WIDTH){1'b0}};
-
             network_Rx_line_strobe_1 <= 1'b0;
-            network_Rx_line_data_1   <= {(TRANSPORT_DATA_WIDTH){1'b0}};
-
-        end else begin
-            network_Rx_line_strobe <= network_Tx_line_strobe_1;
-            network_Rx_line_data   <= network_Tx_line_data_1;
-
-            network_Rx_line_strobe_1 <= network_Tx_line_strobe;
-            network_Rx_line_data_1   <= network_Tx_line_data;
         end
     end
 

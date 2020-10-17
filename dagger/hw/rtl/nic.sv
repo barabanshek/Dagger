@@ -154,69 +154,68 @@ module nic
     assign mmio_req_hdr = t_ccip_c0_ReqMmioHdr'(sRx.c0.hdr);
 
     always_ff @(posedge ccip_clk) begin
+        // Always respond with something
+        sTx.c2.mmioRdValid <= is_csr_read;
+        sTx.c2.hdr.tid     <= mmio_req_hdr.tid;
+
+        // Addresses are of 32-bit objects in MMIO space.  Addresses
+        // of 64-bit objects are thus multiples of 2.
+        case (mmio_req_hdr.address)
+            // AFU DFH (device feature header)
+            SRF_BASE_MMIO_ADDRESS_AFU_ID + 0: begin
+                // Here we define a trivial feature list.  In this
+                // example, our AFU is the only entry in this list.
+                sTx.c2.data <= t_ccip_mmioData'(0);
+                // Feature type is AFU
+                sTx.c2.data[63:60] <= 4'h1;
+                // End of list (last entry in list)
+                sTx.c2.data[40] <= 1'b1;
+              end
+
+            // AFU_ID_L
+            SRF_BASE_MMIO_ADDRESS_AFU_ID + 2: begin
+                sTx.c2.data <= afu_id[63:0];
+            end
+
+            // AFU_ID_H
+            SRF_BASE_MMIO_ADDRESS_AFU_ID + 4: begin
+                sTx.c2.data <= afu_id[127:64];
+            end
+
+            // DFH_RSVD0
+            SRF_BASE_MMIO_ADDRESS_AFU_ID + 6: begin
+                sTx.c2.data <= t_ccip_mmioData'(0);
+            end
+
+            // DFH_RSVD1
+            SRF_BASE_MMIO_ADDRESS_AFU_ID + 8: begin
+                sTx.c2.data <= t_ccip_mmioData'(0);
+            end
+
+            // Status
+            addrRegNicStatus: begin
+                sTx.c2.data[$bits(iRegNicStatus)-1:0] <= iRegNicStatus;
+            end
+
+            // Perf
+            addrRegCcipRps: begin
+                sTx.c2.data[$bits(iRegCcipRps)-1:0] <= iRegCcipRps;
+            end
+
+            // Counters
+            addrPckCnt: begin
+                sTx.c2.data[$bits(iRegPckCnt)-1:0] <= iRegPckCnt;
+            end
+
+            addrRegCcipMode: begin
+                sTx.c2.data[$bits(CcipMode)-1:0] <= iRegCcipMode;
+            end
+
+            default: sTx.c2.data <= t_ccip_mmioData'(0);
+        endcase
+
         if (reset) begin
             sTx.c2.mmioRdValid <= 1'b0;
-
-        end else begin
-            // Always respond with something
-            sTx.c2.mmioRdValid <= is_csr_read;
-            sTx.c2.hdr.tid     <= mmio_req_hdr.tid;
-
-            // Addresses are of 32-bit objects in MMIO space.  Addresses
-            // of 64-bit objects are thus multiples of 2.
-            case (mmio_req_hdr.address)
-                // AFU DFH (device feature header)
-                SRF_BASE_MMIO_ADDRESS_AFU_ID + 0: begin
-                    // Here we define a trivial feature list.  In this
-                    // example, our AFU is the only entry in this list.
-                    sTx.c2.data <= t_ccip_mmioData'(0);
-                    // Feature type is AFU
-                    sTx.c2.data[63:60] <= 4'h1;
-                    // End of list (last entry in list)
-                    sTx.c2.data[40] <= 1'b1;
-                  end
-
-                // AFU_ID_L
-                SRF_BASE_MMIO_ADDRESS_AFU_ID + 2: begin
-                    sTx.c2.data <= afu_id[63:0];
-                end
-
-                // AFU_ID_H
-                SRF_BASE_MMIO_ADDRESS_AFU_ID + 4: begin
-                    sTx.c2.data <= afu_id[127:64];
-                end
-
-                // DFH_RSVD0
-                SRF_BASE_MMIO_ADDRESS_AFU_ID + 6: begin
-                    sTx.c2.data <= t_ccip_mmioData'(0);
-                end
-
-                // DFH_RSVD1
-                SRF_BASE_MMIO_ADDRESS_AFU_ID + 8: begin
-                    sTx.c2.data <= t_ccip_mmioData'(0);
-                end
-
-                // Status
-                addrRegNicStatus: begin
-                    sTx.c2.data[$bits(iRegNicStatus)-1:0] <= iRegNicStatus;
-                end
-
-                // Perf
-                addrRegCcipRps: begin
-                    sTx.c2.data[$bits(iRegCcipRps)-1:0] <= iRegCcipRps;
-                end
-
-                // Counters
-                addrPckCnt: begin
-                    sTx.c2.data[$bits(iRegPckCnt)-1:0] <= iRegPckCnt;
-                end
-
-                addrRegCcipMode: begin
-                    sTx.c2.data[$bits(CcipMode)-1:0] <= iRegCcipMode;
-                end
-
-                default: sTx.c2.data <= t_ccip_mmioData'(0);
-            endcase
         end
     end
 
@@ -265,66 +264,62 @@ module nic
                                         (mmio_req_hdr.address == addrPollingRate);
 
     always_ff @(posedge ccip_clk) begin
+        // Default values
+        iRegNicInit <= 1'b0;
+
+        if (is_mem_tx_addr_csr_write) begin
+            $display("NIC%d: iRegMemTxAddr configured: %08h", NIC_ID, sRx.c0.data);
+            iRegMemTxAddr <= t_ccip_clAddr'(sRx.c0.data);
+        end
+
+        if (is_mem_rx_addr_csr_write) begin
+            $display("NIC%d: iRegMemRxAddr configured: %08h", NIC_ID, sRx.c0.data);
+            iRegMemRxAddr <= t_ccip_clAddr'(sRx.c0.data);
+        end
+
+        if (is_nic_start_csr_write) begin
+            $display("NIC%d: iRegNicStart configured: %08h", NIC_ID, sRx.c0.data);
+            iRegNicStart <= sRx.c0.data[0];
+        end
+
+        if (is_num_of_flows_csr_write) begin
+            $display("NIC%d: iRegNumOfFlows configured: %08h", NIC_ID, sRx.c0.data);
+            iRegNumOfFlows <= sRx.c0.data[LMAX_NUM_OF_FLOWS-1:0] - 1;
+        end
+
+        if (is_init_csr_write) begin
+            $display("NIC%d: iRegNicInit received", NIC_ID);
+            iRegNicInit <= 1;
+        end
+
+        if (is_get_nic_cnt_csr_write) begin
+            $display("NIC%d: iRegGetPckCnt received: %08h", NIC_ID, sRx.c0.data);
+            iRegGetPckCnt <= sRx.c0.data[7:0];
+        end
+
+        if (is_rx_queue_size_csr_write) begin
+            $display("NIC%d: iRegRxQueueSize received: %08h", NIC_ID, sRx.c0.data);
+            iRegRxQueueSize <= sRx.c0.data[LMAX_RX_QUEUE_SIZE-1:0] - 1;
+        end
+
+        if (is_tx_batch_size_csr_write) begin
+            $display("NIC%d: lRegTxBatchSize received: %08h", NIC_ID, sRx.c0.data);
+            lRegTxBatchSize <= sRx.c0.data[LMAX_CCIP_BATCH-1:0];
+        end
+
+        if (is_rx_batch_size_csr_write) begin
+            $display("NIC%d: iRegRxBatchSize received: %08h", NIC_ID, sRx.c0.data);
+            iRegRxBatchSize <= sRx.c0.data[LMAX_CCIP_DMA_BATCH-1:0];
+        end
+
+        if (is_polling_rate_csr_write) begin
+            $display("NIC%d: iRegPollingRate received: %08h", NIC_ID, sRx.c0.data);
+            iRegPollingRate <= sRx.c0.data[LMAX_POLLING_RATE-1:0];
+        end
+
         if (reset) begin
-            iRegNicStart        <= 1'b0;
-            iRegMemTxAddr       <= t_ccip_mmioAddr'(0);
-            iRegMemRxAddr       <= t_ccip_mmioAddr'(0);
-            iRegNumOfFlows      <= {($bits(iRegNumOfFlows)){1'b0}};
-            iRegNicInit         <= 1'b0;
-
-        end else begin
-            // Default values
-            iRegNicInit <= 1'b0;
-
-            if (is_mem_tx_addr_csr_write) begin
-                $display("NIC%d: iRegMemTxAddr configured: %08h", NIC_ID, sRx.c0.data);
-                iRegMemTxAddr <= t_ccip_clAddr'(sRx.c0.data);
-            end
-
-            if (is_mem_rx_addr_csr_write) begin
-                $display("NIC%d: iRegMemRxAddr configured: %08h", NIC_ID, sRx.c0.data);
-                iRegMemRxAddr <= t_ccip_clAddr'(sRx.c0.data);
-            end
-
-            if (is_nic_start_csr_write) begin
-                $display("NIC%d: iRegNicStart configured: %08h", NIC_ID, sRx.c0.data);
-                iRegNicStart <= sRx.c0.data[0];
-            end
-
-            if (is_num_of_flows_csr_write) begin
-                $display("NIC%d: iRegNumOfFlows configured: %08h", NIC_ID, sRx.c0.data);
-                iRegNumOfFlows <= sRx.c0.data[LMAX_NUM_OF_FLOWS-1:0] - 1;
-            end
-
-            if (is_init_csr_write) begin
-                $display("NIC%d: iRegNicInit received", NIC_ID);
-                iRegNicInit <= 1;
-            end
-
-            if (is_get_nic_cnt_csr_write) begin
-                $display("NIC%d: iRegGetPckCnt received: %08h", NIC_ID, sRx.c0.data);
-                iRegGetPckCnt <= sRx.c0.data[7:0];
-            end
-
-            if (is_rx_queue_size_csr_write) begin
-                $display("NIC%d: iRegRxQueueSize received: %08h", NIC_ID, sRx.c0.data);
-                iRegRxQueueSize <= sRx.c0.data[LMAX_RX_QUEUE_SIZE-1:0] - 1;
-            end
-
-            if (is_tx_batch_size_csr_write) begin
-                $display("NIC%d: lRegTxBatchSize received: %08h", NIC_ID, sRx.c0.data);
-                lRegTxBatchSize <= sRx.c0.data[LMAX_CCIP_BATCH-1:0];
-            end
-
-            if (is_rx_batch_size_csr_write) begin
-                $display("NIC%d: iRegRxBatchSize received: %08h", NIC_ID, sRx.c0.data);
-                iRegRxBatchSize <= sRx.c0.data[LMAX_CCIP_DMA_BATCH-1:0];
-            end
-
-            if (is_polling_rate_csr_write) begin
-                $display("NIC%d: iRegPollingRate received: %08h", NIC_ID, sRx.c0.data);
-                iRegPollingRate <= sRx.c0.data[LMAX_POLLING_RATE-1:0];
-            end
+            iRegNicStart <= 1'b0;
+            iRegNicInit  <= 1'b0;
         end
     end
 
