@@ -8,7 +8,8 @@
 module async_fifo_channel
     #(
         parameter DATA_WIDTH = 32,
-        parameter LOG_DEPTH = 5
+        parameter LOG_DEPTH = 5,
+        parameter DELAY_PIPE = 0
     )
     (
     input logic clear,
@@ -65,13 +66,13 @@ module async_fifo_channel
         dcfifo_.lpm_width  = DATA_WIDTH,
         dcfifo_.lpm_widthu  = LOG_DEPTH,
         dcfifo_.overflow_checking  = "ON",
-        dcfifo_.rdsync_delaypipe  = 0,
+        dcfifo_.rdsync_delaypipe  = DELAY_PIPE,
         dcfifo_.clocks_are_synchronized = "TRUE",
         dcfifo_.read_aclr_synch  = "ON",
         dcfifo_.underflow_checking  = "ON",
         dcfifo_.use_eab  = "ON",
         dcfifo_.write_aclr_synch  = "ON",
-        dcfifo_.wrsync_delaypipe  = 0;
+        dcfifo_.wrsync_delaypipe  = DELAY_PIPE;
 
     // 1-cycle delay to sync
     logic pop_valid_delay;

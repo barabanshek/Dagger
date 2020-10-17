@@ -188,6 +188,79 @@ module ccip_transmitter
 
     integer i4, i5;
     always @(posedge clk) begin
+        // Initial values
+        rq_pop_en <= 1'b0;
+        for(i5=0; i5<MAX_TX_FLOWS; i5=i5+1) begin
+            ff_pop_en[i5] <= 1'b0;
+        end
+
+        if (tx_state == TxIdle) begin
+            // Look for a flow that already has tx_batch_size number of requests
+            if (ff_dw[tx_flow_cnt] >= tx_batch_size) begin
+                $display("NIC%d: CCI-P transmitter, batch is find in flow fifo= %d",
+                                        NIC_ID, tx_flow_cnt);
+                ff_pop_en[tx_flow_cnt] <= 1'b1;
+                tx_state               <= TxTransmit;
+            end else begin
+                if (tx_flow_cnt == number_of_flows) begin
+                    tx_flow_cnt <= {($bits(tx_flow_cnt)){1'b0}};
+                end else begin
+                    tx_flow_cnt <= tx_flow_cnt + 1;
+                end
+                tx_state <= TxIdle;
+            end
+        end
+
+        if (tx_state == TxTransmit) begin
+            if (tx_batch_cnt == tx_batch_size - 1) begin
+                tx_batch_cnt <= {($bits(tx_batch_cnt)){1'b0}};
+                tx_state     <= TxIdle;
+            end else begin
+                ff_pop_en[tx_flow_cnt] <= 1'b1;
+                tx_batch_cnt <= tx_batch_cnt + 1;
+                tx_state <= TxTransmit;
+            end
+        end
+
+        // Delay to alight with ff look-up
+        tx_flow_cnt_d <= tx_flow_cnt;
+
+        // Get RPC packets from request queue
+        if (ff_pop_valid[tx_flow_cnt_d]) begin
+            rq_pop_slot_id <= ff_pop_data[tx_flow_cnt_d];
+            rq_pop_en <= 1'b1;
+        end
+
+        // Delay to align with rq look-up
+        rq_read_d      <= rq_pop_en;
+        tx_flow_cnt_d1 <= tx_flow_cnt_d;
+
+        // Transmit over CCI-P
+        // Data
+        sTx_c1.hdr                    <= t_ccip_c1_ReqMemHdr'(0);
+        sTx_c1.hdr.cl_len             <= tx_cl_len;
+        sTx_c1.hdr.vc_sel             <= eVC_VH0;
+        sTx_c1.hdr.req_type           <= eREQ_WRLINE_I;
+        sTx_c1.hdr.address            <= tx_base_addr + tx_out_flow_shift + tx_out_batch_cnt;
+        sTx_c1.hdr.sop                <= tx_out_batch_cnt == 0;
+        sTx_c1.data[$bits(RpcIf)-1:0] <= rq_pop_data;
+
+        // Control
+        sTx_c1.valid <= 1'b0;
+        if (rq_read_d) begin
+            $display("NIC%d: Writing back to flow %d", NIC_ID, tx_flow_cnt_d1);
+            $display("NIC%d:         %dth value= %p", NIC_ID, tx_out_batch_cnt, rq_pop_data);
+
+            sTx_c1.valid <= 1'b1;
+
+            // Batch counter
+            if (tx_out_batch_cnt == tx_batch_size - 1) begin
+                tx_out_batch_cnt <= {($bits(tx_out_batch_cnt)){1'b0}};
+            end else begin
+                tx_out_batch_cnt <= tx_out_batch_cnt + 1;
+            end
+        end
+
         if (reset) begin
             tx_state         <= TxIdle;
             tx_flow_cnt      <= {($bits(tx_flow_cnt)){1'b0}};
@@ -196,80 +269,6 @@ module ccip_transmitter
             rq_pop_en        <= 1'b0;
             for(i4=0; i4<MAX_TX_FLOWS; i4=i4+1) begin
                 ff_pop_en[i4] <= 1'b0;
-            end
-
-        end else begin
-            // Initial values
-            rq_pop_en <= 1'b0;
-            for(i5=0; i5<MAX_TX_FLOWS; i5=i5+1) begin
-                ff_pop_en[i5] <= 1'b0;
-            end
-
-            if (tx_state == TxIdle) begin
-                // Look for a flow that already has tx_batch_size number of requests
-                if (ff_dw[tx_flow_cnt] >= tx_batch_size) begin
-                    $display("NIC%d: CCI-P transmitter, batch is find in flow fifo= %d",
-                                            NIC_ID, tx_flow_cnt);
-                    ff_pop_en[tx_flow_cnt] <= 1'b1;
-                    tx_state               <= TxTransmit;
-                end else begin
-                    if (tx_flow_cnt == number_of_flows) begin
-                        tx_flow_cnt <= {($bits(tx_flow_cnt)){1'b0}};
-                    end else begin
-                        tx_flow_cnt <= tx_flow_cnt + 1;
-                    end
-                    tx_state <= TxIdle;
-                end
-            end
-
-            if (tx_state == TxTransmit) begin
-                if (tx_batch_cnt == tx_batch_size - 1) begin
-                    tx_batch_cnt <= {($bits(tx_batch_cnt)){1'b0}};
-                    tx_state     <= TxIdle;
-                end else begin
-                    ff_pop_en[tx_flow_cnt] <= 1'b1;
-                    tx_batch_cnt <= tx_batch_cnt + 1;
-                    tx_state <= TxTransmit;
-                end
-            end
-
-            // Delay to alight with ff look-up
-            tx_flow_cnt_d <= tx_flow_cnt;
-
-            // Get RPC packets from request queue
-            if (ff_pop_valid[tx_flow_cnt_d]) begin
-                rq_pop_slot_id <= ff_pop_data[tx_flow_cnt_d];
-                rq_pop_en <= 1'b1;
-            end
-
-            // Delay to align with rq look-up
-            rq_read_d      <= rq_pop_en;
-            tx_flow_cnt_d1 <= tx_flow_cnt_d;
-
-            // Transmit over CCI-P
-            // Data
-            sTx_c1.hdr                    <= t_ccip_c1_ReqMemHdr'(0);
-            sTx_c1.hdr.cl_len             <= tx_cl_len;
-            sTx_c1.hdr.vc_sel             <= eVC_VH0;
-            sTx_c1.hdr.req_type           <= eREQ_WRLINE_I;
-            sTx_c1.hdr.address            <= tx_base_addr + tx_out_flow_shift + tx_out_batch_cnt;
-            sTx_c1.hdr.sop                <= tx_out_batch_cnt == 0;
-            sTx_c1.data[$bits(RpcIf)-1:0] <= rq_pop_data;
-
-            // Control
-            sTx_c1.valid <= 1'b0;
-            if (rq_read_d) begin
-                $display("NIC%d: Writing back to flow %d", NIC_ID, tx_flow_cnt_d1);
-                $display("NIC%d:         %dth value= %p", NIC_ID, tx_out_batch_cnt, rq_pop_data);
-
-                sTx_c1.valid                  <= 1'b1;
-
-                // Batch counter
-                if (tx_out_batch_cnt == tx_batch_size - 1) begin
-                    tx_out_batch_cnt <= {($bits(tx_out_batch_cnt)){1'b0}};
-                end else begin
-                    tx_out_batch_cnt <= tx_out_batch_cnt + 1;
-                end
             end
         end
     end

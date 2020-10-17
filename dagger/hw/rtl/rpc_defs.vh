@@ -27,10 +27,10 @@ typedef struct packed {
     logic [7:0]  n_of_frames;
     logic [31:0] rpc_id;
     RpcHeaderCtl ctl;
-} RpcHeader;    // Size is 96B
+} RpcHeader;    // Size is 96b
 
 typedef struct packed {
-    logic [63:0] argv;
+    logic [415:0] argv;
     RpcHeader hdr;
 } RpcPckt;
 
