@@ -31,15 +31,17 @@
 // Project :        F-NIC
 // Description :    CCI-P top-level module:
 //                      - MUX CCI-P
-//                      - instantiate NICs
-
+//
+// Known bugs:
+//                  1) When cross-clock shim is added, the system fails to read
+//                     the CCI-P mode register
+//
+//
 // ***************************************************************************
 
 
-`include "platform_if.vh"
-`include "ccip_nic_if.vh"
-
-`include "nic_defs.vh"
+`include "top_level.sv"
+`include "ccip_async_shim.sv"
 
 module ccip_std_afu (
     // CCI-P Clocks and Resets
@@ -57,156 +59,55 @@ module ccip_std_afu (
     output          t_if_ccip_Tx      pck_af2cp_sTx         // CCI-P Tx Port
     );
 
+    // Define default clock
+    `define SYS_CLOCK_200
+    //`define SYS_CLOCK_400
 
-    // We need two AFUs:
-    // * client-side NIC
-    // * server-side NIC
-    localparam NUM_SUB_AFUS    = 2;
-    localparam NUM_PIPE_STAGES = 2;
+`ifdef SYS_CLOCK_200
+    // Run system with medium frequency: 200 and 100MHz
 
+    t_if_ccip_Tx afu_tx;
+    t_if_ccip_Rx afu_rx;
 
-    // Define clock and reset for design
-    logic clk;
-    assign clk = pClk;
+    logic reset_pass;
 
-    logic clk_div_2;
-    assign clk_div_2 = pClkDiv2;
+    // Shim to cross clock for CCI-P
+    ccip_async_shim cross_clock (
+        .bb_softreset(pck_cp2af_softReset),
+        .bb_clk(pClk),
+        .bb_tx(pck_af2cp_sTx),
+        .bb_rx(pck_cp2af_sRx),
 
-    logic clk_div_4;
-    assign clk_div_4 = pClkDiv4;
+        .afu_softreset(reset_pass),
+        .afu_clk(pClkDiv2),
+        .afu_tx(afu_tx),
+        .afu_rx(afu_rx)
+    );
 
-    logic reset;
-    assign reset = pck_cp2af_softReset;
+    // Top-level
+    top_level_module top_level (
+        .pClk(pClkDiv2),
+        .pClkDiv2(pClkDiv4),
+        .pReset(reset_pass),
+        .pck_cp2af_sRx(afu_rx),
+        .pck_af2cp_sTx(afu_tx)
+    );
 
-    // Register requests
-    t_if_ccip_Rx sRx;
-    always_ff @(posedge clk)
-    begin
-        sRx <= pck_cp2af_sRx;
-    end
+`elsif SYS_CLOCK_400
+    // Run system with high frequency: 400 and 200MHz
 
-    t_if_ccip_Tx sTx;
-    assign pck_af2cp_sTx = sTx;
+    top_level_module top_level (
+        .pClk(pClk),
+        .pClkDiv2(pClkDiv2),
+        .pReset(pck_cp2af_softReset),
+        .pck_cp2af_sRx(pck_cp2af_sRx),
+        .pck_af2cp_sTx(pck_af2cp_sTx)
+    );
 
+`else
+    $error("** Illegal Configuration ** the system clock is not defined");
 
-    // =============================================================
-    // Install CCI-P MUX    
-    // =============================================================
-    t_if_ccip_Rx    pck_afu_RxPort        [NUM_SUB_AFUS-1:0];
-    t_if_ccip_Tx    pck_afu_TxPort        [NUM_SUB_AFUS-1:0];
-    logic           ccip_mux2pe_reset     [NUM_SUB_AFUS-1:0];
-
-    ccip_mux #(NUM_SUB_AFUS, NUM_PIPE_STAGES) ccip_mux_U0 (
-                        .pClk(clk),
-                        .pClkDiv2(clk_div_2),
-                        .SoftReset(reset),
-                        .up_Error(),
-                        .up_PwrState(),
-                        .up_RxPort(sRx),
-                        .up_TxPort(sTx),
-                        .afu_SoftReset(ccip_mux2pe_reset),
-                        .afu_PwrState(),
-                        .afu_Error(),
-                        .afu_RxPort(pck_afu_RxPort), 
-                        .afu_TxPort(pck_afu_TxPort)
-        );
-
-
-    // =============================================================
-    // Install NIC devices
-    // =============================================================
-    // Emulate ToR network as a loop-back connection
-    NetworkPacketInternal network_Tx_line_data,   network_Tx_line_data_1;
-    logic                 network_Tx_line_strobe, network_Tx_line_strobe_1;
-    NetworkPacketInternal network_Rx_line_data,   network_Rx_line_data_1;
-    logic                 network_Rx_line_strobe, network_Rx_line_strobe_1;
-
-    // NIC_0:
-    //     TODO: So far, NIC::connect_to_accel always reads UUID by 0x00000
-    //     so it always reads from nic_0
-    //     fix it in software: different NICs must have different MMIO space
-
-    logic nic_0_reset;
-    t_if_ccip_Rx nic_0_rx;
-    t_if_ccip_Tx nic_0_tx;
-
-    nic #(
-            .NIC_ID(8'h00),
-            .SRF_BASE_MMIO_ADDRESS(32'h00000),
-            .SRF_BASE_MMIO_ADDRESS_AFU_ID(32'h00000),
-            .NUM_SUB_AFUS(NUM_SUB_AFUS)
-          ) nic_0 (
-            .clk(clk),
-            .clk_div_2(clk_div_2),
-            .clk_div_4(clk_div_4),
-            .reset(ccip_mux2pe_reset[0]),
-
-            .sRx(pck_afu_RxPort[0]),
-            .sTx(pck_afu_TxPort[0]),
-
-            .network_tx_out(network_Tx_line_data),
-            .network_tx_valid_out(network_Tx_line_strobe),
-            .network_rx_in(network_Rx_line_data),
-            .network_rx_valid_in(network_Rx_line_strobe)
-        );
-
-    // NIC_1:
-    //     HW MMIO addr is in 32-bit space (1)
-    //     HW MMIO objects are 64-bits (2)
-    //     (1, 2) -> HW MMIO addresses are mult. of 2 (3)
-    //     SW MMIO addr is in 64-bit space
-    //     SW MMIO addr is 8B aligned (4)
-    //     (3, 4) -> SW/HW = 4
-    localparam NIC_1_MMIO_SW_ADDR = 32'h20000;
-    localparam NIC_1_MMIO_ADDR_SW_2_HW = NIC_1_MMIO_SW_ADDR/4;
-
-    logic nic_1_reset;
-    t_if_ccip_Rx nic_1_rx;
-    t_if_ccip_Tx nic_1_tx;
-
-    nic #(
-            .NIC_ID(8'h01),
-            .SRF_BASE_MMIO_ADDRESS(NIC_1_MMIO_ADDR_SW_2_HW),
-            .SRF_BASE_MMIO_ADDRESS_AFU_ID(NIC_1_MMIO_ADDR_SW_2_HW),
-            .NUM_SUB_AFUS(NUM_SUB_AFUS)
-          ) nic_1 (
-            .clk(clk),
-            .clk_div_2(clk_div_2),
-            .clk_div_4(clk_div_4),
-            .reset(ccip_mux2pe_reset[1]),
-
-            .sRx(pck_afu_RxPort[1]),
-            .sTx(pck_afu_TxPort[1]),
-
-            .network_tx_out(network_Tx_line_data_1),
-            .network_tx_valid_out(network_Tx_line_strobe_1),
-            .network_rx_in(network_Rx_line_data_1),
-            .network_rx_valid_in(network_Rx_line_strobe_1)
-        );
-
-
-    // =============================================================
-    // Emulate ToR network as a loop-back connection with latency
-    //   - current latency = 1 cycle
-    // =============================================================
-    logic network_clk;
-    assign network_clk = clk_div_4;
-
-    logic network_rst;
-    assign network_rst = ccip_mux2pe_reset[0];
-
-    always @(posedge network_clk) begin
-        network_Rx_line_strobe <= network_Tx_line_strobe_1;
-        network_Rx_line_data   <= network_Tx_line_data_1;
-
-        network_Rx_line_strobe_1 <= network_Tx_line_strobe;
-        network_Rx_line_data_1   <= network_Tx_line_data;
-
-        if (network_rst) begin
-            network_Rx_line_strobe <= 1'b0;
-            network_Rx_line_strobe_1 <= 1'b0;
-        end
-    end
+`endif
 
 
 endmodule

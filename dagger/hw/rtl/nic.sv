@@ -33,7 +33,6 @@ module nic
     (
     input logic clk,
     input logic clk_div_2,
-    input logic clk_div_4,
     input logic reset,
 
     // CPU interface
@@ -77,15 +76,15 @@ module nic
     // NOTE: ccip_clk >= rpc_clk
     //       ccip_clk >= network_clk
     // =============================================================
-    localparam ccip_clk_hz = 400000000;
+    localparam ccip_clk_hz = 200000000;
     logic ccip_clk;
     assign ccip_clk = clk;
 
     logic rpc_clk;
-    assign rpc_clk = clk_div_4;
+    assign rpc_clk = clk_div_2;
 
     logic network_clk;
-    assign network_clk = clk_div_4;
+    assign network_clk = clk_div_2;
 
 
     // =============================================================

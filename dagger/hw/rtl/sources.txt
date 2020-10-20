@@ -11,6 +11,11 @@ async_fifo_channel.sv
 nic_counters.sv
 single_clock_wr_ram.sv
 
+top_level.sv
+ccip_async_shim.sv
+ccip_afifo_channel.sv
+ccip_async_activity_cnt.sv
+
 ccip_std_afu.sv
 ccip_mmio.sv
 ccip_polling.sv
