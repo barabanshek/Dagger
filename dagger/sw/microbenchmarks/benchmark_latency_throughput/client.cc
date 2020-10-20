@@ -104,7 +104,7 @@ static int run_benchmark(frpc::RpcClientNonBlock* rpc_client,
 
     // Make an RPC call
     for(int i=0; i<num_iterations; ++i) {
-        rpc_client->foo(i, 0);
+        rpc_client->foo(i, 1);
 
        // Blocking delay to control rps rate
        for (int delay=0; delay<req_delay; ++delay) {
@@ -121,12 +121,12 @@ static int run_benchmark(frpc::RpcClientNonBlock* rpc_client,
     std::cout << "Thread #" << thread_id
               << ": CQ size= " << cq_size << std::endl;
     //for (int i=0; i<cq_size; ++i) {
-    //    std::cout << cq->pop_response().ret_val << std::endl;
+    //    std::cout << *reinterpret_cast<uint32_t*>(cq->pop_response().argv) << std::endl;
     //}
 
     // Get latency profile
     std::vector<std::pair<uint32_t, uint64_t>> latency_results;
-    for (size_t i=0; i<num_iterations; ++i) {
+    for (size_t i=0; i<num_iterations+100; ++i) {
         if (timestamp_send[i] != 0 && timestamp_recv[i] != 0) {
             latency_results.push_back(std::make_pair(
                                     i, timestamp_recv[i] - timestamp_send[i]));
