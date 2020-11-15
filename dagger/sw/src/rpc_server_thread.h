@@ -7,18 +7,33 @@
 #include <utility>
 
 #include "nic.h"
-#include "tx_queue.h"
+#include "rpc_header.h"
 #include "rx_queue.h"
+#include "tx_queue.h"
 
 namespace frpc {
+
+// Server callback interface
+class RpcServerCallBack_Base {
+public:
+    RpcServerCallBack_Base(const std::vector<const void*>& rpc_fn_ptr):
+        rpc_fn_ptr_(rpc_fn_ptr) {}
+    virtual ~RpcServerCallBack_Base() {}
+
+    virtual void operator()(const RpcPckt* rpc_in, TxQueue& tx_queue) const =0;
+
+protected:
+    const std::vector<const void*>& rpc_fn_ptr_;
+
+};
 
 class RpcServerThread {
 public:
     RpcServerThread(const Nic* nic,
                     size_t nic_flow_id,
                     uint16_t thread_id,
-                    const std::vector<const void*>& rpc_fn_ptr);
-    ~RpcServerThread();
+                    const RpcServerCallBack_Base* callback);
+    virtual ~RpcServerThread();
 
     void start_listening();
     void stop_listening();
@@ -37,8 +52,8 @@ private:
     TxQueue tx_queue_;
     RxQueue rx_queue_;
 
-    // RPC function pointer
-    std::vector<const void*> rpc_fn_ptr_;
+    // RPC callback object
+    const RpcServerCallBack_Base* server_callback_;
 
     // Thread
     std::thread thread_;

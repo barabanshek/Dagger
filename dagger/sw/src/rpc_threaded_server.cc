@@ -95,7 +95,7 @@ int RpcThreadedServer::check_hw_errors() const {
 }
 
 int RpcThreadedServer::run_new_listening_thread(
-                            const std::vector<const void*>& rpc_fn_ptr) {
+                            const RpcServerCallBack_Base* rpc_callback) {
     std::unique_lock<std::mutex> lck(mtx_);
 
     if (thread_cnt_ < max_num_of_threads_) {
@@ -103,7 +103,7 @@ int RpcThreadedServer::run_new_listening_thread(
                         new RpcServerThread(nic_.get(),
                                             thread_cnt_,
                                             thread_cnt_,
-                                            rpc_fn_ptr)));
+                                            rpc_callback)));
         threads_.back().get()->start_listening();
         ++thread_cnt_;
         return 0;

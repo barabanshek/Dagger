@@ -4,6 +4,8 @@
 
 #!/usr/bin/python
 
+TAB_SIZE = 4
+
 class CodeGen:
 	def __init__(self, tmpl_filename = ""):
 		self.__code = ""
@@ -44,4 +46,8 @@ class CodeGen:
 		self.__seek_ptr = self.__code.index(token)
 
 	def get_code(self):
+		self.__tabs_to_spaces()
 		return self.__code
+
+	def __tabs_to_spaces(self):
+		self.__code = self.__code.replace('\t', ''.join([' ']*TAB_SIZE))

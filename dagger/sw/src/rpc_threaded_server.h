@@ -21,7 +21,7 @@ public:
 
     int check_hw_errors() const;
 
-    int run_new_listening_thread(const std::vector<const void*>& rpc_fn_ptr);
+    int run_new_listening_thread(const RpcServerCallBack_Base* rpc_callback);
 
     int stop_all_listening_threads();
 
