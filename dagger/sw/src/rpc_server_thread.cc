@@ -17,11 +17,11 @@ namespace frpc {
 RpcServerThread::RpcServerThread(const Nic* nic,
                                  size_t nic_flow_id,
                                  uint16_t thread_id,
-                                 const std::vector<const void*>& rpc_fn_ptr):
+                                 const RpcServerCallBack_Base* callback):
         thread_id_(thread_id),
         nic_(nic),
         nic_flow_id_(nic_flow_id),
-        rpc_fn_ptr_(rpc_fn_ptr) {
+        server_callback_(callback) {
 #ifdef NIC_CCIP_MMIO
     if (cfg::nic::l_tx_queue_size != 0) {
         FRPC_ERROR("In MMIO mode, only one entry in the tx queue is allowed\n");
@@ -99,100 +99,7 @@ void RpcServerThread::_PullListen() {
         if (stop_signal_) continue;
 
         for(int i=0; i<batch_size; ++i) {
-            // call function
-            uint32_t ret_value = 0;
-            if (req_pckt_1[i].hdr.fn_id == 0) {
-                ret_value = (*reinterpret_cast<uint32_t(*)(uint32_t, uint32_t)>
-                            (rpc_fn_ptr_[0]))(*reinterpret_cast<uint32_t*>(req_pckt_1[i].argv),
-                                              *reinterpret_cast<uint32_t*>(req_pckt_1[i].argv + sizeof(uint32_t)));
-            } else if (req_pckt_1[i].hdr.fn_id == 1) {
-                ret_value = (*reinterpret_cast<uint32_t(*)(uint32_t)>
-                            (rpc_fn_ptr_[1]))(*reinterpret_cast<uint32_t*>(req_pckt_1[i].argv));
-            } else {
-                FRPC_ERROR("Thread %d received a wrong function_id= %d\n", thread_id_, req_pckt_1[i].hdr.fn_id);
-                // TODO: what should we do in this case?
-            }
-
-            // Get current buffer pointer
-            uint8_t change_bit;
-            char* tx_ptr = tx_queue_.get_write_ptr(change_bit);
-
-            // return value
-#ifdef NIC_CCIP_POLLING
-            RpcPckt* tx_ptr_casted = reinterpret_cast<RpcPckt*>(tx_ptr);
-
-            tx_ptr_casted->hdr.rpc_id      = req_pckt_1[i].hdr.rpc_id;
-            tx_ptr_casted->hdr.n_of_frames = 1;
-            tx_ptr_casted->hdr.frame_id    = 0;
-
-            tx_ptr_casted->hdr.fn_id = req_pckt_1[i].hdr.fn_id;
-            tx_ptr_casted->hdr.argl  = 1;
-
-            tx_ptr_casted->hdr.ctl.req_type    = rpc_response;
-            tx_ptr_casted->hdr.ctl.update_flag = change_bit;
-
-            // Make data layout
-            *(reinterpret_cast<uint32_t*>(tx_ptr_casted->argv)) = ret_value;
-
-            _mm_mfence();
-            tx_ptr_casted->hdr.ctl.valid = 1;
-#elif NIC_CCIP_MMIO
-            RpcPckt response __attribute__ ((aligned (64)));
-
-            response.hdr.rpc_id      = req_pckt_1[i].hdr.rpc_id;
-            response.hdr.n_of_frames = 1;
-            response.hdr.frame_id    = 0;
-
-            request.hdr.fn_id = req_pckt_1[i].hdr.fn_id;
-            request.hdr.argl  = 1;
-
-            request.hdr.ctl.req_type = rpc_response;
-            request.hdr.ctl.valid    = 1;
-
-            // Make data layout
-            *(reinterpret_cast<uint32_t*>(response.argv)) = ret_value;
-
-            // MMIO only supports AVX writes
-            _mm256_store_si256(reinterpret_cast<__m256i*>(tx_ptr),
-                               *(reinterpret_cast<__m256i*>(&response)));
-            _mm256_store_si256(reinterpret_cast<__m256i*>(tx_ptr + 32),
-                               *(reinterpret_cast<__m256i*>(&response)));
-            _mm_mfence();
-#elif NIC_CCIP_DMA
-            RpcPckt* tx_ptr_casted = reinterpret_cast<RpcPckt*>(tx_ptr);
-
-            tx_ptr_casted->hdr.rpc_id      = req_pckt_1[i].hdr.rpc_id;
-            tx_ptr_casted->hdr.n_of_frames = 1;
-            tx_ptr_casted->hdr.frame_id    = 0;
-
-            tx_ptr_casted->hdr.fn_id = req_pckt_1[i].hdr.fn_id;
-            tx_ptr_casted->hdr.argl  = 1;
-
-            tx_ptr_casted->hdr.ctl.req_type    = rpc_response;
-            tx_ptr_casted->hdr.ctl.update_flag = change_bit;
-
-            // Make data layout
-            *(reinterpret_cast<uint32_t*>(tx_ptr_casted->argv)) = ret_value;
-
-            tx_ptr_casted->hdr.ctl.valid = 1;
-            _mm_mfence();
-
-            if (batch_counter == cfg::nic::tx_batch_size - 1) {
-                nic_->notify_nic_of_new_dma(nic_flow_id_, current_batch_ptr);
-
-                current_batch_ptr += cfg::nic::tx_batch_size;
-                if (current_batch_ptr == ((1 << cfg::nic::l_tx_queue_size) / cfg::nic::tx_batch_size)*cfg::nic::tx_batch_size) {
-                    current_batch_ptr = 0;
-                }
-
-                batch_counter = 0;
-            } else {
-                ++batch_counter;
-            }
-#else
-    #error NIC CCI-P mode is not defined
-#endif
-
+            server_callback_->operator()(req_pckt_1 + i, tx_queue_);
         }
     }
 

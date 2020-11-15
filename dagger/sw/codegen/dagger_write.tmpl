@@ -1,73 +1,70 @@
-    // Send data
-#ifdef NIC_CCIP_POLLING
-    RpcPckt* tx_ptr_casted = reinterpret_cast<RpcPckt*>(tx_ptr);
+        // Send data
+    #ifdef NIC_CCIP_POLLING
+        RpcPckt* tx_ptr_casted = reinterpret_cast<RpcPckt*>(tx_ptr);
 
-    tx_ptr_casted->hdr.rpc_id      = rpc_id;
-    tx_ptr_casted->hdr.n_of_frames = <FUN_NUM_OF_FRAMES>;
-    tx_ptr_casted->hdr.frame_id    = 0;
+        tx_ptr_casted->hdr.rpc_id      = <RPC_ID>;
+        tx_ptr_casted->hdr.n_of_frames = <FUN_NUM_OF_FRAMES>;
+        tx_ptr_casted->hdr.frame_id    = 0;
 
-    tx_ptr_casted->hdr.fn_id  = <FUN_FUNCTION_ID>;
-    tx_ptr_casted->hdr.argl   = <FUN_ARG_LENGTH_BYTES>;
+        tx_ptr_casted->hdr.fn_id  = <FUN_FUNCTION_ID>;
+        tx_ptr_casted->hdr.argl   = <FUN_ARG_LENGTH_BYTES>;
 
-    tx_ptr_casted->hdr.ctl.req_type    = rpc_request;
-    tx_ptr_casted->hdr.ctl.update_flag = change_bit;
+        tx_ptr_casted->hdr.ctl.req_type    = <REQ_TYPE>;
+        tx_ptr_casted->hdr.ctl.update_flag = change_bit;
 
-    /*DATA_LAYOUT*/
+/*DATA_LAYOUT*/
+        // Set valid
+        _mm_mfence();
+        tx_ptr_casted->hdr.ctl.valid = 1;
+    #elif NIC_CCIP_MMIO
+        RpcPckt request __attribute__ ((aligned (64)));
 
-    // Set valid
-    _mm_mfence();
-    tx_ptr_casted->hdr.ctl.valid = 1;
-#elif NIC_CCIP_MMIO
-    RpcPckt request __attribute__ ((aligned (64)));
+        request.hdr.rpc_id      = <RPC_ID>;
+        request.hdr.n_of_frames = <FUN_NUM_OF_FRAMES>;
+        request.hdr.frame_id    = 0;
 
-    request.hdr.rpc_id      = rpc_id;
-    request.hdr.n_of_frames = <FUN_NUM_OF_FRAMES>;
-    request.hdr.frame_id    = 0;
+        request.hdr.fn_id = <FUN_FUNCTION_ID>;
+        request.hdr.argl  = <FUN_ARG_LENGTH_BYTES>;
 
-    request.hdr.fn_id = <FUN_FUNCTION_ID>;
-    request.hdr.argl  = <FUN_ARG_LENGTH_BYTES>;
+        request.hdr.ctl.req_type = <REQ_TYPE>;
+        request.hdr.ctl.valid    = 1;
 
-    request.hdr.ctl.req_type = rpc_request;
-    request.hdr.ctl.valid    = 1;
+/*DATA_LAYOUT*/
+        // MMIO only supports AVX writes
+        _mm256_store_si256(reinterpret_cast<__m256i*>(tx_ptr),
+                           *(reinterpret_cast<__m256i*>(&request)));
+        _mm256_store_si256(reinterpret_cast<__m256i*>(tx_ptr + 32),
+                           *(reinterpret_cast<__m256i*>(&request)));
+        _mm_mfence();
+    #elif NIC_CCIP_DMA
+        RpcPckt* tx_ptr_casted = reinterpret_cast<RpcPckt*>(tx_ptr);
 
-    /*DATA_LAYOUT*/
+        tx_ptr_casted->hdr.rpc_id      = <RPC_ID>;
+        tx_ptr_casted->hdr.n_of_frames = <FUN_NUM_OF_FRAMES>;
+        tx_ptr_casted->hdr.frame_id    = 0;
 
-    // MMIO only supports AVX writes
-    _mm256_store_si256(reinterpret_cast<__m256i*>(tx_ptr),
-                       *(reinterpret_cast<__m256i*>(&request)));
-    _mm256_store_si256(reinterpret_cast<__m256i*>(tx_ptr + 32),
-                       *(reinterpret_cast<__m256i*>(&request)));
-    _mm_mfence();
-#elif NIC_CCIP_DMA
-    RpcPckt* tx_ptr_casted = reinterpret_cast<RpcPckt*>(tx_ptr);
+        tx_ptr_casted->hdr.fn_id = <FUN_FUNCTION_ID>;
+        tx_ptr_casted->hdr.argl  = <FUN_ARG_LENGTH_BYTES>;
 
-    tx_ptr_casted->hdr.rpc_id      = rpc_id;
-    tx_ptr_casted->hdr.n_of_frames = <FUN_NUM_OF_FRAMES>;
-    tx_ptr_casted->hdr.frame_id    = 0;
+        tx_ptr_casted->hdr.ctl.req_type    = <REQ_TYPE>;
+        tx_ptr_casted->hdr.ctl.update_flag = change_bit;
 
-    tx_ptr_casted->hdr.fn_id = <FUN_FUNCTION_ID>;
-    tx_ptr_casted->hdr.argl  = <FUN_ARG_LENGTH_BYTES>;
+/*DATA_LAYOUT*/
+        tx_ptr_casted->hdr.ctl.valid = 1;
+        _mm_mfence();
 
-    tx_ptr_casted->hdr.ctl.req_type    = rpc_request;
-    tx_ptr_casted->hdr.ctl.update_flag = change_bit;
+        if (batch_counter == cfg::nic::tx_batch_size - 1) {
+            nic_->notify_nic_of_new_dma(nic_flow_id_, current_batch_ptr);
 
-    /*DATA_LAYOUT*/
+            current_batch_ptr += cfg::nic::tx_batch_size;
+            if (current_batch_ptr == ((1 << cfg::nic::l_tx_queue_size) / cfg::nic::tx_batch_size)*cfg::nic::tx_batch_size) {
+                current_batch_ptr = 0;
+            }
 
-    tx_ptr_casted->hdr.ctl.valid = 1;
-    _mm_mfence();
-
-    if (batch_counter == cfg::nic::tx_batch_size - 1) {
-        nic_->notify_nic_of_new_dma(nic_flow_id_, current_batch_ptr);
-
-        current_batch_ptr += cfg::nic::tx_batch_size;
-        if (current_batch_ptr == ((1 << cfg::nic::l_tx_queue_size) / cfg::nic::tx_batch_size)*cfg::nic::tx_batch_size) {
-            current_batch_ptr = 0;
+            batch_counter = 0;
+        } else {
+            ++batch_counter;
         }
-
-        batch_counter = 0;
-    } else {
-        ++batch_counter;
-    }
-#else
-    #error NIC CCI-P mode is not defined
-#endif
+    #else
+        #error NIC CCI-P mode is not defined
+    #endif

@@ -193,29 +193,41 @@ class RPCGenerator:
 #ifndef _RPC_SERVER_CALLBACK_H_
 #define _RPC_SERVER_CALLBACK_H_
 
-class RpcServerCallBack {
+#include "logger.h"
+#include "rpc_header.h"
+#include "rpc_server_thread.h"
+#include "rx_queue.h"
+#include "utils.h"
+
+#include <immintrin.h>
+
+namespace frpc {
+
+class RpcServerCallBack: public RpcServerCallBack_Base {
 public:
 	RpcServerCallBack(const std::vector<const void*>& rpc_fn_ptr):
-		rpc_fn_ptr_(rpc_fn_ptr) {}
-	~RpcServerCallBack();
+		RpcServerCallBack_Base(rpc_fn_ptr) {}
+	~RpcServerCallBack() {};
 
-	virtual void operator()(const RpcPckt* rpc_in, const TxQueue* tx_queue) {
+	virtual void operator()(const RpcPckt* rpc_in, TxQueue& tx_queue) const final {
 		uint64_t ret_val;
 """
 		c_codegen.append_snippet(skeleton_header)
 
 		# Generate function calls
 		c_codegen.append(self.__switch_block(
-							'req_pckt->hdr.fn_id',
+							'rpc_in->hdr.fn_id',
 							[str(f[3]) for f in s_functions],
-							[self.__gen_casted_f_call(f, imessages) for f in s_functions]
+							[self.__gen_casted_f_call(f, imessages) for f in s_functions],
+							2
 						))
 
 		# Generate
 		skeleton_change_bit = \
 """
-	uint8_t change_bit;
-	char* tx_ptr = tx_queue.get_write_ptr(change_bit);
+		uint8_t change_bit;
+		char* tx_ptr = tx_queue.get_write_ptr(change_bit);
+
 """
 		c_codegen.append_snippet(skeleton_change_bit)
 
@@ -224,29 +236,32 @@ public:
 
 		# Make return parameters
 		# TODO: we only support uint64_t so far
+		c_codegen.replace('<RPC_ID>', 'rpc_in->hdr.rpc_id')
 		c_codegen.replace('<FUN_NUM_OF_FRAMES>', str(1))
 		c_codegen.replace('<FUN_FUNCTION_ID>', str(1))
 		c_codegen.replace('<FUN_ARG_LENGTH_BYTES>', str(8))
+		c_codegen.replace('<REQ_TYPE>', 'rpc_response')
 
 		# Make data layout
 		for i in range(3):
 			c_codegen.seek('/*DATA_LAYOUT*/')
 			c_codegen.remove_token('/*DATA_LAYOUT*/')
 			c_codegen.append(
+				self.__new_line(
 				self.__assignment(
 				self.__dereference(
 				self.__reinterpret_cast(
 					'uint64_t*',
 					'tx_ptr_casted->argv'
-				)), 'ret_val'))
+				)), 'ret_val'), 2))
 
 		skeleton_footer = \
 """
 	}
-private:
-	const std::vector<const void*>& rpc_fn_ptr_;
 
 };
+
+}  // namespace frpc
 
 #endif // _RPC_SERVER_CALLBACK_H_
 """
@@ -280,10 +295,10 @@ private:
 		arguments = []
 		for arg, size in zip(arg_list, arg_sizes):
 			arguments.append(self.__dereference(
-			          	 	 self.__reinterpret_cast(
-			          		 	self.__make_ptr(arg),
-			          			self.__offset('req_pckt->argv', offset) 
-			          		)))
+							 self.__reinterpret_cast(
+								self.__make_const(self.__make_ptr(arg)),
+								self.__offset('rpc_in->argv', offset)
+							)))
 			offset = offset + size
 
 		cast_string = self.__assignment('ret_val',
@@ -292,7 +307,7 @@ private:
 					  self.__closure(
 					  self.__dereference(
 					  self.__reinterpret_cast('uint64_t(*)(' + ', '.join(arg_list) + ')',
-					  	                       'rpc_fn_ptr_[' + str(rpc_id) + ']')
+						                      'rpc_fn_ptr_[' + str(rpc_id) + ']')
 					  )), ','.join(arguments))))
 
 		return cast_string
@@ -315,7 +330,11 @@ private:
 #ifndef _RPC_CLIENT_NONBLOCKING_H_
 #define _RPC_CLIENT_NONBLOCKING_H_
 
+#include "logger.h"
 #include "rpc_client_nonblocking_base.h"
+#include "utils.h"
+
+#include <immintrin.h>
 
 namespace frpc {
 
@@ -338,6 +357,7 @@ public:
 			# Get name and args
 			f_name = f[0]
 			arg_name = f[1]
+			f_id = str(f[3])
 			if arg_name in imessages:
 				msg = imessages[arg_name]
 			else:
@@ -345,30 +365,32 @@ public:
 
 			# Generate function prototype
 			arg_string, arg_size_bytes = self.__make_fparam_layout(msg)
-			f_codegen.append(self.__function('int', f_name, arg_string));
+			f_codegen.append(self.__function('int', f_name, arg_string, 1));
 
 			# Generate function header
 			f_codegen.append(
 """
-    // Get current buffer pointer
-    uint8_t change_bit;
-    char* tx_ptr = tx_queue_.get_write_ptr(change_bit);
-    if (tx_ptr >= nic_->get_tx_buff_end()) {
-        FRPC_ERROR("Nic tx buffer overflow \\n");
-        assert(false);
-    }
-    assert(reinterpret_cast<size_t>(tx_ptr) % nic_->get_mtu_size_bytes() == 0);
+	    // Get current buffer pointer
+	    uint8_t change_bit;
+	    char* tx_ptr = tx_queue_.get_write_ptr(change_bit);
+	    if (tx_ptr >= nic_->get_tx_buff_end()) {
+	        FRPC_ERROR("Nic tx buffer overflow \\n");
+	        assert(false);
+	    }
+	    assert(reinterpret_cast<size_t>(tx_ptr) % nic_->get_mtu_size_bytes() == 0);
 
-    // Make RPC id
-    uint32_t rpc_id = client_id_ | static_cast<uint32_t>(rpc_id_cnt_ << 16);
+	    // Make RPC id
+	    uint32_t rpc_id = client_id_ | static_cast<uint32_t>(rpc_id_cnt_ << 16);
 """)
 			# Append buffer writing template
 			f_codegen.append_from_file(WRITE_TMPL_FILENAME)
 
 			# Make RPC parameters
+			f_codegen.replace('<RPC_ID>', 'rpc_id')
 			f_codegen.replace('<FUN_NUM_OF_FRAMES>', str(1))
-			f_codegen.replace('<FUN_FUNCTION_ID>', str(1))
+			f_codegen.replace('<FUN_FUNCTION_ID>', f_id)
 			f_codegen.replace('<FUN_ARG_LENGTH_BYTES>', str(arg_size_bytes))
+			f_codegen.replace('<REQ_TYPE>', 'rpc_request')
 
 			# Make data layout
 			for i in range(3):
@@ -379,14 +401,14 @@ public:
 			# Generate function footer
 			f_codegen.append("""
 #ifdef PROFILE_LATENCY
-    // Add to latency hash table
-    uint64_t hash = a + b;
-    lat_prof_timestamp[hash] = frpc::utils::rdtsc();
+        // Add to latency hash table
+        uint64_t hash = a + b;
+        lat_prof_timestamp[hash] = frpc::utils::rdtsc();
 #endif
 
-    ++rpc_id_cnt_;
+        ++rpc_id_cnt_;
 
-    return 0;
+        return 0;
 }\n""")
 
 			# Append function
@@ -442,7 +464,7 @@ public:
 				self.__reinterpret_cast(
 					self.__make_ptr(cpp_field_type),
 					self.__offset('tx_ptr_casted->argv', cpp_field_offset)
-				)), str(field_var))))
+				)), str(field_var)), 2))
 
 			cpp_field_offset = cpp_field_offset + cpp_field_size
 
@@ -467,27 +489,31 @@ public:
 	def __f_call(self, fn, args):
 		return fn + '(' + args + ')'
 
-	def __new_line(self, expr):
-		return expr + ';\n'
+	def __new_line(self, expr, tabs=0):
+		return "".join(['\t']*tabs) + expr + ';\n'
 
 	def __make_ptr(self, expr):
 		return expr + '*'
 
+	def __make_const(self, expr):
+		return 'const ' + expr
+
 	def __var_def(self, type_, name):
 		return type_ + ' ' + name
 
-	def __switch_block(self, var_name, case_var_list, case_list):
-		result = 'switch (' + var_name + ') {\n'
+	def __switch_block(self, var_name, case_var_list, case_list, tabs=0):
+		result = "".join(['\t']*tabs) + 'switch (' + var_name + ') {\n'
 		for case_var, case in zip(case_var_list, case_list):
-			result = result + 'case ' + case_var + ': {\n'
-			result = result + case
-			result = result + '}\n'
-		result = result + '}\n'
+			result = result + "".join(['\t']*(tabs+1)) + 'case ' + case_var + ': {\n'
+			result = result + "".join(['\t']*(tabs+2)) + case
+			result = result + "".join(['\t']*(tabs+2)) + 'break;\n'
+			result = result + "".join(['\t']*(tabs+1)) + '}\n'
+		result = result + "".join(['\t']*tabs) + '}\n'
 
 		return result
 
-	def __function(self, ret_type, name, args):
-		return ret_type + ' ' + name + '(' + args + ') {\n'
+	def __function(self, ret_type, name, args, tabs=0):
+		return "".join(['\t']*tabs) + ret_type + ' ' + name + '(' + args + ') {\n'
 
 
 #
