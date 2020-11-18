@@ -1,15 +1,24 @@
+/* 16 Byte */
+message LoopBackArgs {
+	int64 timestamp;
+	int64 data;
+}
+
+/* 24 Byte */
 message AddArgs {
-    int32 a;
-    int32 b;
-}
-
-message NumericalResult {
-    int32 ret_val;
-}
-
-message SigningArgs {
+	int64 timestamp;
     int64 a;
     int64 b;
+}
+
+/* 8 Byte */
+message NumericalResult {
+    int64 ret_val;
+}
+
+/* 40 Byte */
+message SigningArgs {
+	int64 timestamp;
     int64 hash_lsb;
     int64 hash_msb;
     int32 key_0;
@@ -18,25 +27,25 @@ message SigningArgs {
     int32 key_3;
 }
 
+/* 8 Byte */
 message Signature {
     uint64 result;
 }
 
-message HashData {
+/* 52 Byte */
+message XorArgs {
+	int64 timestamp;
     int64 a;
     int64 b;
-    int64 data_0;
-    int64 data_1;
-    int64 data_2;
-    int64 data_3;
-}
-
-message HashResult {
-    int64 result;
+    int64 c;
+    int64 d;
+    int64 e;
+    int32 f;
 }
 
 service MyService {
+	rpc loopback(LoopBackArgs) returns (NumericalResult);
     rpc add(AddArgs) returns (NumericalResult);
-    rpc hash(HashData) returns (HashResult);
     rpc sign(SigningArgs) returns (Signature);
+    rpc xor_(XorArgs) returns (NumericalResult);
 }

@@ -87,7 +87,13 @@ class RPCGenerator:
 
 			l = l.rstrip("\n").lstrip()
 
-			if l.endswith('{'):
+			if l.startswith('/*'):
+				if not l.endswith('*/'):
+					assert False, "Wrong format of a comment"
+
+				continue
+
+			elif l.endswith('{'):
 				regexp = r"^(message|service) .* {$"
 				m = re.search(regexp, l)
 				if not m == None:
@@ -372,12 +378,6 @@ public:
 			f_codegen.append(
 """
 	    // Get current buffer pointer
-#ifdef PROFILE_LATENCY
-        // Add to latency hash table
-        uint64_t hash = a + b;
-        lat_prof_timestamp[hash] = frpc::utils::rdtsc();
-#endif
-
 	    uint8_t change_bit;
 	    char* tx_ptr = tx_queue_.get_write_ptr(change_bit);
 	    if (tx_ptr >= nic_->get_tx_buff_end()) {

@@ -10,16 +10,13 @@
 #define NIC_ADDR 0x00000
 
 // RPC functions
-static uint64_t add(uint32_t a, uint32_t b);
-static uint64_t hash(uint64_t a, uint64_t b,
-                     uint64_t data_0, uint64_t data_1, uint64_t data_2, uint64_t data_3);
-//static uint32_t boo(uint32_t a);
+static uint64_t loopback(uint64_t timestamp, uint64_t data);
+static uint64_t add(uint64_t timestamp, uint64_t a, uint64_t b);
+static uint64_t sign(uint64_t timestamp, uint64_t hash_lsb, uint64_t hash_msb,
+                     uint32_t key_0, uint32_t key_1, uint32_t key_2, uint32_t key_3);
+static uint64_t xor_(uint64_t timestamp, uint64_t a, uint64_t b, uint64_t c,
+                     uint64_t d, uint64_t e, uint32_t f);
 
-static uint64_t rdtsc(){
-    unsigned int lo, hi;
-    __asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
-    return ((uint64_t)hi << 32) | lo;
-}
 
 // <max number of threads, run duration>
 int main(int argc, char* argv[]) {
@@ -40,8 +37,10 @@ int main(int argc, char* argv[]) {
 
     // Register RPC functions
     std::vector<const void*> fn_ptr;
+    fn_ptr.push_back(reinterpret_cast<const void*>(&loopback));
     fn_ptr.push_back(reinterpret_cast<const void*>(&add));
-    fn_ptr.push_back(reinterpret_cast<const void*>(&hash));
+    fn_ptr.push_back(reinterpret_cast<const void*>(&sign));
+    fn_ptr.push_back(reinterpret_cast<const void*>(&xor_));
 
     frpc::RpcServerCallBack server_callback(fn_ptr);
 
@@ -75,22 +74,34 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-static uint64_t add(uint32_t a, uint32_t b) {
-    //std::cout << "add is called with " << a << ", " << b << std::endl;
-    return a;
+static uint64_t loopback(uint64_t timestamp, uint64_t data) {
+#ifdef VERBOSE_RPCS
+    std::cout << "loopback is called with " << data << std::endl;
+#endif
+    return timestamp;
 }
 
-static uint64_t hash(uint64_t a, uint64_t b,
-                     uint64_t data_0, uint64_t data_1, uint64_t data_2, uint64_t data_3) {
-   std::cout << "hash is called with " << a << ", " << b << ": <"
-             << data_0 << " " << data_1 << " " << data_2 << " " << data_3 << ">" << std::endl;
-    return a;
+static uint64_t add(uint64_t timestamp, uint64_t a, uint64_t b) {
+#ifdef VERBOSE_RPCS
+    std::cout << "add is called with " << a << ", " << b << std::endl;
+#endif
+    return timestamp;
 }
 
-//static uint32_t boo(uint32_t data[16]) {
-//    uint32_t sum = 0;
-//    for (int i=0; i<16; ++i) {
-//        sum += data[i];
-//    }
-//    return sum;
-//}
+static uint64_t sign(uint64_t timestamp, uint64_t hash_lsb, uint64_t hash_msb,
+                     uint32_t key_0, uint32_t key_1, uint32_t key_2, uint32_t key_3) {
+#ifdef VERBOSE_RPCS
+    std::cout << "sign is called with " << hash_lsb << ", " << hash_msb << ": <"
+              << key_0 << " " << key_1 << " " << key_2 << " " << key_3 << ">" << std::endl;
+#endif
+    return timestamp;
+}
+
+static uint64_t xor_(uint64_t timestamp, uint64_t a, uint64_t b, uint64_t c,
+                     uint64_t d, uint64_t e, uint32_t f) {
+#ifdef VERBOSE_RPCS
+    std::cout << "xor_ is called with " << a << " " << b << " " << c << " "
+                                        << d << " " << e << " " << f << std::endl;
+#endif
+    return timestamp;
+}

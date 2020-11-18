@@ -29,10 +29,6 @@ public:
     // Forbid instantiation
     virtual void abstract_class() const =0;
 
-#ifdef PROFILE_LATENCY
-    void init_latency_profile(uint64_t* timestamp_send,
-                              uint64_t* timestamp_recv);
-#endif
 
 protected:
     // client_id - a part of rpc_id
@@ -51,11 +47,6 @@ protected:
 #ifdef NIC_CCIP_DMA
     uint32_t current_batch_ptr;
     size_t batch_counter;
-#endif
-
-#ifdef PROFILE_LATENCY
-    // Latency profiler
-    uint64_t* lat_prof_timestamp;
 #endif
 
 private:
