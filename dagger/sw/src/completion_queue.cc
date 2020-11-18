@@ -35,12 +35,6 @@ void CompletionQueue::unbind() {
     FRPC_INFO("Completion queue is unbound from RPC client %d\n", rpc_client_id_);
 }
 
-#ifdef PROFILE_LATENCY
-void CompletionQueue::init_latency_profile(uint64_t* timestamp_recv) {
-    lat_prof_timestamp = timestamp_recv;
-}
-#endif
-
 void CompletionQueue::_PullListen() {
     FRPC_INFO("Completion queue is bound to RPC client %d\n", rpc_client_id_);
 
@@ -57,20 +51,22 @@ void CompletionQueue::_PullListen() {
 
         if (stop_signal_) continue;
 
-#ifdef PROFILE_LATENCY
-        // Mark recv time
-        uint64_t hash = *reinterpret_cast<uint32_t*>(resp_pckt->argv);
-        lat_prof_timestamp[hash] = frpc::utils::rdtsc();
-#endif
-
         rx_queue_.update_rpc_id(resp_pckt->hdr.rpc_id);
+
+        cq_lock_.lock();
+
+#ifdef PROFILE_LATENCY
+        // Record latency
+        uint64_t arrival_timestamp = *reinterpret_cast<uint64_t*>(resp_pckt->argv);
+        timestamps_.push_back(frpc::utils::rdtsc() - arrival_timestamp);
+#endif
 
         // Append to queue
         // TODO: there is a potential optimization here:
         //       the NIC hardware can directly write to this queue without
         //       the needs to explicitly copy data
-        cq_lock_.lock();
         cq_.push_back(*const_cast<RpcPckt*>(resp_pckt));
+
         cq_lock_.unlock();
     }
 }
@@ -87,6 +83,10 @@ RpcPckt CompletionQueue::pop_response() {
     cq_lock_.unlock();
 
     return res;
+}
+
+const std::vector<uint64_t>& CompletionQueue::get_latency_records() const {
+    return timestamps_;
 }
 
 }  // namespace frpc

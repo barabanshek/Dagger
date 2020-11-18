@@ -52,13 +52,5 @@ CompletionQueue* RpcClientNonBlock_Base::get_completion_queue() const {
     return cq_.get();
 }
 
-#ifdef PROFILE_LATENCY
-void RpcClientNonBlock_Base::init_latency_profile(uint64_t* timestamp_send,
-                                             uint64_t* timestamp_recv) {
-    lat_prof_timestamp = timestamp_send;
-    cq_->init_latency_profile(timestamp_recv);
-}
-#endif
-
 
 }  // namespace frpc

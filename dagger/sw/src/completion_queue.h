@@ -28,9 +28,7 @@ public:
 
     RpcPckt pop_response();
 
-#ifdef PROFILE_LATENCY
-    void init_latency_profile(uint64_t* timestamp_recv);
-#endif
+    const std::vector<uint64_t>& get_latency_records() const;
 
 private:
     void _PullListen();
@@ -48,13 +46,13 @@ private:
     // CQ
     std::vector<RpcPckt> cq_;
 
+#ifdef PROFILE_LATENCY
+    // Timestamps
+    std::vector<uint64_t> timestamps_;
+#endif
+
     // Sync
     std::mutex cq_lock_;
-
-#ifdef PROFILE_LATENCY
-    // Latency profiler
-    uint64_t* lat_prof_timestamp;
-#endif
 
 };
 

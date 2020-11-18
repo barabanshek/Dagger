@@ -19,7 +19,8 @@ static int run_benchmark(frpc::RpcClient* rpc_client,
                              int thread_id,
                              size_t num_iterations,
                              size_t req_delay,
-                             double cycles_in_ns);
+                             double cycles_in_ns,
+                             int function_to_call);
 
 static double rdtsc_in_ns() {
     uint64_t a = frpc::utils::rdtsc();
@@ -29,7 +30,7 @@ static double rdtsc_in_ns() {
     return (b - a)/1000000000.0;
 }
 
-// <number of threads, number of requests per thread, RPC issue delay>
+// <number of threads, number of requests per thread, RPC issue delay, function>
 enum TestType {performance, correctness};
 
 int main(int argc, char* argv[]) {
@@ -40,6 +41,19 @@ int main(int argc, char* argv[]) {
     size_t num_of_threads = atoi(argv[1]);
     size_t num_of_requests = atoi(argv[2]);
     size_t req_delay = atoi(argv[3]);
+    int function_to_call = 0;
+    if (strcmp(argv[4], "-loopback") == 0)
+        function_to_call = 0;
+    else if (strcmp(argv[4], "-add") == 0)
+        function_to_call = 1;
+    else if (strcmp(argv[4], "-sign") == 0)
+        function_to_call = 2;
+    else if (strcmp(argv[4], "-xor") == 0)
+        function_to_call = 3;
+    else {
+        std::cout << "wrong parameter: function name" << std::endl;
+        return 1;
+    }
 
     frpc::RpcClientPool<frpc::RpcClient> rpc_client_pool(NIC_ADDR,
                                                          num_of_threads);
@@ -67,7 +81,8 @@ int main(int argc, char* argv[]) {
                                       i,
                                       num_of_requests,
                                       req_delay,
-                                      cycles_in_ns);
+                                      cycles_in_ns,
+                                      function_to_call);
         threads.push_back(std::move(thr));
     }
 
@@ -90,30 +105,33 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-static bool sortbysec(const std::pair<uint32_t,uint64_t> &a,
-              const std::pair<uint32_t,uint64_t> &b) {
-    return (a.second < b.second);
+static bool sortbysec(const uint64_t &a, const uint64_t &b) {
+    return a < b;
 }
 
 static int run_benchmark(frpc::RpcClient* rpc_client,
                          int thread_id,
                          size_t num_iterations,
                          size_t req_delay,
-                         double cycles_in_ns) {
-    uint64_t* timestamp_send = new uint64_t[num_iterations+100];
-    uint64_t* timestamp_recv = new uint64_t[num_iterations+100];
-
-    rpc_client->init_latency_profile(timestamp_send, timestamp_recv);
-
+                         double cycles_in_ns,
+                         int function_to_call) {
     // Make an RPC call
     for(int i=0; i<num_iterations; ++i) {
-        rpc_client->add(i, 10);
-      //  rpc_client->hash(i, 10, 123, 456, 789, 1111);
+        switch (function_to_call) {
+            case 0: rpc_client->loopback(frpc::utils::rdtsc(), i); break;
+            case 1: rpc_client->add(frpc::utils::rdtsc(), i, i+1); break;
+            case 2: rpc_client->sign(frpc::utils::rdtsc(),
+                                     0xaabbccdd,
+                                     0x11223344,
+                                     i, i+1, i+2, i+3); break;
+            case 3: rpc_client->xor_(frpc::utils::rdtsc(),
+                                     i, i+1, i+2, i+3, i+4, i+5); break;
+        }
 
-       // Blocking delay to control rps rate
-       for (int delay=0; delay<req_delay; ++delay) {
-           asm("");
-       }
+        // Blocking delay to control rps rate
+        for (int delay=0; delay<req_delay; ++delay) {
+            asm("");
+        }
     }
 
     // Wait a bit
@@ -122,37 +140,30 @@ static int run_benchmark(frpc::RpcClient* rpc_client,
     // Get data
     auto cq = rpc_client->get_completion_queue();
     size_t cq_size = cq->get_number_of_completed_requests();
-    std::cout << "Thread #" << thread_id
-              << ": CQ size= " << cq_size << std::endl;
+    std::cout << "Thread #" << thread_id << ": CQ size= " << cq_size << std::endl;
+
+    // Output data
     //for (int i=0; i<cq_size; ++i) {
     //    std::cout << *reinterpret_cast<uint32_t*>(cq->pop_response().argv) << std::endl;
     //}
 
     // Get latency profile
-    std::vector<std::pair<uint32_t, uint64_t>> latency_results;
-    for (size_t i=0; i<num_iterations+100; ++i) {
-        if (timestamp_send[i] != 0 && timestamp_recv[i] != 0) {
-            latency_results.push_back(std::make_pair(
-                                    i, timestamp_recv[i] - timestamp_send[i]));
-        }
-    }
+    auto latency_records = cq->get_latency_records();
 
-    std::sort(latency_results.begin(), latency_results.end(), sortbysec);
+    std::sort(latency_records.begin(), latency_records.end(), sortbysec);
 
     std::cout << "***** latency results for thread #" << thread_id
               << " *****" << std::endl;
-    std::cout << "  total records= " << latency_results.size() << std::endl;
+    std::cout << "  total records= " << latency_records.size() << std::endl;
     std::cout << "  median= "
-              << latency_results[latency_results.size()*0.5].second/cycles_in_ns
+              << latency_records[latency_records.size()*0.5]/cycles_in_ns
               << " ns" << std::endl;
     std::cout << "  90th= "
-              << latency_results[latency_results.size()*0.9].second/cycles_in_ns
+              << latency_records[latency_records.size()*0.9]/cycles_in_ns
               << " ns" << std::endl;
     std::cout << "  99th= "
-              << latency_results[latency_results.size()*0.99].second/cycles_in_ns
+              << latency_records[latency_records.size()*0.99]/cycles_in_ns
               << " ns" << std::endl;
 
-    delete[] timestamp_send;
-    delete[] timestamp_recv;
     return 0;
 }
