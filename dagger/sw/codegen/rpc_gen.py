@@ -6,6 +6,7 @@
 
 from codegen import CodeGen
 
+import os
 import re
 import sys
 from shutil import copyfile
@@ -371,6 +372,12 @@ public:
 			f_codegen.append(
 """
 	    // Get current buffer pointer
+#ifdef PROFILE_LATENCY
+        // Add to latency hash table
+        uint64_t hash = a + b;
+        lat_prof_timestamp[hash] = frpc::utils::rdtsc();
+#endif
+
 	    uint8_t change_bit;
 	    char* tx_ptr = tx_queue_.get_write_ptr(change_bit);
 	    if (tx_ptr >= nic_->get_tx_buff_end()) {
@@ -400,11 +407,6 @@ public:
 
 			# Generate function footer
 			f_codegen.append("""
-#ifdef PROFILE_LATENCY
-        // Add to latency hash table
-        uint64_t hash = a + b;
-        lat_prof_timestamp[hash] = frpc::utils::rdtsc();
-#endif
 
         ++rpc_id_cnt_;
 

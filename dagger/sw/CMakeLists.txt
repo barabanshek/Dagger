@@ -26,7 +26,7 @@ set(LIBRARIES ${LIBRARIES} -z noexecstack)
 set(LIBRARIES ${LIBRARIES} -z relro -z now)
 set(LIBRARIES ${LIBRARIES} pthread -pie)
 set(LIBRARIES ${LIBRARIES} -luuid)
-#set(LIBRARIES ${LIBRARIES} -shared)
+set(LIBRARIES ${LIBRARIES} -shared)
 
 # Testing
 enable_testing()
@@ -39,6 +39,8 @@ set(ASE_LIBS -lopae-c-ase)
 include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${CMAKE_SOURCE_DIR}/src/nic_impl)
 
+set(RPC_CODEGEN_PATH ${CMAKE_CURRENT_SOURCE_DIR}/codegen)
+
 set(SOURCES
     src/nic_impl/nic_ccip.cc
     src/nic_impl/nic_ccip_polling.cc
@@ -50,8 +52,9 @@ set(SOURCES
     src/tx_queue.cc
     src/rx_queue.cc
     src/completion_queue.cc
-    src/rpc_client_nonblocking.cc
-    src/rpc_threaded_server_wrapper.cc)
+    src/rpc_client_nonblocking_base.cc
+#    src/rpc_threaded_server_wrapper.cc
+    )
 
 set(TEST_SOURCES
     tests/client_pool_test.cc
@@ -75,17 +78,6 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 #add_executable(rpc_tests ${SOURCES} ${TEST_SOURCES})
 #target_link_libraries(rpc_tests ${GTEST_LIBRARIES} ${FPGA_LIBS} ${LIBRARIES})
 
-# Compile microbenchmarks
-set(MBENCH_LAT_THR_CLIENT_SRC ${CMAKE_SOURCE_DIR}/microbenchmarks/benchmark_latency_throughput/client.cc)
-add_executable(dagger_benchmark_client ${MBENCH_LAT_THR_CLIENT_SRC} ${SOURCES})
-target_compile_definitions(dagger_benchmark_client PRIVATE PROFILE_LATENCY=1)
-target_link_libraries(dagger_benchmark_client ${FPGA_LIBS} ${LIBRARIES})
-
-set(MBENCH_LAT_THR_SERVER_SRC ${CMAKE_SOURCE_DIR}/microbenchmarks/benchmark_latency_throughput/server.cc)
-add_executable(dagger_benchmark_server ${MBENCH_LAT_THR_SERVER_SRC} ${SOURCES})
-target_compile_definitions(dagger_benchmark_server PRIVATE PROFILE_LATENCY=1)
-target_link_libraries(dagger_benchmark_server ${FPGA_LIBS} ${LIBRARIES})
-
 # Compile samples
 #set(SAMPLE_CLIENT_SRC ${CMAKE_SOURCE_DIR}/samples/client.cc)
 #add_executable(rpc_client ${SAMPLE_CLIENT_SRC} ${SOURCES})
@@ -105,12 +97,17 @@ target_link_libraries(dagger_benchmark_server ${FPGA_LIBS} ${LIBRARIES})
 #target_compile_definitions(rpc_joint_ase PUBLIC -DASE_SIMULATION)
 #target_link_libraries(rpc_joint_ase ${ASE_LIBS} ${LIBRARIES})
 
-set(ASE_SAMPLE_NONBLOCK_SRC ${CMAKE_SOURCE_DIR}/samples/joint_nonblocking_ase_process.cc)
-add_executable(rpc_joint_nonblocking_ase ${ASE_SAMPLE_NONBLOCK_SRC} ${SOURCES})
-target_compile_definitions(rpc_joint_nonblocking_ase PUBLIC -DASE_SIMULATION)
-target_link_libraries(rpc_joint_nonblocking_ase ${ASE_LIBS} ${LIBRARIES})
 
-# Compile Dagger as a static library with a C wrapper
-#add_library(dagger SHARED ${SOURCES})
-#target_compile_definitions(dagger PRIVATE PROFILE_LATENCY=1)
-#target_link_libraries(dagger ${FPGA_LIBS} ${LIBRARIES})
+#set(ASE_SAMPLE_NONBLOCK_SRC ${CMAKE_SOURCE_DIR}/samples/joint_nonblocking_ase_process.cc)
+#add_executable(rpc_joint_nonblocking_ase ${ASE_SAMPLE_NONBLOCK_SRC} ${SOURCES})
+#target_compile_definitions(rpc_joint_nonblocking_ase PUBLIC -DASE_SIMULATION)
+#target_link_libraries(rpc_joint_nonblocking_ase ${ASE_LIBS} ${LIBRARIES})
+
+
+# Build Dagger as a shared library
+add_library(dagger SHARED ${SOURCES})
+target_compile_definitions(dagger PRIVATE PROFILE_LATENCY=1)
+target_link_libraries(dagger ${FPGA_LIBS} ${LIBRARIES})
+
+# Build microbenchmarks
+add_subdirectory(microbenchmarks)

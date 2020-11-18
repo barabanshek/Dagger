@@ -1,0 +1,42 @@
+message AddArgs {
+    int32 a;
+    int32 b;
+}
+
+message NumericalResult {
+    int32 ret_val;
+}
+
+message SigningArgs {
+    int64 a;
+    int64 b;
+    int64 hash_lsb;
+    int64 hash_msb;
+    int32 key_0;
+    int32 key_1;
+    int32 key_2;
+    int32 key_3;
+}
+
+message Signature {
+    uint64 result;
+}
+
+message HashData {
+    int64 a;
+    int64 b;
+    int64 data_0;
+    int64 data_1;
+    int64 data_2;
+    int64 data_3;
+}
+
+message HashResult {
+    int64 result;
+}
+
+service MyService {
+    rpc add(AddArgs) returns (NumericalResult);
+    rpc hash(HashData) returns (HashResult);
+    rpc sign(SigningArgs) returns (Signature);
+}
