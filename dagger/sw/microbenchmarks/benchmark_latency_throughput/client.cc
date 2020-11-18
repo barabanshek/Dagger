@@ -8,14 +8,14 @@
 #include <thread>
 #include <vector>
 
-#include "rpc_client_nonblocking.h"
+#include "rpc_client.h"
 #include "rpc_client_pool.h"
 #include "utils.h"
 
 // HW parameters
 #define NIC_ADDR 0x20000
 
-static int run_benchmark(frpc::RpcClientNonBlock* rpc_client,
+static int run_benchmark(frpc::RpcClient* rpc_client,
                              int thread_id,
                              size_t num_iterations,
                              size_t req_delay,
@@ -30,15 +30,18 @@ static double rdtsc_in_ns() {
 }
 
 // <number of threads, number of requests per thread, RPC issue delay>
+enum TestType {performance, correctness};
+
 int main(int argc, char* argv[]) {
     double cycles_in_ns = rdtsc_in_ns();
     std::cout << "Cycles in ns: " << cycles_in_ns << std::endl;
 
+    // Parse input
     size_t num_of_threads = atoi(argv[1]);
     size_t num_of_requests = atoi(argv[2]);
     size_t req_delay = atoi(argv[3]);
 
-    frpc::RpcClientPool<frpc::RpcClientNonBlock> rpc_client_pool(NIC_ADDR,
+    frpc::RpcClientPool<frpc::RpcClient> rpc_client_pool(NIC_ADDR,
                                                          num_of_threads);
 
     // Init client pool
@@ -56,7 +59,7 @@ int main(int argc, char* argv[]) {
     // Run client threads
     std::vector<std::thread> threads;
     for (int i=0; i<num_of_threads; ++i) {
-        frpc::RpcClientNonBlock* rpc_client = rpc_client_pool.pop();
+        frpc::RpcClient* rpc_client = rpc_client_pool.pop();
         assert(rpc_client != nullptr);
 
         std::thread thr = std::thread(&run_benchmark,
@@ -92,7 +95,7 @@ static bool sortbysec(const std::pair<uint32_t,uint64_t> &a,
     return (a.second < b.second);
 }
 
-static int run_benchmark(frpc::RpcClientNonBlock* rpc_client,
+static int run_benchmark(frpc::RpcClient* rpc_client,
                          int thread_id,
                          size_t num_iterations,
                          size_t req_delay,
@@ -104,7 +107,8 @@ static int run_benchmark(frpc::RpcClientNonBlock* rpc_client,
 
     // Make an RPC call
     for(int i=0; i<num_iterations; ++i) {
-        rpc_client->foo(i, 1);
+        rpc_client->add(i, 10);
+      //  rpc_client->hash(i, 10, 123, 456, 789, 1111);
 
        // Blocking delay to control rps rate
        for (int delay=0; delay<req_delay; ++delay) {
