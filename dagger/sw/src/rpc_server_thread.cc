@@ -51,6 +51,14 @@ RpcServerThread::~RpcServerThread() {
 
 }
 
+int RpcServerThread::register_connection(ConnectionId c_id, const IPv4& server_addr) {
+    return nic_->add_connection(c_id, server_addr, 0);
+}
+
+int RpcServerThread::remove_connection(ConnectionId c_id) {
+    return nic_->close_connection(c_id);
+}
+
 void RpcServerThread::start_listening() {
     stop_signal_ = 0;
     thread_ = std::thread(&RpcServerThread::_PullListen, this);

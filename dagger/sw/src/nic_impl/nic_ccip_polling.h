@@ -26,28 +26,28 @@ public:
                    bool master_nic);
     virtual ~NicPollingCCIP();
 
-    virtual int start(bool perf=false);
-    virtual int stop();
+    virtual int start(bool perf=false) final;
+    virtual int stop() final;
 
-    virtual int configure_data_plane();
+    virtual int configure_data_plane() final;
 
-    virtual int notify_nic_of_new_dma(size_t flow, size_t bucket) const {
+    virtual int notify_nic_of_new_dma(size_t flow, size_t bucket) const final {
         // No needs to explicitly notify NIC
         return 0;
     }
 
-    virtual char* get_tx_flow_buffer(size_t flow) const {
+    virtual char* get_tx_flow_buffer(size_t flow) const final {
         return const_cast<char*>(buf_) + tx_offset_bytes_ + flow * tx_queue_size_bytes_;
     }
 
-    virtual volatile char* get_rx_flow_buffer(size_t flow) const {
+    virtual volatile char* get_rx_flow_buffer(size_t flow) const final {
         return buf_ + rx_offset_bytes_ + flow * rx_queue_size_bytes_;
     }
 
-    virtual const char* get_tx_buff_end() const {
+    virtual const char* get_tx_buff_end() const final {
         return const_cast<char*>(buf_) + tx_offset_bytes_ + tx_buff_size_bytes_;
     }
-    virtual const char* get_rx_buff_end() const {
+    virtual const char* get_rx_buff_end() const final {
         return const_cast<char*>(buf_) + rx_offset_bytes_ + rx_buff_size_bytes_;
     }
 

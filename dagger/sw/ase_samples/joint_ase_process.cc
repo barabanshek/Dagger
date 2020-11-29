@@ -3,8 +3,8 @@
 // the same time. This wrapper runs both client and server in a single UNIX
 // process.
 //
-// NOTE: there is not such issue when running under a real FPGA, so client and
-// server can be used as independent standalone processes.
+// NOTE: there is not such issue when running on a real FPGA, so client and
+// server can be launched as independent standalone processes.
 //
 
 #include <iostream>
@@ -14,14 +14,15 @@
 #include <assert.h>
 #include <unistd.h>
 
-#define FRPC_LOG_LEVEL_GLOBAL FRPC_LOG_LEVEL_INFO
-
 #include "rpc_client.h"
-#include "rpc_client_nonblocking.h"
 #include "rpc_client_pool.h"
+#include "rpc_server_callback.h"
 #include "rpc_threaded_server.h"
 
+
+#define FRPC_LOG_LEVEL_GLOBAL FRPC_LOG_LEVEL_INFO
 #define NUMBER_OF_THREADS 1
+#define NUM_OF_REQUESTS 20
 
 static int run_server();
 static int run_client();
@@ -36,13 +37,14 @@ int main() {
     return 0;
 }
 
+
 //
 // Server part
 //
 #define SERVER_NIC_ADDR 0x20000
 
-static uint32_t foo(uint32_t a, uint32_t b);
-static uint32_t boo(uint32_t a);
+static uint64_t loopback(uint64_t data);
+static uint64_t add(uint64_t a, uint64_t b);
 
 static int run_server() {
     frpc::RpcThreadedServer server(SERVER_NIC_ADDR, NUMBER_OF_THREADS);
@@ -59,17 +61,20 @@ static int run_server() {
 
     // Register RPC functions
     std::vector<const void*> fn_ptr;
-    fn_ptr.push_back(reinterpret_cast<const void*>(&foo));
-    fn_ptr.push_back(reinterpret_cast<const void*>(&boo));
+    fn_ptr.push_back(reinterpret_cast<const void*>(&loopback));
+    fn_ptr.push_back(reinterpret_cast<const void*>(&add));
 
+    frpc::RpcServerCallBack server_callback(fn_ptr);
+
+    // Start server threads
     for (int i=0; i<NUMBER_OF_THREADS; ++i) {
-        res = server.run_new_listening_thread(fn_ptr);
+        res = server.run_new_listening_thread(&server_callback);
         if (res != 0)
             return res;
     }
 
     std::cout << "------- Server is running... -------" << std::endl;
-    sleep(40); // Run server for 10 sec
+    sleep(40); // Run server for 40 sec
 
     res = server.stop_all_listening_threads();
     if (res != 0)
@@ -82,21 +87,25 @@ static int run_server() {
     if (res != 0)
         return res;
 
-    sleep(5);
+    // We wait a little long here since exiting the scope will immediately
+    // destroy RpcThreadedServer and de-allocate NIC buffers. The ASE environment
+    // can be slow, so if CCI-P transactions are still in-flight when buffers
+    // are de-allocated, this might cause errors.
+    sleep(10);
 
     return 0;
 }
 
 // RPC function #0
-static uint32_t foo(uint32_t a, uint32_t b) {
-    std::cout << "foo is called with a= " << a << ", b= " << b << std::endl;
-    return a + b;
+static uint64_t loopback(uint64_t data) {
+    std::cout << "loopback is called with data= " << data << std::endl;
+    return data + 10;
 }
     
 // RPC function #1
-static uint32_t boo(uint32_t a) {
-    std::cout << "boo is called with a= " << a << std::endl;
-    return a + 10;
+static uint64_t add(uint64_t a, uint64_t b) {
+    std::cout << "add is called with a= " << a << " b= " << b << std::endl;
+    return a + b;
 }
 
 
@@ -104,23 +113,54 @@ static uint32_t boo(uint32_t a) {
 // Client part
 //
 #define CLIENT_NIC_ADDR 0x00000
-#define NUM_OF_REQUESTS 20
 
-static int client(frpc::RpcClientNonBlock* rpc_client, size_t thread_id, size_t num_of_requests) {
+static int client(frpc::RpcClient* rpc_client, size_t thread_id, size_t num_of_requests) {
+    // Open connection
+    frpc::IPv4 server_addr("192.168.0.1", 3136);
+    if (rpc_client->connect(server_addr, 0) != 0) {
+        std::cout << "Failed to open connection" << std::endl;
+        exit(1);
+    } else {
+        std::cout << "Connection is open" << std::endl;
+    }
+
+    if (rpc_client->disconnect() != 0) {
+        std::cout << "Failed to close connection" << std::endl;
+        exit(1);
+    } else {
+        std::cout << "Connection is closed" << std::endl;
+    }
+
+    frpc::IPv4 server_addr2("192.168.0.2", 3136);
+    if (rpc_client->connect(server_addr2, 0) != 0) {
+        std::cout << "Failed to open connection" << std::endl;
+        exit(1);
+    } else {
+        std::cout << "Connection is open" << std::endl;
+    }
+
+    if (rpc_client->connect(server_addr2, 1) != 0) {
+        std::cout << "Failed to open connection" << std::endl;
+        exit(1);
+    } else {
+        std::cout << "Connection is open" << std::endl;
+    }
+
     // Get completion queue
     frpc::CompletionQueue* cq = rpc_client->get_completion_queue();
     assert(cq != nullptr);
 
     // Make an RPC call
     for (int i=0; i<num_of_requests; ++i) {
-        int res = rpc_client->foo(thread_id*10 + i, 12);
+        int res = rpc_client->loopback(thread_id*10 + i);
         assert(res == 0);
 
         usleep(100000);
 
-        for (int delay=0; delay<13; ++delay) {
-            asm("");
-        }
+        //res = rpc_client->add(thread_id*10 + i, thread_id*10 + i + 10);
+        //assert(res == 0);
+
+        //usleep(100000);
     }
 
     // Wait a bit
@@ -138,8 +178,8 @@ static int client(frpc::RpcClientNonBlock* rpc_client, size_t thread_id, size_t 
 }
 
 static int run_client() {
-    frpc::RpcClientPool<frpc::RpcClientNonBlock> rpc_client_pool(CLIENT_NIC_ADDR,
-                                                                 NUMBER_OF_THREADS);
+    frpc::RpcClientPool<frpc::RpcClient> rpc_client_pool(CLIENT_NIC_ADDR,
+                                                         NUMBER_OF_THREADS);
 
     // Init client pool
     int res = rpc_client_pool.init_nic();
@@ -154,7 +194,7 @@ static int run_client() {
     // Get client
     std::vector<std::thread> threads;
     for (int i=0; i<NUMBER_OF_THREADS; ++i) {
-        frpc::RpcClientNonBlock* rpc_client = rpc_client_pool.pop();
+        frpc::RpcClient* rpc_client = rpc_client_pool.pop();
         assert(rpc_client != nullptr);
 
         std::thread thr = std::thread(&client,
@@ -180,7 +220,11 @@ static int run_client() {
     if (res != 0)
         return res;
 
-    sleep(5);
+    // We wait a little long here since exiting the scope will immediately
+    // destroy RpcClientPool and de-allocate NIC buffers. The ASE environment
+    // can be slow, so if CCI-P transactions are still in-flight when buffers
+    // are de-allocated, this might cause errors.
+    sleep(10);
 
     return 0;
 }

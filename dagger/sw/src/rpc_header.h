@@ -1,4 +1,4 @@
-// NOTE: this file must be consistent with hw/rtl/rpc_defs.vh
+// NOTE: this file must be consistent with hw/rtl/cpu_if_defs.vh
 // NOTE: SystemVerilog structures are reversed w.r.t. C structures
 
 #ifndef _RPC_HEADER_H_

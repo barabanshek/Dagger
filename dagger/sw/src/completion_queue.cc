@@ -85,8 +85,10 @@ RpcPckt CompletionQueue::pop_response() {
     return res;
 }
 
+#ifdef PROFILE_LATENCY
 const std::vector<uint64_t>& CompletionQueue::get_latency_records() const {
     return timestamps_;
 }
+#endif
 
 }  // namespace frpc

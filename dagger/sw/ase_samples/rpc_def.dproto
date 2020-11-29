@@ -1,0 +1,17 @@
+message LoopBackArgs {
+    int64 data;
+}
+
+message AddArgs {
+    int64 a;
+    int64 b;
+}
+
+message NumericalResult {
+    int64 data;
+}
+
+service Sample {
+    rpc loopback(LoopBackArgs) returns (NumericalResult);
+    rpc add(AddArgs) returns (NumericalResult);
+}

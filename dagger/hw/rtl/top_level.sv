@@ -7,9 +7,10 @@
 //
 
 `include "platform_if.vh"
-`include "ccip_nic_if.vh"
 
-`include "nic_defs.vh"
+`include "nic.sv"
+
+//`include "nic_defs.vh"
 
 module top_level_module (
     // CCI-P Clocks and Resets
@@ -26,7 +27,7 @@ module top_level_module (
     // * client-side NIC
     // * server-side NIC
     localparam NUM_SUB_AFUS    = 2;
-    localparam NUM_PIPE_STAGES = 3;
+    localparam NUM_PIPE_STAGES = 5;
 
 
     // Define clock and reset for design

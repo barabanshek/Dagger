@@ -2,36 +2,32 @@
 //
 // Module Name :    rpc_defs
 // Project :        F-NIC
-// Description :    RPC definitions
+// Description :    Definitions for the RPC module, includes definitions for
+//                    - RPC module
+//                    - Connection Manager module
 //
-// NOTE: this file must be consistent with sw/rpc_header.h
-// NOTE: SystemVerilog structures are reversed w.r.t. C structures
 
 `ifndef RPC_DEFS_VH_
 `define RPC_DEFS_VH_
 
-typedef enum logic[0:0] { rpcReq, rpcResp } RpcReqType;
+`include "config_defs.vh"
+`include "general_defs.vh"
 
-typedef struct packed {
-    logic      [4:0] padding;
-    logic      valid;
-    logic      update_flag;
-    RpcReqType req_type;
-} RpcHeaderCtl;
+// Base types
+//----------------------------------------------------------------------
+typedef logic [LMAX_NUM_OF_FLOWS-1:0] FlowId;
+typedef logic [LMAX_NUM_OF_CONNECTIONS-1] ConnectionId;
 
+// Connection control interface to connection manager
+//----------------------------------------------------------------------
 typedef struct packed {
-    logic [7:0]  padding;
-    logic [15:0] argl;
-    logic [15:0] fn_id;
-    logic [7:0]  frame_id;
-    logic [7:0]  n_of_frames;
-    logic [31:0] rpc_id;
-    RpcHeaderCtl ctl;
-} RpcHeader;    // Size is 96b
+    ConnectionId conn_id;
+    IPv4 dest_ip;
+    Port dest_port;
+    FlowId client_flow_id;
+    logic open;
+    logic enable;
+} ConnectionControlIf;
 
-typedef struct packed {
-    logic [415:0] argv;
-    RpcHeader hdr;
-} RpcPckt;
 
 `endif //  RPC_DEFS_VH_

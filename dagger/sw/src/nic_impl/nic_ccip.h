@@ -11,6 +11,7 @@
 #include <uuid/uuid.h>
 
 #include "config.h"
+#include "connection_manager.h"
 #include "nic.h"
 
 namespace frpc {
@@ -25,7 +26,7 @@ namespace frpc {
 ///
 class NicCCIP: public Nic {
 public:
-    // CL size and MTU
+    // MTU
     static constexpr size_t mtu_cls = 1;
     // MMIO CPU/FPGA view: nic_addr = cpu_addr/4
     static constexpr size_t mmio_cpu_nic_view = 4;
@@ -46,6 +47,8 @@ public:
     static constexpr uint8_t lRegTxBatchSize = 96;   // hw: 24, W
     static constexpr uint8_t lRegRxBatchSize = 104;  // hw: 26, W
     static constexpr uint8_t iRegPollingRate = 112;  // hw: 28, W
+    static constexpr uint8_t iRegConnSetupFrame = 120; // hw: 30, W
+    static constexpr uint8_t iRegConnStatus = 128;  // hw: 32, R
     static constexpr uint16_t iMMIOSpaceStart = 256;  // hw: 64, -
 
     // Hardware register map constants
@@ -58,16 +61,23 @@ public:
     static constexpr int iConstCcipQueuePolling = 3;
     static constexpr uint8_t iNumOfPckCnt       = 4;
 
-    NicCCIP(uint64_t base_rf_addr, bool master_nic);
+    NicCCIP(uint64_t base_rf_addr, size_t num_of_flows, bool master_nic);
     virtual ~NicCCIP();
 
     // Common functionality
-    virtual int connect_to_nic();
-    virtual int initialize_nic();
-    virtual int check_hw_errors() const;
-    virtual size_t get_mtu_size_bytes() const {
+    virtual int connect_to_nic() final;
+    virtual int initialize_nic() final;
+    virtual int check_hw_errors() const final;
+    virtual size_t get_mtu_size_bytes() const final {
         return mtu_cls * cfg::sys::cl_size_bytes;
     }
+    virtual int open_connection(ConnectionId& c_id,
+                                const IPv4& dest_addr,
+                                ConnectionFlowId c_flow_id) const final;
+    virtual int add_connection(ConnectionId c_id,
+                               const IPv4& dest_addr,
+                               ConnectionFlowId c_flow_id) const final;
+    virtual int close_connection(ConnectionId c_id) const final;
 
     // CCI-P implementation dependent functionality
     virtual int configure_data_plane() = 0;
@@ -99,10 +109,54 @@ private:
         uint16_t err_rpcRxFifoOvf : 1;
         uint16_t err_rpcTxFifoOvf : 1;
         uint16_t err_ccip         : 1;
+        uint16_t err_rpc          : 1;
     };
     int get_nic_hw_status(NicHwStatus& status) const;
     std::string dump_nic_hw_status(const NicHwStatus& status) const;
 
+    // NIC connection manager
+    // Connection setup commands
+    static constexpr uint8_t setUpConnId = 0;
+    static constexpr uint8_t setUpOpen = 1;
+    static constexpr uint8_t setUpDestIPv4 = 2;
+    static constexpr uint8_t setUpDestPort = 3;
+    static constexpr uint8_t setUpClientFlowId = 4;
+    static constexpr uint8_t setUpEnable = 5;
+
+    // Connection setup frame
+    struct __attribute__ ((__packed__)) ConnSetupFrame {
+        uint32_t data;
+        uint8_t cmd : 3;
+        uint8_t padding : 5;
+    };
+
+    static_assert(sizeof(ConnSetupFrame) == 5);
+
+    // Connection setup status
+    static constexpr uint8_t cOK = 0;
+    static constexpr uint8_t cAlreadyOpen = 1;
+    static constexpr uint8_t cIsClosed = 2;
+    static constexpr uint8_t cIdWrong = 3;
+
+    // Connection setup status
+    struct __attribute__ ((__packed__)) ConnSetupStatus {
+        uint32_t conn_id;
+        uint8_t valid : 1;
+        uint8_t error_status : 2;
+        uint8_t padding : 5;
+    };
+
+    static_assert(sizeof(ConnSetupStatus) == 5);
+
+    enum ConnOpenClose {cClose = 0, cOpen = 1};
+
+    // Connection setup methods
+    int register_connection(ConnectionId c_id,
+                            const IPv4& dest_addr,
+                            ConnectionFlowId c_flow_id) const;
+    int remove_connection(ConnectionId c_id) const;
+
+    // Performance counters
     void get_perf() const;
 
 protected:
@@ -112,6 +166,7 @@ protected:
     fpga_handle accel_handle_;
 
     // NIC status
+    // TODO: define a status enum instead
     bool connected_;
     bool initialized_;
     bool started_;
@@ -124,6 +179,13 @@ private:
     // Perf thread
     volatile bool collect_perf_;
     std::thread perf_thread_;
+
+    // Connection manager
+    // TODO: is this the right place for connection manager?
+    //       I don't like 'mutable' here, the nic has always been const!
+    //       Is connection setup considered as modification of the nic?
+    //       Think of a better abstraction here
+    mutable ConnectionManager conn_manager_;
 
 };
 

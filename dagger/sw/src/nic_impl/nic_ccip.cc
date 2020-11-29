@@ -6,7 +6,7 @@
 
 #include "logger.h"
 
-// Hardware congifuration
+// Hardware configuration
 // NIC's JSON file, extracted using OPAE's afu_json_mgr script
 #include "afu_json_info.h"
 
@@ -18,13 +18,14 @@ namespace frpc {
 #define NIC_PERF_DELAY_S 2
 
 
-NicCCIP::NicCCIP(uint64_t base_nic_addr, bool master_nic = true):
+NicCCIP::NicCCIP(uint64_t base_nic_addr, size_t num_of_flows, bool master_nic = true):
     base_nic_addr_(base_nic_addr),
-    master_nic_(master_nic),
     connected_(false),
     initialized_(false),
     started_(false),
-    collect_perf_(false) {
+    master_nic_(master_nic),
+    collect_perf_(false),
+    conn_manager_(num_of_flows + 100) {
 
 }
 
@@ -226,6 +227,265 @@ int NicCCIP::check_hw_errors() const {
     return 0;
 }
 
+int NicCCIP::open_connection(ConnectionId& c_id,
+                             const IPv4& dest_addr,
+                             ConnectionFlowId c_flow_id) const {
+    if (conn_manager_.open_connection(c_id, dest_addr, c_flow_id) != 0) {
+        FRPC_ERROR("Failed to open connection\n");
+        return 1;
+    }
+
+    if (register_connection(c_id, dest_addr, c_flow_id) != 0) {
+        FRPC_ERROR("Failed to register connection on the Nic\n");
+        return 1;
+    }
+
+    return 0;
+}
+
+int NicCCIP::add_connection(ConnectionId c_id,
+                           const IPv4& dest_addr,
+                           ConnectionFlowId c_flow_id) const {
+    if (conn_manager_.add_connection(c_id, dest_addr, c_flow_id) != 0) {
+        FRPC_ERROR("Failed to add connection\n");
+        return 1;
+    }
+
+    if (register_connection(c_id, dest_addr, c_flow_id) != 0) {
+        FRPC_ERROR("Failed to register connection on the Nic\n");
+        return 1;
+    }
+
+    return 0;
+}
+
+int NicCCIP::close_connection(ConnectionId c_id) const {
+    if (remove_connection(c_id) != 0) {
+        FRPC_ERROR("Failed to remove connection on the Nic\n");
+        return 1;
+    }
+
+    if (conn_manager_.close_connection(c_id) != 0) {
+        FRPC_ERROR("Failed to close connection\n");
+        return 1;
+    }
+
+    return 0;
+}
+
+int NicCCIP::register_connection(ConnectionId c_id,
+                                 const IPv4& dest_addr,
+                                 ConnectionFlowId c_flow_id) const {
+    assert(connected_ == true);
+
+    fpga_result res;
+
+    // setUpConnId
+    // Ignore GCC warning here since designated initializers
+    // will be supported in C++20
+    ConnSetupFrame frame = {.data = c_id, .cmd = setUpConnId};
+    res = fpgaWriteMMIO64(accel_handle_,
+                         0,
+                         base_nic_addr_ + iRegConnSetupFrame,
+                         *reinterpret_cast<uint64_t*>(&frame));
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Nic configuration error, failed to register connection, "
+                        "failed to write setUpConnId, nic returned: %d\n", res);
+        return 1;
+    }
+
+    // setUpOpen
+    frame = {.data = cOpen, .cmd = setUpOpen};
+    res = fpgaWriteMMIO64(accel_handle_,
+                         0,
+                         base_nic_addr_ + iRegConnSetupFrame,
+                         *reinterpret_cast<uint64_t*>(&frame));
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Nic configuration error, failed to register connection, "
+                        "failed to write setUpOpen, nic returned: %d\n", res);
+        return 1;
+    }
+
+    // setUpDestIPv4
+    frame = {.data = dest_addr.get_addr(), .cmd = setUpDestIPv4};
+    res = fpgaWriteMMIO64(accel_handle_,
+                         0,
+                         base_nic_addr_ + iRegConnSetupFrame,
+                         *reinterpret_cast<uint64_t*>(&frame));
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Nic configuration error, failed to register connection, "
+                        "failed to write setUpDestIPv4, nic returned: %d\n", res);
+        return 1;
+    }
+
+    // setUpDestPort
+    frame = {.data = dest_addr.get_port(), .cmd = setUpDestPort};
+    res = fpgaWriteMMIO64(accel_handle_,
+                         0,
+                         base_nic_addr_ + iRegConnSetupFrame,
+                         *reinterpret_cast<uint64_t*>(&frame));
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Nic configuration error, failed to register connection, "
+                        "failed to write setUpDestPort, nic returned: %d\n", res);
+        return 1;
+    }
+
+    // setUpClientFlowId
+    frame = {.data = c_flow_id, .cmd = setUpClientFlowId};
+    res = fpgaWriteMMIO64(accel_handle_,
+                         0,
+                         base_nic_addr_ + iRegConnSetupFrame,
+                         *reinterpret_cast<uint64_t*>(&frame));
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Nic configuration error, failed to register connection, "
+                        "failed to write setUpClientFlowId, nic returned: %d\n", res);
+        return 1;
+    }
+
+    // setUpEnable
+    frame = {.data = 1, .cmd = setUpEnable};
+    res = fpgaWriteMMIO64(accel_handle_,
+                         0,
+                         base_nic_addr_ + iRegConnSetupFrame,
+                         *reinterpret_cast<uint64_t*>(&frame));
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Nic configuration error, failed to register connection, "
+                        "failed to write setUpEnable, nic returned: %d\n", res);
+        return 1;
+    }
+
+    // Wait until connection is registered
+    ConnSetupStatus* c_setup_status;
+    uint64_t raw_status;
+    int wait_iteration = 0;
+    do {
+        res = fpgaReadMMIO64(accel_handle_,
+                             0,
+                             base_nic_addr_ + iRegConnStatus,
+                             &raw_status);
+        if (res != FPGA_OK) {
+            FRPC_ERROR("Nic configuration error, failed to register connection, "
+                            "failed to read status, nic returned: %d\n", res);
+            return 1;
+        }
+
+        c_setup_status = reinterpret_cast<ConnSetupStatus*>(&raw_status);
+
+        ++wait_iteration;
+        sleep(NIC_INIT_DELAY_S);
+    } while (!(c_setup_status->valid == 1 && c_setup_status->conn_id == c_id)
+                                        && wait_iteration < NIC_INIT_TIMEOUT);
+
+    if (!(c_setup_status->valid == 1 && c_setup_status->conn_id == c_id)) {
+        FRPC_ERROR("Nic configuration error, failed to register connection: timeout reached\n");
+        return 1;
+    }
+
+    if (c_setup_status->error_status == cAlreadyOpen) {
+        FRPC_ERROR("Nic configuration error, failed to register connection, "
+                                    "connection is already registered on the Nic\n");
+        return 1;
+
+    } else if (c_setup_status->error_status == cOK) {
+        FRPC_INFO("Connection id=%d is registered\n", c_id);
+        return 0;
+
+    } else {
+        FRPC_ERROR("Nic configuration error, failed to register connection, "
+                   "unexpected connection state on the Nic: %d\n", c_setup_status->error_status);
+        return 1;
+
+    }
+
+    return 0;
+}
+
+int NicCCIP::remove_connection(ConnectionId c_id) const {
+    assert(connected_ == true);
+
+    fpga_result res;
+
+    // setUpConnId
+    ConnSetupFrame frame = {.data = c_id, .cmd = setUpConnId};
+    res = fpgaWriteMMIO64(accel_handle_,
+                         0,
+                         base_nic_addr_ + iRegConnSetupFrame,
+                         *reinterpret_cast<uint64_t*>(&frame));
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Nic configuration error, failed to remove connection,"
+                        "failed to write setUpConnId, nic returned: %d\n", res);
+        return 1;
+    }
+
+    // setUpOpen
+    frame = {.data = cClose, .cmd = setUpOpen};
+    res = fpgaWriteMMIO64(accel_handle_,
+                         0,
+                         base_nic_addr_ + iRegConnSetupFrame,
+                         *reinterpret_cast<uint64_t*>(&frame));
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Nic configuration error, failed to remove connection,"
+                        "failed to write setUpOpen, nic returned: %d\n", res);
+        return 1;
+    }
+
+    // setUpEnable
+    frame = {.data = 1, .cmd = setUpEnable};
+    res = fpgaWriteMMIO64(accel_handle_,
+                         0,
+                         base_nic_addr_ + iRegConnSetupFrame,
+                         *reinterpret_cast<uint64_t*>(&frame));
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Nic configuration error, failed to remove connection, "
+                        "failed to write setUpEnable, nic returned: %d\n", res);
+        return 1;
+    }
+
+    // Wait until connection is closed
+    ConnSetupStatus* c_setup_status;
+    uint64_t raw_status;
+    int wait_iteration = 0;
+    do {
+        res = fpgaReadMMIO64(accel_handle_,
+                             0,
+                             base_nic_addr_ + iRegConnStatus,
+                             &raw_status);
+        if (res != FPGA_OK) {
+            FRPC_ERROR("Nic configuration error, failed to remove connection, "
+                            "failed to read status, nic returned: %d\n", res);
+            return 1;
+        }
+
+        c_setup_status = reinterpret_cast<ConnSetupStatus*>(&raw_status);
+
+        ++wait_iteration;
+        sleep(NIC_INIT_DELAY_S);
+    } while (!(c_setup_status->valid == 1 && c_setup_status->conn_id == c_id)
+                                        && wait_iteration < NIC_INIT_TIMEOUT);
+
+    if (!(c_setup_status->valid == 1 && c_setup_status->conn_id == c_id)) {
+        FRPC_ERROR("Nic configuration error, failed to remove connection: timeout reached\n");
+        return 1;
+    }
+
+    if (c_setup_status->error_status == cIsClosed) {
+        FRPC_ERROR("Nic configuration error, failed to remove connection, "
+                                    "connection is already removed on the Nic\n");
+        return 1;
+
+    } else if (c_setup_status->error_status == cOK) {
+        FRPC_INFO("Connection id=%d is removed\n", c_id);
+        return 0;
+
+    } else {
+        FRPC_ERROR("Nic configuration error, failed to remove connection, "
+                   "unexpected connection state on the Nic: %d\n", c_setup_status->error_status);
+        return 1;
+
+    }
+
+}
+
 int NicCCIP::get_nic_hw_status(NicHwStatus& status) const {
     assert(connected_ == true);
 
@@ -257,6 +517,7 @@ std::string NicCCIP::dump_nic_hw_status(const NicHwStatus& status) const {
     ret += "  err_rpcRxFifoOvf= " + std::to_string(status.err_rpcRxFifoOvf) + "\n";
     ret += "  err_rpcTxFifoOvf= " + std::to_string(status.err_rpcTxFifoOvf) + "\n";
     ret += "  err_ccip= "         + std::to_string(status.err_ccip)         + "\n";
+    ret += "  err_rpc= "          + std::to_string(status.err_rpc)          + "\n";
 
     return ret;
 }

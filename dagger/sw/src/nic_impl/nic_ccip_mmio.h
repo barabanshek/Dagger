@@ -25,28 +25,28 @@ public:
     NicMmioCCIP(uint64_t base_rf_addr, size_t num_of_flows, bool master_nic);
     virtual ~NicMmioCCIP();
 
-    virtual int start(bool perf=false);
-    virtual int stop();
+    virtual int start(bool perf=false) final;
+    virtual int stop() final;
 
-    virtual int configure_data_plane();
+    virtual int configure_data_plane() final;
 
     virtual int notify_nic_of_new_dma(size_t flow, size_t bucket) const {
         // No needs to explicitly notify NIC
         return 0;
     }
 
-    virtual char* get_tx_flow_buffer(size_t flow) const {
+    virtual char* get_tx_flow_buffer(size_t flow) const final {
         return reinterpret_cast<char*>(tx_mmio_buf_) + tx_cl_offset_ + CL(flow);
     }
 
-    virtual volatile char* get_rx_flow_buffer(size_t flow) const {
+    virtual volatile char* get_rx_flow_buffer(size_t flow) const final {
         return buf_ + CL(rx_cl_offset_) + CL(flow);
     }
 
-    virtual const char* get_tx_buff_end() const {
+    virtual const char* get_tx_buff_end() const final {
         return reinterpret_cast<char*>(tx_mmio_buf_) + tx_cl_offset_ + CL(num_of_flows_);
     }
-    virtual const char* get_rx_buff_end() const { return nullptr; }
+    virtual const char* get_rx_buff_end() const final { return nullptr; }
 
 private:
     bool dp_configured_;
