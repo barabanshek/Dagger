@@ -12,7 +12,7 @@ namespace frpc {
 NicPollingCCIP::NicPollingCCIP(uint64_t base_nic_addr,
                                size_t num_of_flows,
                                bool master_nic = true):
-    NicCCIP(base_nic_addr, master_nic),
+    NicCCIP(base_nic_addr, num_of_flows, master_nic),
     dp_configured_(false),
     num_of_flows_(num_of_flows),
     buf_(nullptr),

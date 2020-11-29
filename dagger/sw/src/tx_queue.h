@@ -11,7 +11,7 @@ namespace frpc {
 
 /// Tx queue implementation
 ///
-class TxQueue {
+class alignas(4096) TxQueue {
 public:
     TxQueue();
     TxQueue(char* tx_flow_buff, size_t bucket_size_bytes, size_t l_depth);

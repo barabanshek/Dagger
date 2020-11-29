@@ -28,7 +28,9 @@ public:
 
     RpcPckt pop_response();
 
+#ifdef PROFILE_LATENCY
     const std::vector<uint64_t>& get_latency_records() const;
+#endif
 
 private:
     void _PullListen();

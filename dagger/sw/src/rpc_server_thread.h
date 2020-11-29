@@ -6,6 +6,7 @@
 #include <vector>
 #include <utility>
 
+#include "connection_manager.h"
 #include "nic.h"
 #include "rpc_header.h"
 #include "rx_queue.h"
@@ -34,6 +35,9 @@ public:
                     uint16_t thread_id,
                     const RpcServerCallBack_Base* callback);
     virtual ~RpcServerThread();
+
+    int register_connection(ConnectionId c_id, const IPv4& server_addr);
+    int remove_connection(ConnectionId c_id);
 
     void start_listening();
     void stop_listening();

@@ -2,6 +2,7 @@
 #define _RPC_CLIENT_NBLOCK_BASE_H_
 
 #include "completion_queue.h"
+#include "connection_manager.h"
 #include "nic.h"
 #include "rpc_header.h"
 #include "tx_queue.h"
@@ -29,6 +30,10 @@ public:
     // Forbid instantiation
     virtual void abstract_class() const =0;
 
+    // Open connection
+    int connect(const IPv4& server_addr, ConnectionId c_id);
+    int disconnect();
+
 
 protected:
     // client_id - a part of rpc_id
@@ -52,6 +57,10 @@ protected:
 private:
     // Completion queue
     std::unique_ptr<CompletionQueue> cq_;
+
+    // Connection ID associated with this client
+    // TODO: so far, we only support a single connection
+    ConnectionId c_id_;
 
 };
 

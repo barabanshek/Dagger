@@ -18,6 +18,7 @@
 
 `include "platform_if.vh"
 `include "nic_defs.vh"
+
 `include "async_fifo_channel.sv"
 `include "ccip_transmitter.sv"
 

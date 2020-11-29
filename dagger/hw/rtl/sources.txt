@@ -4,11 +4,15 @@ C:${FPGA_BBB_CCI_SRC}/BBB_ccip_mux/hw/sim/mux_simfiles.list
 
 
 +incdir+.
+config_defs.vh
+cpu_if_defs.vh
+general_defs.vh
 nic_defs.vh
 rpc_defs.vh
 
 async_fifo_channel.sv
 nic_counters.sv
+pulse_gen.sv
 single_clock_wr_ram.sv
 
 top_level.sv
@@ -19,5 +23,6 @@ ccip_async_activity_cnt.sv
 ccip_std_afu.sv
 ccip_mmio.sv
 ccip_polling.sv
+connection_manager.sv
 nic.sv
 rpc.sv

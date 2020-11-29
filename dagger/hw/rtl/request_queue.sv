@@ -9,7 +9,6 @@
 
 module request_queue
     #(
-        // NIC ID
         parameter DATA_WIDTH = 8,
         parameter LSIZE = 0
 

@@ -12,7 +12,9 @@
 
 namespace frpc {
 
-RpcClientNonBlock_Base::RpcClientNonBlock_Base(const Nic* nic, size_t nic_flow_id, uint16_t client_id):
+RpcClientNonBlock_Base::RpcClientNonBlock_Base(const Nic* nic,
+                                               size_t nic_flow_id,
+                                               uint16_t client_id):
         client_id_(client_id),
         nic_(nic),
         nic_flow_id_(nic_flow_id),
@@ -50,6 +52,15 @@ RpcClientNonBlock_Base::~RpcClientNonBlock_Base() {
 
 CompletionQueue* RpcClientNonBlock_Base::get_completion_queue() const {
     return cq_.get();
+}
+
+int RpcClientNonBlock_Base::connect(const IPv4& server_addr, ConnectionId c_id) {
+    c_id_ = c_id;
+    return nic_->add_connection(c_id_, server_addr, nic_flow_id_);
+}
+
+int RpcClientNonBlock_Base::disconnect() {
+    return nic_->close_connection(c_id_);
 }
 
 

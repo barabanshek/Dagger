@@ -86,7 +86,7 @@ int RpcThreadedServer::stop_nic() {
     }
 
     nic_is_started_ = false;
-    FRPC_INFO("NIC is stopped\n");
+    FRPC_INFO("Server NIC is stopped\n");
     return 0;
 }
 

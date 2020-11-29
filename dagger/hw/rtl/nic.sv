@@ -7,14 +7,17 @@
 `include "afu_json_info.vh"
 `include "platform_if.vh"
 
+`include "config_defs.vh"
+`include "cpu_if_defs.vh"
+//`include "nic_defs.vh"
+
 `include "async_fifo_channel.sv"
 `include "ccip_mmio.sv"
 `include "ccip_polling.sv"
 `include "ccip_queue_polling.sv"
 `include "ccip_dma.sv"
 `include "nic_counters.sv"
-`include "nic_defs.vh"
-`include "rpc_defs.vh"
+`include "pulse_gen.sv"
 `include "rpc.sv"
 `include "single_clock_wr_ram.sv"
 
@@ -58,8 +61,7 @@ module nic
     //`define CCIP_DMA
     `define CCIP_QUEUE_POLLING
     // log number of NIC flows
-    localparam LMAX_NUM_OF_FLOWS  = 3;   // 2**3=8 flows
-    localparam LMAX_RX_QUEUE_SIZE = 4;   // 2**4=16
+    localparam LMAX_RX_QUEUE_SIZE = 3;   // 2**3=8
     // CCI-P VCs
     localparam CCIP_FORWARD_VC       = eVC_VH0; // PCIe
     localparam CCIP_FORWARD_RD_TYPE  = eREQ_RDLINE_I;
@@ -68,7 +70,7 @@ module nic
     // Log max CCI-P polling rate
     localparam LMAX_POLLING_RATE = 8;
     // Log depth of the RPC I/O FIFO
-    localparam RPC_IO_FIFO_LDEPTH= 3;
+    localparam RPC_IO_FIFO_LDEPTH = 3;
 
 
     // =============================================================
@@ -127,6 +129,10 @@ module nic
                         = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 26);
     localparam t_ccip_mmioAddr addrPollingRate
                         = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 28);
+    localparam t_ccip_mmioAddr addrConnSetup
+                        = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 30);
+    localparam t_ccip_mmioAddr addrConnStatus
+                        = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 32);
 
 
     // Registers
@@ -144,6 +150,9 @@ module nic
     logic[LMAX_CCIP_BATCH-1:0]     lRegTxBatchSize;
     logic[LMAX_CCIP_DMA_BATCH-1:0] iRegRxBatchSize;
     logic[LMAX_POLLING_RATE-1:0]   iRegPollingRate;
+    ConnSetupFrame                 iRegConnSetupFrame;
+    logic                          iRegConnSetupFrame_en;
+    ConnSetupStatus                iRegConnStatus;
 
     // CSR read logic
     logic is_csr_read;
@@ -152,10 +161,17 @@ module nic
     t_ccip_c0_ReqMmioHdr mmio_req_hdr;
     assign mmio_req_hdr = t_ccip_c0_ReqMmioHdr'(sRx.c0.hdr);
 
+    ConnSetupStatus rpc_conn_setup_status;
+
     always_ff @(posedge ccip_clk) begin
         // Always respond with something
         sTx.c2.mmioRdValid <= is_csr_read;
         sTx.c2.hdr.tid     <= mmio_req_hdr.tid;
+
+        // Save rpc connection status
+        if (rpc_conn_setup_status.valid) begin
+            iRegConnStatus <= rpc_conn_setup_status;
+        end
 
         // Addresses are of 32-bit objects in MMIO space.  Addresses
         // of 64-bit objects are thus multiples of 2.
@@ -210,6 +226,13 @@ module nic
                 sTx.c2.data[$bits(CcipMode)-1:0] <= iRegCcipMode;
             end
 
+            addrConnStatus: begin
+                sTx.c2.data[$bits(ConnSetupStatus)-1:0] <= iRegConnStatus;
+
+                // Zero-out conenction status
+                iRegConnStatus <= {($bits(iRegConnStatus)){1'b0}};
+            end
+
             default: sTx.c2.data <= t_ccip_mmioData'(0);
         endcase
 
@@ -262,9 +285,14 @@ module nic
     assign is_polling_rate_csr_write = is_csr_write &&
                                         (mmio_req_hdr.address == addrPollingRate);
 
+    logic is_conn_setup_frame_write;
+    assign is_conn_setup_frame_write = is_csr_write &&
+                                        (mmio_req_hdr.address == addrConnSetup);
+
     always_ff @(posedge ccip_clk) begin
         // Default values
         iRegNicInit <= 1'b0;
+        iRegConnSetupFrame_en <= 1'b0;
 
         if (is_mem_tx_addr_csr_write) begin
             $display("NIC%d: iRegMemTxAddr configured: %08h", NIC_ID, sRx.c0.data);
@@ -316,9 +344,16 @@ module nic
             iRegPollingRate <= sRx.c0.data[LMAX_POLLING_RATE-1:0];
         end
 
+        if (is_conn_setup_frame_write) begin
+            $display("NIC%d: iRegConnSetupFrame received: %08h", NIC_ID, sRx.c0.data);
+            iRegConnSetupFrame <= sRx.c0.data[$bits(ConnSetupFrame)-1:0];
+            iRegConnSetupFrame_en <= 1'b1;
+        end
+
         if (reset) begin
             iRegNicStart <= 1'b0;
             iRegNicInit  <= 1'b0;
+            iRegConnSetupFrame_en <= 1'b0;
         end
     end
 
@@ -535,7 +570,7 @@ module nic
             .push_en(from_ccip_valid),
             .push_data(from_ccip),
             .clk_2(rpc_clk),
-            .pop_enable(1'b1), // currently, RPC layer never overflows, always pop
+            .pop_enable(1'b1),
             .pop_valid(to_rpc_valid),
             .pop_data(to_rpc),
             .pop_dw(),
@@ -566,9 +601,46 @@ module nic
         );
 
     // RPC processing
+    // FIFO to synch the RF and RPC
+    ConnSetupFrame conn_setup_frame;
+    logic conn_setup_en;
+    async_fifo_channel #(
+            .DATA_WIDTH($bits(iRegConnSetupFrame)),
+            .LOG_DEPTH(RPC_IO_FIFO_LDEPTH)
+        )
+    fr_to_rpc_fifo_channel (
+            .clear(reset),
+            .clk_1(ccip_clk),
+            .push_en(iRegConnSetupFrame_en),
+            .push_data(iRegConnSetupFrame),
+            .clk_2(rpc_clk),
+            .pop_enable(1'b1),
+            .pop_valid(conn_setup_en),
+            .pop_data(conn_setup_frame),
+            .pop_dw(),
+            .error()
+        );
+
+    // Generate rpc initialization pulse (2 ccip cycles)
+    logic rpc_init;
+    pulse_gen #(2) init_pulse_gen (
+            .clk(ccip_clk),
+            .reset(reset),
+            .sig_in(iRegNicInit),
+            .pulse_out(rpc_init)
+        );
+
     rpc #(NIC_ID) rpc_ (
             .clk(rpc_clk),
             .reset(reset),
+
+            .initialize(rpc_init),
+            .initialized(rpc_initialized),
+            .error(rpc_error),
+
+            .conn_setup_en_in(conn_setup_en),
+            .conn_setup_frame_in(conn_setup_frame),
+            .conn_setup_status_out(rpc_conn_setup_status),
 
             .rpc_valid_in(to_rpc_valid),
             .rpc_in(to_rpc),
@@ -600,6 +672,10 @@ module nic
     // NIC status
     // =============================================================
     // NOTE: careful with crossing clock domains here
+    logic system_initialized;
+    assign system_initialized = ccip_layer_initialized &
+                                rpc_initialized;
+
     always @(posedge ccip_clk) begin
         if (reset) begin
             iRegNicStatus         <= {($bits(iRegNicStatus)){1'b0}};
@@ -611,17 +687,19 @@ module nic
             iRegNicStatus.nic_id <= NIC_ID;
 
             // Runnig status
-            iRegNicStatus.ready   <= ccip_layer_initialized;
-            iRegNicStatus.running <= ccip_layer_initialized & iRegNicStart;
+            iRegNicStatus.ready   <= system_initialized;
+            iRegNicStatus.running <= system_initialized & iRegNicStart;
 
             // Errors
             iRegNicStatus.err_rpcRxFifoOvf <= rpc_rx_fifo_error;
             iRegNicStatus.err_rpcTxFifoOvf <= rpc_tx_fifo_error;
             iRegNicStatus.err_ccip         <= ccip_error;
+            iRegNicStatus.err_rpc          <= rpc_error;
 
             iRegNicStatus.error <= rpc_rx_fifo_error |
                                    rpc_tx_fifo_error |
-                                   ccip_error;
+                                   ccip_error |
+                                   rpc_error;
 
         end
     end

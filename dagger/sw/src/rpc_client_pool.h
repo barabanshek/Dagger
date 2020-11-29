@@ -120,7 +120,7 @@ public:
         }
 
         nic_is_started_ = false;
-        FRPC_INFO("NIC is stopped\n");
+        FRPC_INFO("Client NIC is stopped\n");
         return 0;
     }
 
@@ -133,7 +133,7 @@ public:
         std::unique_lock<std::mutex> lck(mtx_);
 
         if (rpc_client_cnt_ < max_pool_size_) {
-            // Directly map rpc clients to the NIC flows for simplicity
+            // Directly map rpc clients to the NIC flows for now
             rpc_client_pool.push_back(std::unique_ptr<T>(
                                             new T(nic_.get(),
                                                   rpc_client_cnt_,
