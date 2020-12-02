@@ -12,7 +12,11 @@
 `include "platform_if.vh"
 `include "nic_defs.vh"
 `include "request_queue.sv"
+<<<<<<< HEAD
 `include "rng_module.v"
+=======
+`include "quartus_ip_cores/rng_module/altera_rand_gen_160/synth/rng_module.v"
+>>>>>>> First Commit
 
 module ccip_transmitter
     #(
