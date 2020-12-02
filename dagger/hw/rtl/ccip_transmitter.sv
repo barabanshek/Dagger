@@ -12,6 +12,7 @@
 `include "platform_if.vh"
 `include "nic_defs.vh"
 `include "request_queue.sv"
+`include "quartus_ip_cores/rng_module/altera_rand_gen_160/synth/rng_module.v"
 
 module ccip_transmitter
     #(
@@ -64,6 +65,18 @@ module ccip_transmitter
     logic rq_push_done;
     logic rq_pop_en;
     ReqQueueSlotId rq_pop_slot_id;
+
+    logic rng_enable, rng_ready, rng_valid;
+    logic [31:0] rng_data;
+    
+    rng_module u0 (
+	.start          (rng_enable),          //     call.enable
+	.clock          (clk),                 //    clock.clk
+	.rand_num_data  (rng_data),  	       // rand_num.data
+	.rand_num_ready (rng_ready),           //         .ready
+	.rand_num_valid (rng_valid),           //         .valid
+	.resetn         (reset)                //    reset.reset_n
+	);
 
     request_queue #(
             .DATA_WIDTH($bits(RpcIf)),
@@ -140,15 +153,23 @@ module ccip_transmitter
             for(i3=0; i3<MAX_TX_FLOWS; i3=i3+1) begin
                 ff_push_en[i3] <= 1'b0;
             end
-
+	    rng_ready <= 1'b0;
             // Put request to request queue
             if (start && rpc_in_valid) begin
                 $display("NIC%d: CCI-P transmitter, rpc_in requesed for flow= %d",
                                             NIC_ID, rpc_flow_id_in);
-                rq_push_en       <= 1'b1;
-                rpc_flow_id_in_d <= rpc_flow_id_in;
+                //rq_push_en       <= 1'b1;
+		rng_enable 	 <= 1'b1;
+		//rpc_flow_id_in_d <= rpc_flow_id_in;
             end
-
+		
+	    if (rng_valid) begin
+	    	rq_push_en	 <= 1'b1;
+		rpc_flow_id_in_d <= rng_data [LMAX_NUM_OF_FLOWS-1:0];
+		rng_ready	 <= 1'b1;
+		rng_enable	 <= 1'b0; 
+	    end
+		
             // Put slot_id to corresponding flow FIFO
             if (rq_push_done) begin
                 $display("NIC%d: CCI-P transmitter, writing request to flow fifo= %d, rq_slot_id= %d",
