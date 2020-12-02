@@ -12,6 +12,7 @@
 `include "platform_if.vh"
 `include "nic_defs.vh"
 `include "request_queue.sv"
+`include "quartus_ip_cores/rng_module/altera_rand_gen_160/synth/rng_module.v"
 
 module ccip_transmitter
     #(
@@ -67,6 +68,18 @@ module ccip_transmitter
     logic rq_push_done;
     logic rq_pop_en;
     ReqQueueSlotId rq_pop_slot_id;
+
+    logic rng_enable, rng_ready, rng_valid;
+    logic [31:0] rng_data;
+    
+    rng_module u0 (
+	.start          (rng_enable),          //     call.enable
+	.clock          (clk),                 //    clock.clk
+	.rand_num_data  (rng_data),  	       // rand_num.data
+	.rand_num_ready (rng_ready),           //         .ready
+	.rand_num_valid (rng_valid),           //         .valid
+	.resetn         (reset)                //    reset.reset_n
+	);
 
     request_queue #(
             .DATA_WIDTH($bits(RpcIf)),
