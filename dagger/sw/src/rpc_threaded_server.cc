@@ -123,4 +123,14 @@ int RpcThreadedServer::stop_all_listening_threads() {
     return 0;
 }
 
+int RpcThreadedServer::connect(const IPv4& client_addr,
+                               ConnectionId c_id,
+                               ConnectionFlowId c_flow_id) {
+    return nic_->add_connection(c_id, client_addr, c_flow_id);
+}
+
+int RpcThreadedServer::disconnect(ConnectionId c_id) {
+    return nic_->close_connection(c_id);
+}
+
 }  // namespace frpc

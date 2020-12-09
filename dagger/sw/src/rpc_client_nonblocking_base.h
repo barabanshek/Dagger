@@ -54,13 +54,15 @@ protected:
     size_t batch_counter;
 #endif
 
+    // Connection ID associated with this client
+    // TODO: so far, we only support a single connection per client;
+    //       multiple connections will also work, but it's up to client
+    //       to handle all responses
+    ConnectionId c_id_;
+
 private:
     // Completion queue
     std::unique_ptr<CompletionQueue> cq_;
-
-    // Connection ID associated with this client
-    // TODO: so far, we only support a single connection
-    ConnectionId c_id_;
 
 };
 

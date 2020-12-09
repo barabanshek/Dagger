@@ -230,6 +230,8 @@ int NicCCIP::check_hw_errors() const {
 int NicCCIP::open_connection(ConnectionId& c_id,
                              const IPv4& dest_addr,
                              ConnectionFlowId c_flow_id) const {
+    std::unique_lock<std::mutex> lck(conn_setup_mtx_);
+
     if (conn_manager_.open_connection(c_id, dest_addr, c_flow_id) != 0) {
         FRPC_ERROR("Failed to open connection\n");
         return 1;
@@ -246,6 +248,8 @@ int NicCCIP::open_connection(ConnectionId& c_id,
 int NicCCIP::add_connection(ConnectionId c_id,
                            const IPv4& dest_addr,
                            ConnectionFlowId c_flow_id) const {
+    std::unique_lock<std::mutex> lck(conn_setup_mtx_);
+
     if (conn_manager_.add_connection(c_id, dest_addr, c_flow_id) != 0) {
         FRPC_ERROR("Failed to add connection\n");
         return 1;
@@ -260,6 +264,8 @@ int NicCCIP::add_connection(ConnectionId c_id,
 }
 
 int NicCCIP::close_connection(ConnectionId c_id) const {
+    std::unique_lock<std::mutex> lck(conn_setup_mtx_);
+
     if (remove_connection(c_id) != 0) {
         FRPC_ERROR("Failed to remove connection on the Nic\n");
         return 1;
@@ -277,6 +283,8 @@ int NicCCIP::register_connection(ConnectionId c_id,
                                  const IPv4& dest_addr,
                                  ConnectionFlowId c_flow_id) const {
     assert(connected_ == true);
+
+    std::unique_lock<std::mutex> lck(conn_setup_hw_mtx_);
 
     fpga_result res;
 
@@ -402,6 +410,8 @@ int NicCCIP::register_connection(ConnectionId c_id,
 
 int NicCCIP::remove_connection(ConnectionId c_id) const {
     assert(connected_ == true);
+
+    std::unique_lock<std::mutex> lck(conn_setup_hw_mtx_);
 
     fpga_result res;
 

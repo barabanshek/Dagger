@@ -22,7 +22,7 @@
 
 #define FRPC_LOG_LEVEL_GLOBAL FRPC_LOG_LEVEL_INFO
 #define NUMBER_OF_THREADS 1
-#define NUM_OF_REQUESTS 20
+#define NUM_OF_REQUESTS 8
 
 static int run_server();
 static int run_client();
@@ -66,6 +66,17 @@ static int run_server() {
 
     frpc::RpcServerCallBack server_callback(fn_ptr);
 
+    // Open connections
+    for (int i=0; i<NUMBER_OF_THREADS; ++i) {
+        frpc::IPv4 client_addr("192.168.0.2", 3136);
+        if (server.connect(client_addr, i, i) != 0) {
+            std::cout << "Failed to open connection on server" << std::endl;
+            exit(1);
+        } else {
+            std::cout << "Connection is open on server" << std::endl;
+        }
+    }
+
     // Start server threads
     for (int i=0; i<NUMBER_OF_THREADS; ++i) {
         res = server.run_new_listening_thread(&server_callback);
@@ -101,7 +112,7 @@ static uint64_t loopback(uint64_t data) {
     std::cout << "loopback is called with data= " << data << std::endl;
     return data + 10;
 }
-    
+
 // RPC function #1
 static uint64_t add(uint64_t a, uint64_t b) {
     std::cout << "add is called with a= " << a << " b= " << b << std::endl;
@@ -117,33 +128,11 @@ static uint64_t add(uint64_t a, uint64_t b) {
 static int client(frpc::RpcClient* rpc_client, size_t thread_id, size_t num_of_requests) {
     // Open connection
     frpc::IPv4 server_addr("192.168.0.1", 3136);
-    if (rpc_client->connect(server_addr, 0) != 0) {
-        std::cout << "Failed to open connection" << std::endl;
+    if (rpc_client->connect(server_addr, thread_id) != 0) {
+        std::cout << "Failed to open connection on client" << std::endl;
         exit(1);
     } else {
-        std::cout << "Connection is open" << std::endl;
-    }
-
-    if (rpc_client->disconnect() != 0) {
-        std::cout << "Failed to close connection" << std::endl;
-        exit(1);
-    } else {
-        std::cout << "Connection is closed" << std::endl;
-    }
-
-    frpc::IPv4 server_addr2("192.168.0.2", 3136);
-    if (rpc_client->connect(server_addr2, 0) != 0) {
-        std::cout << "Failed to open connection" << std::endl;
-        exit(1);
-    } else {
-        std::cout << "Connection is open" << std::endl;
-    }
-
-    if (rpc_client->connect(server_addr2, 1) != 0) {
-        std::cout << "Failed to open connection" << std::endl;
-        exit(1);
-    } else {
-        std::cout << "Connection is open" << std::endl;
+        std::cout << "Connection is open on client" << std::endl;
     }
 
     // Get completion queue

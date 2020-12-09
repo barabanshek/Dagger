@@ -8,29 +8,40 @@
 `ifndef NIC_DEFS_VH_
 `define NIC_DEFS_VH_
 
+`include "config_defs.vh"
+`include "general_defs.vh"
 `include "cpu_if_defs.vh"
 
 parameter LMAX_CCIP_BATCH = 2;
 parameter LMAX_CCIP_DMA_BATCH = 6;
 
-// RPC interfaces
+typedef logic [LMAX_NUM_OF_FLOWS-1:0] FlowId;
+
+// RPC interface
+//----------------------------------------------------------------------
 typedef struct packed {
-    logic [7:0] flow_id;    //TODO: it's a temporary solution, will have an RPC descriptor table later
-    RpcPckt     rpc_data;
+    FlowId  flow_id;
+    RpcPckt rpc_data;
 } RpcIf;
 
-// Network interfaces
+// Network interface
+//----------------------------------------------------------------------
 localparam TRANSPORT_DATA_WIDTH = 512;
 
-typedef struct packed {
-    logic[31:0]             payload_size;
-    logic[31:0]             conn_id;
-} NetworkPacketHdr;
+typedef logic[TRANSPORT_DATA_WIDTH-1:0] NetworkPayload;
 
 typedef struct packed {
-    NetworkPacketHdr hdr;
-    logic[TRANSPORT_DATA_WIDTH-1:0] payload;
-} NetworkPacketInternal;
+    IPv4 source_ip;
+    Port source_port;
+    IPv4 dest_ip;
+    Port dest_port;
+} NetworkAddressTuple;
+
+typedef struct packed {
+    NetworkAddressTuple addr_tpl;
+    NetworkPayload payload;
+    logic valid;
+} NetworkIf;
 
 
 `endif //  NIC_DEFS_VH_

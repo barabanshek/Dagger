@@ -1,6 +1,7 @@
 #ifndef _NIC_CCIP_H_
 #define _NIC_CCIP_H_
 
+#include <mutex>
 #include <string>
 #include <thread>
 
@@ -48,8 +49,8 @@ public:
     static constexpr uint8_t lRegRxBatchSize = 104;  // hw: 26, W
     static constexpr uint8_t iRegPollingRate = 112;  // hw: 28, W
     static constexpr uint8_t iRegConnSetupFrame = 120; // hw: 30, W
-    static constexpr uint8_t iRegConnStatus = 128;  // hw: 32, R
-    static constexpr uint16_t iMMIOSpaceStart = 256;  // hw: 64, -
+    static constexpr uint8_t iRegConnStatus     = 128;  // hw: 32, R
+    static constexpr uint16_t iMMIOSpaceStart   = 256;  // hw: 64, -
 
     // Hardware register map constants
     static constexpr int iConstNicStart         = 1;
@@ -59,7 +60,7 @@ public:
     static constexpr int iConstCcipPolling      = 1;
     static constexpr int iConstCcipDma          = 2;
     static constexpr int iConstCcipQueuePolling = 3;
-    static constexpr uint8_t iNumOfPckCnt       = 4;
+    static constexpr uint8_t iNumOfPckCnt       = 5;
 
     NicCCIP(uint64_t base_rf_addr, size_t num_of_flows, bool master_nic);
     virtual ~NicCCIP();
@@ -186,6 +187,10 @@ private:
     //       Is connection setup considered as modification of the nic?
     //       Think of a better abstraction here
     mutable ConnectionManager conn_manager_;
+
+    // Sync connection setup
+    mutable std::mutex conn_setup_mtx_;
+    mutable std::mutex conn_setup_hw_mtx_;
 
 };
 

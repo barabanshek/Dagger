@@ -53,7 +53,7 @@ typedef struct packed {
 } RpcHeaderCtl;
 
 typedef struct packed {
-    logic [7:0]  padding;
+    logic [7:0]  connection_id;
     logic [15:0] argl;
     logic [15:0] fn_id;
     logic [7:0]  frame_id;

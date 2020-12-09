@@ -2,6 +2,7 @@
     #ifdef NIC_CCIP_POLLING
         RpcPckt* tx_ptr_casted = reinterpret_cast<RpcPckt*>(tx_ptr);
 
+        tx_ptr_casted->hdr.c_id        = <CONN_ID>;
         tx_ptr_casted->hdr.rpc_id      = <RPC_ID>;
         tx_ptr_casted->hdr.n_of_frames = <FUN_NUM_OF_FRAMES>;
         tx_ptr_casted->hdr.frame_id    = 0;
@@ -19,6 +20,7 @@
     #elif NIC_CCIP_MMIO
         RpcPckt request __attribute__ ((aligned (64)));
 
+        request.hdr.c_id        = <CONN_ID>;
         request.hdr.rpc_id      = <RPC_ID>;
         request.hdr.n_of_frames = <FUN_NUM_OF_FRAMES>;
         request.hdr.frame_id    = 0;
@@ -39,6 +41,7 @@
     #elif NIC_CCIP_DMA
         RpcPckt* tx_ptr_casted = reinterpret_cast<RpcPckt*>(tx_ptr);
 
+        tx_ptr_casted->hdr.c_id        = <CONN_ID>;
         tx_ptr_casted->hdr.rpc_id      = <RPC_ID>;
         tx_ptr_casted->hdr.n_of_frames = <FUN_NUM_OF_FRAMES>;
         tx_ptr_casted->hdr.frame_id    = 0;

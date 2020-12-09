@@ -43,7 +43,10 @@ module ccip_transmitter
         output logic                       ccip_tx_ready,
         input RpcIf                        rpc_in,
         input logic                        rpc_in_valid,
-        input logic[LMAX_NUM_OF_FLOWS-1:0] rpc_flow_id_in
+        input logic[LMAX_NUM_OF_FLOWS-1:0] rpc_flow_id_in,
+
+        // Statistics
+        output logic pdrop_tx_flows_out
     );
 
     // Parameters
@@ -93,6 +96,7 @@ module ccip_transmitter
     logic ff_pop_valid[MAX_TX_FLOWS];
     ReqQueueSlotId ff_pop_data[MAX_TX_FLOWS];
     logic [LTX_FIFO_DEPTH-1:0] ff_dw[MAX_TX_FLOWS];
+    logic ff_ovf[MAX_TX_FLOWS];
 
     genvar gi;
     generate
@@ -111,13 +115,13 @@ module ccip_transmitter
                 .pop_valid(ff_pop_valid[gi]),
                 .pop_data(ff_pop_data[gi]),
                 .pop_dw(ff_dw[gi]),
-                .error()    // TODO: assign error
+                .error(ff_ovf[gi])
             );
     end
     endgenerate
 
     // Push logic
-    FlowId rpc_flow_id_in_d;
+    FlowId rpc_flow_id_in_1d, rpc_flow_id_in_2d;
 
     integer i1;
     always_comb begin
@@ -146,20 +150,23 @@ module ccip_transmitter
                 $display("NIC%d: CCI-P transmitter, rpc_in requesed for flow= %d",
                                             NIC_ID, rpc_flow_id_in);
                 rq_push_en       <= 1'b1;
-                rpc_flow_id_in_d <= rpc_flow_id_in;
+                rpc_flow_id_in_1d <= rpc_flow_id_in;
             end
+
+            // Delay rpc_flow_id to align with rq look-up
+            rpc_flow_id_in_2d <= rpc_flow_id_in_1d;
 
             // Put slot_id to corresponding flow FIFO
             if (rq_push_done) begin
                 $display("NIC%d: CCI-P transmitter, writing request to flow fifo= %d, rq_slot_id= %d",
-                                            NIC_ID, rpc_flow_id_in_d, rq_slot_id);
-                ff_push_en[rpc_flow_id_in_d] <= 1'b1;
+                                            NIC_ID, rpc_flow_id_in_2d, rq_slot_id);
+                ff_push_en[rpc_flow_id_in_2d] <= 1'b1;
             end
 
         end
     end
 
-    // Pop (tramsmit) logic
+    // Pop (transmit) logic
     TxBatch tx_batch_size;
     t_ccip_clLen tx_cl_len;
     logic [LMAX_NUM_OF_FLOWS+LMAX_CCIP_BATCH:0] tx_out_flow_shift;
@@ -243,7 +250,7 @@ module ccip_transmitter
         sTx_c1.hdr.req_type           <= eREQ_WRLINE_I;
         sTx_c1.hdr.address            <= tx_base_addr + tx_out_flow_shift + tx_out_batch_cnt;
         sTx_c1.hdr.sop                <= tx_out_batch_cnt == 0;
-        sTx_c1.data[$bits(RpcIf)-1:0] <= rq_pop_data;
+        sTx_c1.data[$bits(RpcIf)-1:0] <= rq_pop_data;   // TODO: fix here!
 
         // Control
         sTx_c1.valid <= 1'b0;
@@ -276,5 +283,12 @@ module ccip_transmitter
     // Assert CCI-P tx ready signal
     assign ccip_tx_ready =  ~sRx_c1TxAlmFull;
 
+    // Flow FIFO ovf statistics
+    integer i6;
+    always_comb begin
+        for(i6=0; i6<MAX_TX_FLOWS; i6=i6+1) begin
+            pdrop_tx_flows_out = pdrop_tx_flows_out | ff_ovf[i6];
+        end
+    end
 
 endmodule
