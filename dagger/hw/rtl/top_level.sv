@@ -80,11 +80,8 @@ module top_level_module (
     // =============================================================
     // Install NIC devices
     // =============================================================
-    // Emulate ToR network as a loop-back connection
-    NetworkPacketInternal network_Tx_line_data,   network_Tx_line_data_1;
-    logic                 network_Tx_line_strobe, network_Tx_line_strobe_1;
-    NetworkPacketInternal network_Rx_line_data,   network_Rx_line_data_1;
-    logic                 network_Rx_line_strobe, network_Rx_line_strobe_1;
+    NetworkIf network_Tx_line,   network_Tx_line_1;
+    NetworkIf network_Rx_line,   network_Rx_line_1;
 
     // NIC_0:
     //     TODO: So far, NIC::connect_to_accel always reads UUID by 0x00000
@@ -108,10 +105,8 @@ module top_level_module (
             .sRx(pck_afu_RxPort[0]),
             .sTx(pck_afu_TxPort[0]),
 
-            .network_tx_out(network_Tx_line_data),
-            .network_tx_valid_out(network_Tx_line_strobe),
-            .network_rx_in(network_Rx_line_data),
-            .network_rx_valid_in(network_Rx_line_strobe)
+            .network_tx_out(network_Tx_line),
+            .network_rx_in(network_Rx_line)
         );
 
     // NIC_1:
@@ -141,10 +136,8 @@ module top_level_module (
             .sRx(pck_afu_RxPort[1]),
             .sTx(pck_afu_TxPort[1]),
 
-            .network_tx_out(network_Tx_line_data_1),
-            .network_tx_valid_out(network_Tx_line_strobe_1),
-            .network_rx_in(network_Rx_line_data_1),
-            .network_rx_valid_in(network_Rx_line_strobe_1)
+            .network_tx_out(network_Tx_line_1),
+            .network_rx_in(network_Rx_line_1)
         );
 
 
@@ -159,15 +152,12 @@ module top_level_module (
     assign network_rst = ccip_mux2pe_reset[0];
 
     always @(posedge network_clk) begin
-        network_Rx_line_strobe <= network_Tx_line_strobe_1;
-        network_Rx_line_data   <= network_Tx_line_data_1;
-
-        network_Rx_line_strobe_1 <= network_Tx_line_strobe;
-        network_Rx_line_data_1   <= network_Tx_line_data;
+        network_Rx_line   <= network_Tx_line_1;
+        network_Rx_line_1 <= network_Tx_line;
 
         if (network_rst) begin
-            network_Rx_line_strobe <= 1'b0;
-            network_Rx_line_strobe_1 <= 1'b0;
+            network_Rx_line.valid <= 1'b0;
+            network_Rx_line_1.valid <= 1'b0;
         end
     end
 

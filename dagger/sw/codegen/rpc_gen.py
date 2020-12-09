@@ -243,6 +243,7 @@ public:
 
 		# Make return parameters
 		# TODO: we only support uint64_t so far
+		c_codegen.replace('<CONN_ID>', 'rpc_in->hdr.c_id')
 		c_codegen.replace('<RPC_ID>', 'rpc_in->hdr.rpc_id')
 		c_codegen.replace('<FUN_NUM_OF_FRAMES>', str(1))
 		c_codegen.replace('<FUN_FUNCTION_ID>', str(1))
@@ -393,6 +394,7 @@ public:
 			f_codegen.append_from_file(WRITE_TMPL_FILENAME)
 
 			# Make RPC parameters
+			f_codegen.replace('<CONN_ID>', 'c_id_')
 			f_codegen.replace('<RPC_ID>', 'rpc_id')
 			f_codegen.replace('<FUN_NUM_OF_FRAMES>', str(1))
 			f_codegen.replace('<FUN_FUNCTION_ID>', f_id)

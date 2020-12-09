@@ -32,80 +32,13 @@ module rpc
     output RpcIf  rpc_out,
 
     // Ports to/from network
-    output NetworkPacketInternal network_tx_out,
-    output logic                 network_tx_valid_out,
-
-    input NetworkPacketInternal network_rx_in,
-    input logic                 network_rx_valid_in,
+    output NetworkIf network_tx_out,
+    input NetworkIf network_rx_in,
 
     // Status
     output logic initialized,
     output logic error
     );
-
-    localparam DIV_TO_SHIFT_8 = 3;
-
-    // =============================================================
-    // Serializers
-    // =============================================================
-    // Serialization
-    always_ff @(posedge clk) begin
-        // Init vals
-        network_tx_out       <= {($bits(NetworkPacketInternal)){1'b0}};
-        network_tx_valid_out <= 1'b0;
-
-        // Serialize rpc to network
-        if (rpc_valid_in) begin
-            $display("NIC%d::RPC serializing rpc data %p", NIC_ID, rpc_in.rpc_data);
-
-            // **********************************
-            //
-            // More complex RPC data transformation should be placed here:
-            // - compression
-            // - encryption
-            // - etc.
-            //
-            // **********************************
-            network_tx_out.hdr.payload_size <= ($bits(RpcHeader) >> DIV_TO_SHIFT_8) + rpc_in.rpc_data.hdr.argl;
-            network_tx_out.payload[$bits(RpcPckt)-1:0] <= rpc_in.rpc_data;
-
-            network_tx_out.hdr.conn_id <= rpc_in.flow_id;
-            network_tx_valid_out       <= 1'b1;
-        end
-
-        if (reset) begin
-            network_tx_valid_out <= 1'b0;
-        end
-    end
-
-    // Deserialization
-    always_ff @(posedge clk) begin
-        // Init vals
-        rpc_out       <= {($bits(RpcIf)){1'b0}};
-        rpc_valid_out <= 1'b0;
-
-        if (network_rx_valid_in) begin
-            // deserialize as request
-            $display("NIC%d::RPC DeSerializing rpc %p", NIC_ID, network_rx_in.payload[$bits(RpcPckt)-1:0]);
-
-            // **********************************
-            //
-            // More complex RPC data transformation should be placed here:
-            // - compression
-            // - encryption
-            // - etc.
-            //
-            // **********************************
-            rpc_out.rpc_data <= network_rx_in.payload[$bits(RpcPckt)-1:0];
-
-            rpc_out.flow_id <= network_rx_in.hdr.conn_id;
-            rpc_valid_out   <= 1'b1;
-        end
-
-        if (reset) begin
-            rpc_valid_out <= 1'b0;
-        end
-    end
 
 
     // =============================================================
@@ -201,6 +134,13 @@ module rpc
 
     // Connection manager
     logic ct_error;
+    CManagerNetRpcIf ct_net_out;
+    CManagerNetRpcIf ct_net_in;
+    CManagerRpcIf cm_rpc_out;
+
+    assign rpc_out.flow_id = cm_rpc_out.flow_id;
+    assign rpc_out.rpc_data = cm_rpc_out.rpc_data;
+    assign rpc_valid_out = cm_rpc_out.valid;
 
     connection_manager #(
             .NIC_ID(NIC_ID),
@@ -214,11 +154,84 @@ module rpc
             .c_ctl_in(c_ctl_if),
             .c_ctl_status_out(conn_setup_status_out),
 
+            .rpc_in('{rpc_data: rpc_in.rpc_data,
+                      flow_id: rpc_in.flow_id,
+                      valid: rpc_valid_in}),
+            .rpc_net_out(ct_net_out),
+
+            .rpc_net_in(ct_net_in),
+            .rpc_out(cm_rpc_out),
+
             .initialized(initialized),
             .error(ct_error)
         );
 
+
+
+
+    // =============================================================
+    // Serializers
+    // =============================================================
+    // Serialization
+    always_ff @(posedge clk) begin
+        // Init vals
+        network_tx_out <= {($bits(NetworkIf)){1'b0}};
+
+        // Serialize rpc to network
+        if (ct_net_out.valid) begin
+            $display("NIC%d::RPC serializing rpc data %p", NIC_ID, ct_net_out.rpc_data);
+
+            network_tx_out.addr_tpl <= ct_net_out.net_addr;
+
+            // **********************************
+            //
+            // More complex RPC data transformation should be placed here:
+            // - compression
+            // - encryption
+            // - etc.
+            //
+            // **********************************
+            network_tx_out.payload[$bits(RpcPckt)-1:0] <= ct_net_out.rpc_data;
+
+            network_tx_out.valid <= 1'b1;
+        end
+
+        if (reset) begin
+            network_tx_out.valid <= 1'b0;
+        end
+    end
+
+    // Deserialization
+    always_ff @(posedge clk) begin
+        // Init vals
+        ct_net_in <= {($bits(CManagerNetRpcIf)){1'b0}};
+
+        if (network_rx_in.valid) begin
+            // deserialize as request
+            $display("NIC%d::RPC DeSerializing rpc %p", NIC_ID, network_rx_in.payload[$bits(RpcPckt)-1:0]);
+
+            ct_net_in.net_addr <= network_rx_in.addr_tpl;
+            // **********************************
+            //
+            // More complex RPC data transformation should be placed here:
+            // - compression
+            // - encryption
+            // - etc.
+            //
+            // **********************************
+            ct_net_in.rpc_data <= network_rx_in.payload[$bits(RpcPckt)-1:0];
+
+            ct_net_in.valid   <= 1'b1;
+        end
+
+        if (reset) begin
+            ct_net_in.valid   <= 1'b0;
+        end
+    end
+
+
     assign error = conn_setup_parsing_error |
                    ct_error;
+
 
 endmodule

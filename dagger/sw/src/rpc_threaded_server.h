@@ -25,6 +25,12 @@ public:
 
     int stop_all_listening_threads();
 
+    // Open connection
+    int connect(const IPv4& client_addr,
+                ConnectionId c_id,
+                ConnectionFlowId c_flow_id);
+    int disconnect(ConnectionId c_id);
+
 private:
     size_t max_num_of_threads_;
     uint64_t base_nic_addr_;

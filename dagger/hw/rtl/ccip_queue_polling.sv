@@ -70,7 +70,10 @@ module ccip_queue_polling
         output logic                       ccip_tx_ready,
         input RpcIf                        rpc_in,  // TODO: why RpcIf here if rpc_flow_id is still used?
         input logic                        rpc_in_valid,
-        input logic[LMAX_NUM_OF_FLOWS-1:0] rpc_flow_id_in
+        input logic[LMAX_NUM_OF_FLOWS-1:0] rpc_flow_id_in,
+
+        // Statistics
+        output logic pdrop_tx_flows_out
     );
 
 
@@ -336,7 +339,9 @@ module ccip_queue_polling
             .ccip_tx_ready(ccip_tx_ready),
             .rpc_in(rpc_in),
             .rpc_in_valid(rpc_in_valid),
-            .rpc_flow_id_in(rpc_flow_id_in)
+            .rpc_flow_id_in(rpc_flow_id_in),
+
+            .pdrop_tx_flows_out(pdrop_tx_flows_out)
         );
 
 

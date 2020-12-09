@@ -43,11 +43,8 @@ module nic
     output t_if_ccip_Tx sTx,
 
     // Network interface
-    output NetworkPacketInternal network_tx_out,
-    output logic                 network_tx_valid_out,
-
-    input NetworkPacketInternal network_rx_in,
-    input logic                 network_rx_valid_in
+    output NetworkIf network_tx_out,
+    input NetworkIf network_rx_in
 
     );
 
@@ -370,6 +367,7 @@ module nic
     RpcIf to_ccip;
     logic to_ccip_valid;
 
+    logic pdrop_tx_flows;
     logic ccip_error;
 
 `ifdef CCIP_MMIO
@@ -405,7 +403,9 @@ module nic
         .ccip_tx_ready(ccip_tx_ready),
         .rpc_in(to_ccip.rpc_data),
         .rpc_in_valid(to_ccip_valid),
-        .rpc_flow_id_in(to_ccip.flow_id)
+        .rpc_flow_id_in(to_ccip.flow_id),
+
+        .pdrop_tx_flows_out(pdrop_tx_flows)
     );
 
 `elsif CCIP_POLLING
@@ -445,7 +445,9 @@ module nic
         .ccip_tx_ready(ccip_tx_ready),
         .rpc_in(to_ccip.rpc_data),
         .rpc_in_valid(to_ccip_valid),
-        .rpc_flow_id_in(to_ccip.flow_id)
+        .rpc_flow_id_in(to_ccip.flow_id),
+
+        .pdrop_tx_flows_out(pdrop_tx_flows)
     );
 
 `elsif CCIP_DMA
@@ -486,7 +488,9 @@ module nic
         .ccip_tx_ready(ccip_tx_ready),
         .rpc_in(to_ccip.rpc_data),
         .rpc_in_valid(to_ccip_valid),
-        .rpc_flow_id_in(to_ccip.flow_id)
+        .rpc_flow_id_in(to_ccip.flow_id),
+
+        .pdrop_tx_flows_out(pdrop_tx_flows)
     );
 
 `elsif CCIP_QUEUE_POLLING
@@ -529,7 +533,9 @@ module nic
         .ccip_tx_ready(ccip_tx_ready),
         .rpc_in(to_ccip.rpc_data),
         .rpc_in_valid(to_ccip_valid),
-        .rpc_flow_id_in(to_ccip.flow_id)
+        .rpc_flow_id_in(to_ccip.flow_id),
+
+        .pdrop_tx_flows_out(pdrop_tx_flows)
     );
 
 `else
@@ -648,9 +654,7 @@ module nic
             .rpc_out(from_rpc),
 
             .network_tx_out(network_tx_out),
-            .network_tx_valid_out(network_tx_valid_out),
-            .network_rx_in(network_rx_in),
-            .network_rx_valid_in(network_rx_valid_in)
+            .network_rx_in(network_rx_in)
         );
 
 
@@ -659,10 +663,10 @@ module nic
     // =============================================================
     // Dump network packets (as $display so far)
     always @(posedge network_clk) begin
-        if (network_tx_valid_out) begin
+        if (network_tx_out.valid) begin
             $display("NIC%d: network TX packet requested %p", NIC_ID, network_tx_out);
         end
-        if (network_rx_valid_in) begin
+        if (network_rx_in.valid) begin
             $display("NIC%d: network RX packet requested %p", NIC_ID, network_rx_in);
         end
     end
@@ -749,10 +753,11 @@ module nic
             .clk_0(ccip_clk),
             .t_incoming_rpc(from_ccip_valid),
             .t_outcoming_rpc(to_ccip_valid),
+            .t_pdrop_tx_flows(pdrop_tx_flows),
 
             .clk_1(network_clk),
-            .t_outcoming_network_packets(network_tx_valid_out),
-            .t_incoming_network_packets(network_rx_valid_in),
+            .t_outcoming_network_packets(network_tx_out.valid),
+            .t_incoming_network_packets(network_rx_in.valid),
 
             .clk_io(ccip_clk),
             .counter_id_in(iRegGetPckCnt),

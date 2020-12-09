@@ -25,10 +25,13 @@ module connection_manager
         input ConnectionControlIf c_ctl_in,
         output ConnSetupStatus c_ctl_status_out,
 
-        // Output
-        //input logic get_connection_en_in,
-        //input logic[LSIZE-1:0] get_connection_id_in,
-        //output ConnectionTableEntry get_connection_out,
+        // RPC paththrough
+        // from CPU towards network
+        input CManagerRpcIf rpc_in,
+        output CManagerNetRpcIf rpc_net_out,
+        // from network towards CPU
+        input CManagerNetRpcIf rpc_net_in,
+        output CManagerRpcIf rpc_out,
 
         // Status
         output logic initialized,
@@ -36,17 +39,18 @@ module connection_manager
     );
 
     // Types
-    typedef struct packed {
-        IPv4 dest_ip;
-        Port dest_port;
-        FlowId client_flow_id;
-    } ConnectionTableEntry;
-
     typedef enum logic[0:0] { cClosed, cOpen } ConnectionStatus;
 
     typedef enum logic { CTInitIdle, CTInit } CTInitState;
 
     typedef logic[LCACHE_SIZE-1:0] CTAddr;
+
+    typedef struct packed {
+        IPv4 dest_ip;
+        Port dest_port;
+        FlowId client_flow_id;
+        ConnectionStatus status;
+    } ConnectionTableEntry;
 
     // Connection table
     logic ct_initialized;
@@ -72,7 +76,7 @@ module connection_manager
 
     // Replica of connection table
     // TODO: potential optimization - do not replicate the whole table,
-    //                                only what needs to be accessed at the same time
+    //                                only what requires concurrent access
     single_clock_wr_ram #(
             .DATA_WIDTH($bits(ConnectionTableEntry)),
             .ADR_WIDTH(LCACHE_SIZE)
@@ -135,7 +139,11 @@ module connection_manager
     // =============================================================
     // Connection setup FSM
     // =============================================================
-    typedef enum logic[2:0] { cCtlIdle, cCtlOpenCheck, cCtlOpen, cCtlCloseCheck, cCtlClose } ConnCtlState;
+    typedef enum logic[2:0] { cCtlIdle,
+                              cCtlOpenCheck,
+                              cCtlOpen,
+                              cCtlCloseCheck,
+                              cCtlClose } ConnCtlState;
 
     ConnCtlState c_ctl_state, c_ctl_state_next;
 
@@ -193,7 +201,8 @@ module connection_manager
                         c_tbl_wr_addr[i] = c_ctl_in.conn_id;
                         c_tbl_wr_data[i] = '{dest_ip: c_ctl_in.dest_ip,
                                              dest_port: c_ctl_in.dest_port,
-                                             client_flow_id: c_ctl_in.client_flow_id};
+                                             client_flow_id: c_ctl_in.client_flow_id,
+                                             status: cOpen};
                         c_tbl_wr_en[i]   = 1'b1;
                     end
 
@@ -211,6 +220,15 @@ module connection_manager
                     c_st_tbl_wr_addr = c_ctl_in.conn_id;
                     c_st_tbl_wr_data = cClosed;
                     c_st_tbl_wr_en   = 1'b1;
+                    // data
+                    for (i=0;i<2;i=i+1) begin
+                        c_tbl_wr_addr[i] = c_ctl_in.conn_id;
+                        c_tbl_wr_data[i] = '{dest_ip: {$bits(IPv4){1'b0}},
+                                             dest_port: {$bits(Port){1'b0}},
+                                             client_flow_id: {$bits(FlowId){1'b0}},
+                                             status: cClosed};
+                        c_tbl_wr_en[i]   = 1'b1;
+                    end
 
                     c_ctl_state_next = cCtlClose;
                 end
@@ -248,7 +266,8 @@ module connection_manager
                     //   - TODO: if DRAM swapping is implemented, remove this check
                     if (ct_initialized && c_ctl_in.enable
                                        && c_ctl_in.conn_id >= 2**LCACHE_SIZE) begin
-                        $display("NIC%d::RPC failed to open connection id=%d, connection id is too large", NIC_ID, c_ctl_in.conn_id);
+                        $display("NIC%d::RPC failed to open connection id=%d, \
+                                              connection id is too large", NIC_ID, c_ctl_in.conn_id);
                         c_ctl_status_out <= '{valid: 1'b1,
                                               conn_id: c_ctl_in.conn_id,
                                               error_status: cIdWrong,
@@ -260,7 +279,8 @@ module connection_manager
                 cCtlOpenCheck: begin
                     // If already open, assert an error
                     if (c_st_tbl_rd_data == cOpen) begin
-                        $display("NIC%d::RPC failed to open connection id=%d, already open", NIC_ID, c_ctl_in.conn_id);
+                        $display("NIC%d::RPC failed to open connection id=%d, \
+                                                already open", NIC_ID, c_ctl_in.conn_id);
                         c_ctl_status_out <= '{valid: 1'b1,
                                               conn_id: c_ctl_in.conn_id,
                                               error_status: cAlreadyOpen,
@@ -272,7 +292,8 @@ module connection_manager
                 cCtlCloseCheck: begin
                     // If closed, assert an error
                     if (c_st_tbl_rd_data == cClosed) begin
-                        $display("NIC%d::RPC failed to close connection id=%d, already closed", NIC_ID, c_ctl_in.conn_id);
+                        $display("NIC%d::RPC failed to close connection id=%d, \
+                                                        already closed", NIC_ID, c_ctl_in.conn_id);
                         c_ctl_status_out <= '{valid: 1'b1,
                                               conn_id: c_ctl_in.conn_id,
                                               error_status: cIsClosed,
@@ -282,7 +303,8 @@ module connection_manager
                 end
 
                 cCtlOpen: begin
-                    $display("NIC%d::RPC connection id=%d is open, connection data: %p", NIC_ID, c_ctl_in.conn_id, c_ctl_in);
+                    $display("NIC%d::RPC connection id=%d is open, connection data:%p",
+                                                                NIC_ID, c_ctl_in.conn_id, c_ctl_in);
                     c_ctl_status_out <= '{valid: 1'b1,
                                           conn_id: c_ctl_in.conn_id,
                                           error_status: cOK,
@@ -313,15 +335,117 @@ module connection_manager
     end
 
 
-    // =============================================================
-    // RPC flow
-    // =============================================================
 
 
+    // =============================================================
+    // RPC path
+    // =============================================================
+    // Combinationally start look-up
+    integer i1;
+    always_comb begin
+        // Defaults
+        for (i1=0;i1<2;i1=i1+1) begin
+            c_tbl_rd_addr[i] = {($bits(c_tbl_rd_addr[i])){1'b0}};
+        end
+
+        // For RPC flows from CPU, look-up from c_tbl
+        if (rpc_in.valid) begin
+            if (rpc_in.rpc_data.hdr.connection_id < 2**LCACHE_SIZE) begin
+                c_tbl_rd_addr[0] = rpc_in.rpc_data.hdr.connection_id;
+            end
+        end
+
+        // For RPC flows from network, look-up from c_tbl_r1
+        if (rpc_net_in.valid) begin
+            if (rpc_net_in.rpc_data.hdr.connection_id < 2**LCACHE_SIZE) begin
+                c_tbl_rd_addr[1] = rpc_net_in.rpc_data.hdr.connection_id;
+            end
+        end
+    end
+
+    // Delay RPC flow by 1 cycle for look-up
+    CManagerRpcIf rpc_in_1d;
+    CManagerNetRpcIf rpc_net_in_1d;
+    always @(posedge clk) begin
+        rpc_in_1d <= rpc_in;
+        rpc_net_in_1d <= rpc_net_in;
+    end
+
+    // Commit look-up
+    always @(posedge clk) begin
+        // RPC data flow
+        rpc_net_out.rpc_data <= rpc_in_1d.rpc_data;
+        rpc_net_out.net_addr.dest_ip <= c_tbl_rd_data[0].dest_ip;
+        rpc_net_out.net_addr.dest_port <= c_tbl_rd_data[0].dest_port;
+        rpc_net_out.net_addr.source_ip <= {$bits(IPv4){1'b0}};
+        rpc_net_out.net_addr.source_port <= {$bits(Port){1'b0}};
+
+        rpc_out.rpc_data <= rpc_net_in_1d.rpc_data;
+        rpc_out.flow_id <= c_tbl_rd_data[1].client_flow_id;
+
+        // RPC control flow
+        rpc_net_out.valid <= 1'b0;
+        if (rpc_in_1d.valid) begin
+            if (c_tbl_rd_data[0].status == cOpen) begin
+                rpc_net_out.valid <= 1'b1;
+            end
+        end
+
+        rpc_out.valid <= 1'b0;
+        if (rpc_net_in_1d.valid) begin
+            if (c_tbl_rd_data[1].status == cOpen) begin
+                rpc_out.valid <= 1'b1;
+            end
+        end
+
+        // Reset
+        if (reset) begin
+            rpc_net_out.valid <= 1'b0;
+            rpc_out.valid <= 1'b0;
+        end
+    end
+
+    // Handle errors
+    logic rpc_path_error;
+    always @(posedge clk) begin
+        if (reset) begin
+            rpc_path_error <= 1'b0;
+
+        end else begin
+            if (rpc_in.valid && rpc_in.rpc_data.hdr.connection_id >= 2**LCACHE_SIZE) begin
+                $display("NIC%d::RPC RPC request with wrong connection id=%d \
+                                                    is received, connection id is too large",
+                                                    NIC_ID, rpc_in.rpc_data.hdr.connection_id);
+                rpc_path_error <= 1'b1;
+            end
+
+            if (rpc_in_1d.valid && c_tbl_rd_data[0].status == cClosed) begin
+                $display("NIC%d::RPC RPC request with wrong connection id=%d \
+                                                    is received, connection is closed",
+                                                    NIC_ID, rpc_in.rpc_data.hdr.connection_id);
+                rpc_path_error <= 1'b1;
+            end
+
+            if (rpc_net_in.valid && rpc_net_in.rpc_data.hdr.connection_id >= 2**LCACHE_SIZE) begin
+                $display("NIC%d::RPC RPC request with wrong connection id=%d \
+                                                    is received from network, connection id is too large",
+                                                    NIC_ID, rpc_net_in.rpc_data.hdr.connection_id);
+                rpc_path_error <= 1'b1;
+            end
+
+            if (rpc_net_in_1d.valid && c_tbl_rd_data[1].status == cClosed) begin
+                $display("NIC%d::RPC RPC request with wrong connection id=%d \
+                                                    is received from network, connection is closed",
+                                                    NIC_ID, rpc_net_in_1d.rpc_data.hdr.connection_id);
+                rpc_path_error <= 1'b1;
+            end
+
+        end
+    end
 
 
 assign initialized = ct_initialized;
-assign error = 1'b0;
+assign error = rpc_path_error;
 
 
 endmodule

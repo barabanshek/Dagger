@@ -39,8 +39,8 @@ struct __attribute__ ((__packed__)) RpcHeader {
     uint16_t fn_id;         // remote function ID
     uint16_t argl;          // length of args
 
-    // Padding
-    uint8_t padding;
+    // Connection id
+    uint8_t c_id;           // connection ID
 };
 
 constexpr size_t rpc_header_size_bytes = 12;

@@ -12,11 +12,11 @@
 
 `include "config_defs.vh"
 `include "general_defs.vh"
+`include "nic_defs.vh"
 
 // Base types
 //----------------------------------------------------------------------
-typedef logic [LMAX_NUM_OF_FLOWS-1:0] FlowId;
-typedef logic [LMAX_NUM_OF_CONNECTIONS-1] ConnectionId;
+typedef logic [LMAX_NUM_OF_CONNECTIONS-1:0] ConnectionId;
 
 // Connection control interface to connection manager
 //----------------------------------------------------------------------
@@ -29,5 +29,18 @@ typedef struct packed {
     logic enable;
 } ConnectionControlIf;
 
+// RPC interface to connection manager
+//----------------------------------------------------------------------
+typedef struct packed {
+    FlowId flow_id;
+    RpcPckt rpc_data;
+    logic valid;
+} CManagerRpcIf;
+
+typedef struct packed {
+    NetworkAddressTuple net_addr;
+    RpcPckt rpc_data;
+    logic valid;
+} CManagerNetRpcIf;
 
 `endif //  RPC_DEFS_VH_
