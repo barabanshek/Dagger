@@ -35,6 +35,17 @@ int main(int argc, char* argv[]) {
     if (res != 0)
         return res;
 
+    // Open connections
+    for (int i=0; i<num_of_threads; ++i) {
+        frpc::IPv4 client_addr("192.168.0.2", 3136);
+        if (server.connect(client_addr, i, i) != 0) {
+            std::cout << "Failed to open connection on server" << std::endl;
+            exit(1);
+        } else {
+            std::cout << "Connection is open on server" << std::endl;
+        }
+    }
+
     // Register RPC functions
     std::vector<const void*> fn_ptr;
     fn_ptr.push_back(reinterpret_cast<const void*>(&loopback));

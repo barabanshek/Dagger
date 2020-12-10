@@ -176,7 +176,7 @@ module ccip_transmitter
     TxBatch tx_out_batch_cnt;
     logic rq_read_d;
 
-    // Combinational asignment of batch sizes
+    // Combinational assignment of batch sizes
     always_comb begin
         if (l_tx_batch_size == 0) begin
             tx_batch_size     = 1;
@@ -286,6 +286,8 @@ module ccip_transmitter
     // Flow FIFO ovf statistics
     integer i6;
     always_comb begin
+        pdrop_tx_flows_out = 1'b0;
+
         for(i6=0; i6<MAX_TX_FLOWS; i6=i6+1) begin
             pdrop_tx_flows_out = pdrop_tx_flows_out | ff_ovf[i6];
         end

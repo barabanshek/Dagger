@@ -168,7 +168,6 @@ int NicCCIP::stop_nic() {
         return res;
     assert(status.ready == 1);
     assert(status.running == 1);
-    assert(status.error == 0);
 
     // Stop perf if running
     if (collect_perf_) {
@@ -205,7 +204,6 @@ int NicCCIP::stop_nic() {
 
     assert(status.ready == 1);
     assert(status.running == 0);
-    assert(status.error == 0);
 
     started_ = false;
     return 0;

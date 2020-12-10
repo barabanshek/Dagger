@@ -72,13 +72,22 @@ int main(int argc, char* argv[]) {
 
     // Run client threads
     std::vector<std::thread> threads;
-    for (int i=0; i<num_of_threads; ++i) {
+    for (int thread_id=0; thread_id<num_of_threads; ++thread_id) {
         frpc::RpcClient* rpc_client = rpc_client_pool.pop();
         assert(rpc_client != nullptr);
 
+        // Open connection
+        frpc::IPv4 server_addr("192.168.0.1", 3136);
+        if (rpc_client->connect(server_addr, thread_id) != 0) {
+            std::cout << "Failed to open connection on client" << std::endl;
+            exit(1);
+        } else {
+            std::cout << "Connection is open on client" << std::endl;
+        }
+
         std::thread thr = std::thread(&run_benchmark,
                                       rpc_client,
-                                      i,
+                                      thread_id,
                                       num_of_requests,
                                       req_delay,
                                       cycles_in_ns,
@@ -142,28 +151,32 @@ static int run_benchmark(frpc::RpcClient* rpc_client,
     size_t cq_size = cq->get_number_of_completed_requests();
     std::cout << "Thread #" << thread_id << ": CQ size= " << cq_size << std::endl;
 
+#ifdef VERBOSE_RPCS
     // Output data
-    //for (int i=0; i<cq_size; ++i) {
-    //    std::cout << *reinterpret_cast<uint32_t*>(cq->pop_response().argv) << std::endl;
-    //}
+    for (int i=0; i<cq_size; ++i) {
+        std::cout << *reinterpret_cast<uint64_t*>(cq->pop_response().argv) << std::endl;
+    }
+#endif
 
     // Get latency profile
     auto latency_records = cq->get_latency_records();
 
     std::sort(latency_records.begin(), latency_records.end(), sortbysec);
 
-    std::cout << "***** latency results for thread #" << thread_id
-              << " *****" << std::endl;
-    std::cout << "  total records= " << latency_records.size() << std::endl;
-    std::cout << "  median= "
-              << latency_records[latency_records.size()*0.5]/cycles_in_ns
-              << " ns" << std::endl;
-    std::cout << "  90th= "
-              << latency_records[latency_records.size()*0.9]/cycles_in_ns
-              << " ns" << std::endl;
-    std::cout << "  99th= "
-              << latency_records[latency_records.size()*0.99]/cycles_in_ns
-              << " ns" << std::endl;
+    if (latency_records.size() != 0) {
+        std::cout << "***** latency results for thread #" << thread_id
+                  << " *****" << std::endl;
+        std::cout << "  total records= " << latency_records.size() << std::endl;
+        std::cout << "  median= "
+                  << latency_records[latency_records.size()*0.5]/cycles_in_ns
+                  << " ns" << std::endl;
+        std::cout << "  90th= "
+                  << latency_records[latency_records.size()*0.9]/cycles_in_ns
+                  << " ns" << std::endl;
+        std::cout << "  99th= "
+                  << latency_records[latency_records.size()*0.99]/cycles_in_ns
+                  << " ns" << std::endl;
+    }
 
     return 0;
 }
