@@ -13,10 +13,14 @@
 `include "nic_defs.vh"
 `include "request_queue.sv"
 <<<<<<< HEAD
+<<<<<<< HEAD
 `include "rng_module.v"
 =======
 `include "quartus_ip_cores/rng_module/altera_rand_gen_160/synth/rng_module.v"
 >>>>>>> First Commit
+=======
+`include "rng_module.v"
+>>>>>>> ccip transmitter change
 
 module ccip_transmitter
     #(
@@ -84,8 +88,6 @@ module ccip_transmitter
 	.rand_num_valid (rng_valid),           //         .valid
 	.resetn         (~reset)                //    reset.reset_n
 	);
-
-    
 
     request_queue #(
             .DATA_WIDTH($bits(RpcIf)),
