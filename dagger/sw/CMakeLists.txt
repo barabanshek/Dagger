@@ -26,7 +26,6 @@ set(LIBRARIES ${LIBRARIES} -z noexecstack)
 set(LIBRARIES ${LIBRARIES} -z relro -z now)
 set(LIBRARIES ${LIBRARIES} pthread -pie)
 set(LIBRARIES ${LIBRARIES} -luuid)
-#set(LIBRARIES ${LIBRARIES} -shared)
 
 # Testing
 enable_testing()
@@ -39,14 +38,14 @@ set(ASE_LIBS -lopae-c-ase)
 include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${CMAKE_SOURCE_DIR}/src/nic_impl)
 
-set(RPC_CODEGEN_PATH ${CMAKE_CURRENT_SOURCE_DIR}/codegen)
+set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
+set(RPC_CODEGEN_PATH ${ROOT_DIR}/codegen)
 
 set(SOURCES
     src/nic_impl/nic_ccip.cc
     src/nic_impl/nic_ccip_polling.cc
     src/nic_impl/nic_ccip_mmio.cc
     src/nic_impl/nic_ccip_dma.cc
-#    src/rpc_client.cc
     src/rpc_server_thread.cc
     src/rpc_threaded_server.cc
     src/tx_queue.cc
@@ -54,12 +53,7 @@ set(SOURCES
     src/completion_queue.cc
     src/rpc_client_nonblocking_base.cc
     src/connection_manager.cc
-#    src/rpc_threaded_server_wrapper.cc
     )
-
-set(UNIT_TEST_SOURCES
-    tests/unit_tests/main_test.cc
-    tests/unit_tests/connection_manager_tests.cc)
 
 # Prepare afu_json_info.h
 set(JSON_FILENAME ${CMAKE_SOURCE_DIR}/../hw/rtl/ccip_std_afu.json)
@@ -72,35 +66,42 @@ if(NOT JSON_GEN_RESULT EQUAL "0")
 endif()
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-# Build tests
-add_executable(dagger_unit_tests ${SOURCES} ${UNIT_TEST_SOURCES})
-target_link_libraries(dagger_unit_tests ${GTEST_LIBRARIES} ${ASE_LIBS} ${LIBRARIES})
+#
+# Aux functions
+#
+FUNCTION(PREPEND var prefix)
+   SET(listVar "")
+   FOREACH(f ${ARGN})
+      LIST(APPEND listVar "${prefix}/${f}")
+   ENDFOREACH(f)
+   SET(${var} "${listVar}" PARENT_SCOPE)
+ENDFUNCTION(PREPEND)
 
-# Compile samples
-#set(SAMPLE_CLIENT_SRC ${CMAKE_SOURCE_DIR}/samples/client.cc)
-#add_executable(rpc_client ${SAMPLE_CLIENT_SRC} ${SOURCES})
-#target_link_libraries(rpc_client ${FPGA_LIBS} ${LIBRARIES})
-
-#set(SAMPLE_CLIENT_NONBLOCK_SRC ${CMAKE_SOURCE_DIR}/samples/client_nonblocking.cc)
-#add_executable(rpc_client_nonblocking ${SAMPLE_CLIENT_NONBLOCK_SRC} ${SOURCES})
-#target_link_libraries(rpc_client_nonblocking ${FPGA_LIBS} ${LIBRARIES})
-
-#set(SAMPLE_SERVER_SRC ${CMAKE_SOURCE_DIR}/samples/server.cc)
-#add_executable(rpc_server ${SAMPLE_SERVER_SRC} ${SOURCES})
-#target_link_libraries(rpc_server ${FPGA_LIBS} ${LIBRARIES})
-
+#
 # Build ASE Dagger as a shared library
+#
 add_library(dagger_ase SHARED ${SOURCES})
 target_compile_definitions(dagger_ase PRIVATE -DASE_SIMULATION)
 target_link_libraries(dagger_ase ${ASE_LIBS} ${LIBRARIES} -shared)
 
+#
 # Build FPGA Dagger as a shared library
+#
 add_library(dagger SHARED ${SOURCES})
 target_compile_definitions(dagger PRIVATE PROFILE_LATENCY=1)
 target_link_libraries(dagger ${FPGA_LIBS} ${LIBRARIES} -shared)
 
+#
+# Build tests
+#
+add_subdirectory(tests)
+
+#
 # Build ASE samples
+#
 add_subdirectory(ase_samples)
 
+#
 # Build microbenchmarks
+#
 add_subdirectory(microbenchmarks)
