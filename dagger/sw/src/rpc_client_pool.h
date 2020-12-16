@@ -16,6 +16,7 @@ namespace frpc {
 template <class T>
 class RpcClientPool {
 public:
+    RpcClientPool() = default;
     RpcClientPool(uint64_t base_nic_addr, size_t max_pool_size):
         max_pool_size_(max_pool_size),
         base_nic_addr_(base_nic_addr),

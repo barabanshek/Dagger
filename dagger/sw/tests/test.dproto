@@ -1,0 +1,27 @@
+message arg1 {
+	int64 a;
+}
+
+message ret1 {
+    int64 ret_val;
+}
+
+message arg2 {
+	int64 a;
+	int64 b;
+	int64 c;
+	int64 d;
+}
+
+message arg3 {
+	int8 a;
+	int16 b;
+	int32 c;
+	int64 d;
+}
+
+service MyService {
+	rpc loopback1(arg1) returns (ret1);
+	rpc loopback2(arg2) returns (ret1);
+	rpc loopback3(arg3) returns (ret1);
+}

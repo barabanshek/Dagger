@@ -12,6 +12,7 @@ namespace frpc {
 
 class RpcThreadedServer {
 public:
+    RpcThreadedServer() = default;
     RpcThreadedServer(uint64_t base_nic_addr, size_t max_num_of_threads);
     ~RpcThreadedServer();
 
