@@ -1,107 +1,17 @@
 #include <gtest/gtest.h>
 
+#include "client_server_pair.h"
+
 #include <set>
-#include <vector>
 #include <unordered_set>
+#include <vector>
 
-#include "rpc_client.h"
-#include "rpc_client_pool.h"
-#include "rpc_server_callback.h"
-#include "rpc_threaded_server.h"
-
-#include <iostream>
-
-static constexpr size_t timeout = 5;
-static constexpr uint64_t loopback1_const = 10;
-
-static constexpr uint64_t server_nic_mmio_base = 0x20000;
-static constexpr uint64_t client_nic_mmio_base = 0x00000;
-
-class ClientServerTest: public ::testing::Test {
-protected:
-    ClientServerTest() = default;
-
-    virtual void SetUp(size_t num_of_threads_) {
-        num_of_threads = num_of_threads_;
-        server = std::unique_ptr<frpc::RpcThreadedServer>(
-                    new frpc::RpcThreadedServer(server_nic_mmio_base, num_of_threads));
-        client_pool = std::unique_ptr<frpc::RpcClientPool<frpc::RpcClient>>(
-                        new frpc::RpcClientPool<frpc::RpcClient>(client_nic_mmio_base, num_of_threads));
-
-        // Setup server
-        int res = server->init_nic();
-        ASSERT_EQ(res, 0);
-
-        res = server->start_nic();
-        ASSERT_EQ(res, 0);
-
-        fn_ptr.push_back(reinterpret_cast<const void*>(&ClientServerTest::loopback1));
-        fn_ptr.push_back(reinterpret_cast<const void*>(&ClientServerTest::loopback2));
-        fn_ptr.push_back(reinterpret_cast<const void*>(&ClientServerTest::loopback3));
-        server_callback = std::unique_ptr<frpc::RpcServerCallBack>(
-                                                new frpc::RpcServerCallBack(fn_ptr));
-
-        for(int i=0; i<num_of_threads; ++i) {
-            res = server->run_new_listening_thread(server_callback.get());
-            ASSERT_EQ(res, 0);
-        }
-
-        // Open-up connections
-        frpc::IPv4 client_addr("192.168.0.2", 3136);
-        ASSERT_EQ(server->connect(client_addr, 0, 0), 0);
-
-        // Setup clients
-        res = client_pool->init_nic();
-        ASSERT_EQ(res, 0);
-
-        res = client_pool->start_nic();
-        ASSERT_EQ(res, 0);
-    }
-
-    virtual void TearDown() override {
-        // Shutdown server
-        int res = server->stop_all_listening_threads();
-        ASSERT_EQ(res, 0);
-
-        res = server->stop_nic();
-        ASSERT_EQ(res, 0);
-
-        res = server->check_hw_errors();
-        ASSERT_EQ(res, 0);
-
-        // Shutdown clients
-        res = client_pool->stop_nic();
-        ASSERT_EQ(res, 0);
-
-        res = client_pool->check_hw_errors();
-        ASSERT_EQ(res, 0);
-    }
-
-    // RPC functions
-    static uint64_t loopback1(uint64_t a) {
-        return a + loopback1_const;
-    }
-
-    static uint64_t loopback2(uint64_t a, uint64_t b, uint64_t c, uint64_t d) {
-        return a + b + c + d;
-    }
-
-    static uint64_t loopback3(uint8_t a, uint16_t b, uint32_t c, uint64_t d) {
-        return a*b + c*d;
-    }
-
-    size_t num_of_threads;
-
-    std::unique_ptr<frpc::RpcThreadedServer> server;
-    std::vector<const void*> fn_ptr;
-    std::unique_ptr<frpc::RpcServerCallBack> server_callback;
-
-    std::unique_ptr<frpc::RpcClientPool<frpc::RpcClient>> client_pool;
-
-};
+class ClientServerTest: public ClientServerPair {};
 
 TEST_F(ClientServerTest, SingleLoopback1CallTest) {
-    SetUp(1);
+    constexpr size_t num_of_threads = 1;
+
+    SetUp(num_of_threads);
 
     auto c = client_pool->pop();
     ASSERT_NE(c, nullptr);
@@ -119,19 +29,23 @@ TEST_F(ClientServerTest, SingleLoopback1CallTest) {
 
     // Wait
     size_t t_out_cnt = 0;
-    while(cq->get_number_of_completed_requests() == 0 && t_out_cnt < timeout) {
+    while(cq->get_number_of_completed_requests() == 0 &&
+          t_out_cnt < ClientServerPair::timeout) {
         sleep(1);
         ++t_out_cnt;
     }
     ASSERT_EQ(cq->get_number_of_completed_requests(), 1);
 
     // Check result
-    uint64_t ret_val = *reinterpret_cast<uint64_t*>(cq->pop_response().argv);
-    EXPECT_EQ(ret_val, 12 + loopback1_const);
+    Ret1 returned = *reinterpret_cast<Ret1*>(cq->pop_response().argv);
+    EXPECT_EQ(returned.f_id, 0);
+    EXPECT_EQ(returned.ret_val, 12 + ClientServerPair::loopback1_const);
 }
 
 TEST_F(ClientServerTest, MultipleLoopback1CallTest) {
-    SetUp(1);
+    constexpr size_t num_of_threads = 1;
+
+    SetUp(num_of_threads);
 
     constexpr size_t num_of_it = 100;
     constexpr size_t num_of_wait_us = 100;
@@ -151,14 +65,14 @@ TEST_F(ClientServerTest, MultipleLoopback1CallTest) {
     std::unordered_set<int> expected;
     for(int i=0; i<num_of_it; ++i) {
         c->loopback1(i);
-        expected.insert(i + loopback1_const);
+        expected.insert(i + ClientServerPair::loopback1_const);
         usleep(num_of_wait_us);
     }
 
     // Wait
     size_t t_out_cnt = 0;
     while(cq->get_number_of_completed_requests() < num_of_it &&
-          t_out_cnt < timeout) {
+          t_out_cnt < ClientServerPair::timeout) {
         sleep(1);
         ++t_out_cnt;
     }
@@ -167,9 +81,10 @@ TEST_F(ClientServerTest, MultipleLoopback1CallTest) {
     // Check result
     size_t num_of_errors = 0;
     for(int i=0; i<num_of_it; ++i) {
-        uint64_t ret_val = *reinterpret_cast<uint64_t*>(
-                                            cq->pop_response().argv);
-        auto it = expected.find(ret_val);
+        Ret1 returned = *reinterpret_cast<Ret1*>(cq->pop_response().argv);
+        EXPECT_EQ(returned.f_id, 0);
+
+        auto it = expected.find(returned.ret_val);
         if (it == expected.end()) {
             ++num_of_errors;
         } else {
@@ -181,7 +96,9 @@ TEST_F(ClientServerTest, MultipleLoopback1CallTest) {
 }
 
 TEST_F(ClientServerTest, SingleLoopBack2CallTest) {
-    SetUp(1);
+    constexpr size_t num_of_threads = 1;
+
+    SetUp(num_of_threads);
 
     auto c = client_pool->pop();
     ASSERT_NE(c, nullptr);
@@ -196,22 +113,26 @@ TEST_F(ClientServerTest, SingleLoopBack2CallTest) {
 
     // Make a call
     c->loopback2(1, 2, 3, 4);
+    uint64_t expected = 1 + 2 + 3 + 4;
 
     // Wait
     size_t t_out_cnt = 0;
-    while(cq->get_number_of_completed_requests() == 0 && t_out_cnt < timeout) {
+    while(cq->get_number_of_completed_requests() == 0 && t_out_cnt < ClientServerPair::timeout) {
         sleep(1);
         ++t_out_cnt;
     }
     ASSERT_EQ(cq->get_number_of_completed_requests(), 1);
 
     // Check result
-    uint64_t ret_val = *reinterpret_cast<uint64_t*>(cq->pop_response().argv);
-    EXPECT_EQ(ret_val, 10);
+    Ret1 returned = *reinterpret_cast<Ret1*>(cq->pop_response().argv);
+    EXPECT_EQ(returned.f_id, 1);
+    EXPECT_EQ(returned.ret_val, expected);
 }
 
 TEST_F(ClientServerTest, MultipleLoopback2CallTest) {
-    SetUp(1);
+    constexpr size_t num_of_threads = 1;
+
+    SetUp(num_of_threads);
 
     constexpr size_t num_of_it = 100;
     constexpr size_t num_of_wait_us = 100;
@@ -238,7 +159,7 @@ TEST_F(ClientServerTest, MultipleLoopback2CallTest) {
     // Wait
     size_t t_out_cnt = 0;
     while(cq->get_number_of_completed_requests() < num_of_it &&
-          t_out_cnt < timeout) {
+          t_out_cnt < ClientServerPair::timeout) {
         sleep(1);
         ++t_out_cnt;
     }
@@ -247,9 +168,10 @@ TEST_F(ClientServerTest, MultipleLoopback2CallTest) {
     // Check result
     size_t num_of_errors = 0;
     for(int i=0; i<num_of_it; ++i) {
-        uint64_t ret_val = *reinterpret_cast<uint64_t*>(
-                                            cq->pop_response().argv);
-        auto it = expected.find(ret_val);
+        Ret1 returned = *reinterpret_cast<Ret1*>(cq->pop_response().argv);
+        EXPECT_EQ(returned.f_id, 1);
+
+        auto it = expected.find(returned.ret_val);
         if (it == expected.end()) {
             ++num_of_errors;
         } else {
@@ -261,7 +183,9 @@ TEST_F(ClientServerTest, MultipleLoopback2CallTest) {
 }
 
 TEST_F(ClientServerTest, MixedCallTest) {
-    SetUp(1);
+    constexpr size_t num_of_threads = 1;
+
+    SetUp(num_of_threads);
 
     constexpr size_t num_of_it = 100;
     constexpr size_t num_of_wait_us = 100;
@@ -278,22 +202,35 @@ TEST_F(ClientServerTest, MixedCallTest) {
     ASSERT_EQ(res, 0);
 
     // Make calls
-    std::multiset<uint64_t> expected;
+    std::unordered_set<uint64_t> expected_0;
+    std::unordered_set<uint64_t> expected_1;
+    std::unordered_set<uint64_t> expected_2;
+    std::set<std::pair<uint64_t, uint64_t>> expected_3;
+
     for(int i=0; i<num_of_it; ++i) {
-        switch (i%3) {
+        switch (i%4) {
             case 0: {
                 c->loopback1(i);
-                expected.insert(i + loopback1_const);
+                expected_0.insert(i + ClientServerPair::loopback1_const);
                 break;
             }
+
             case 1: {
                 c->loopback2(i, 10, i+1, i+2);
-                expected.insert(i + 10 + i+1 + i+2);
+                expected_1.insert(i + 10 + i+1 + i+2);
                 break;
             }
+
             case 2: {
                 c->loopback3(i+1, i+2, i+3, 2);
-                expected.insert((i+1)*(i+2) + (i+3)*2);
+                expected_2.insert((i+1)*(i+2) + (i+3)*2);
+                break;
+            }
+
+            case 3: {
+                c->loopback4(i+1, i+2, i+3, 5);
+                expected_3.insert(std::make_pair((i+1)*(i+2) + (i+3)*5,
+                                                        (i+1)*(i+3) + (i+2)*5));
                 break;
             }
         }
@@ -304,7 +241,7 @@ TEST_F(ClientServerTest, MixedCallTest) {
     // Wait
     size_t t_out_cnt = 0;
     while(cq->get_number_of_completed_requests() < num_of_it &&
-          t_out_cnt < timeout) {
+          t_out_cnt < ClientServerPair::timeout) {
         sleep(1);
         ++t_out_cnt;
     }
@@ -313,15 +250,64 @@ TEST_F(ClientServerTest, MixedCallTest) {
     // Check result
     size_t num_of_errors = 0;
     for(int i=0; i<num_of_it; ++i) {
-        uint64_t ret_val = *reinterpret_cast<uint64_t*>(
-                                            cq->pop_response().argv);
-        auto it = expected.find(ret_val);
-        if (it == expected.end()) {
-            ++num_of_errors;
-        } else {
-            expected.erase(it);
+        auto ret = cq->pop_response();
+
+        Ret1 returned = *reinterpret_cast<Ret1*>(ret.argv);
+        switch (returned.f_id) {
+            case 0: {
+                auto it = expected_0.find(returned.ret_val);
+                if (it == expected_0.end()) {
+                    ++num_of_errors;
+                } else {
+                    expected_0.erase(it);
+                }
+
+                break;
+            }
+
+            case 1: {
+                auto it = expected_1.find(returned.ret_val);
+                if (it == expected_1.end()) {
+                    ++num_of_errors;
+                } else {
+                    expected_1.erase(it);
+                }
+
+                break;
+            }
+
+            case 2: {
+                auto it = expected_2.find(returned.ret_val);
+                if (it == expected_2.end()) {
+                    
+                    ++num_of_errors;
+                } else {
+                    expected_2.erase(it);
+                }
+
+                break;
+            }
+
+            case 3: {
+                Ret2* returned_casted = reinterpret_cast<Ret2*>(ret.argv);
+                auto to_find = std::make_pair(returned_casted->ret_val,
+                                                    returned_casted->ret_val_1);
+                auto it = expected_3.find(to_find);
+
+                if (it == expected_3.end()) {
+                    ++num_of_errors;
+                } else {
+                    expected_3.erase(it);
+                }
+
+                break;
+            }
         }
     }
+
     EXPECT_EQ(num_of_errors, 0);
-    EXPECT_EQ(expected.size(), 0);
+    EXPECT_EQ(expected_0.size(), 0);
+    EXPECT_EQ(expected_1.size(), 0);
+    EXPECT_EQ(expected_2.size(), 0);
+    EXPECT_EQ(expected_3.size(), 0);
 }
