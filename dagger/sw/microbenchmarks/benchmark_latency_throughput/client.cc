@@ -8,8 +8,10 @@
 #include <thread>
 #include <vector>
 
+#include "rpc_call.h"
 #include "rpc_client.h"
 #include "rpc_client_pool.h"
+#include "rpc_types.h"
 #include "utils.h"
 
 // HW parameters

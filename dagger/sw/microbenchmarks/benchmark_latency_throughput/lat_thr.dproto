@@ -29,7 +29,7 @@ message SigningArgs {
 
 /* 8 Byte */
 message Signature {
-    uint64 result;
+    int64 result;
 }
 
 /* 52 Byte */

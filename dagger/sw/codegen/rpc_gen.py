@@ -13,6 +13,7 @@ from shutil import copyfile
 
 CLIENT_FILENAME = "rpc_client.h"
 SERVER_FILENAME = "rpc_server_callback.h"
+TYPE_HDR_FILENAME = "rpc_types.h"
 WRITE_TMPL_FILENAME = "dagger_write.tmpl"
 
 # <proto_type: (C++_type, sizeof)>
@@ -58,6 +59,10 @@ class RPCGenerator:
 
 		# Generate
 		for s_name, s_functions in iservices.items():
+			# Type header
+			with open(self.__src_file_path + '/' + TYPE_HDR_FILENAME, 'w+') as type_hdr_f:
+				type_hdr_f.write(self.__gen_type_hdr(imessages))
+
 			# Service
 			with open(self.__src_file_path + '/' + SERVER_FILENAME, 'w+') as server_f:
 				server_f.write(self.__gen_service(imessages, s_name, s_functions))
@@ -201,11 +206,15 @@ class RPCGenerator:
 #define _RPC_SERVER_CALLBACK_H_
 
 #include "logger.h"
+#include "rpc_call.h"
 #include "rpc_header.h"
 #include "rpc_server_thread.h"
 #include "rx_queue.h"
 #include "utils.h"
 
+#include "rpc_types.h"
+
+#include <cstring>
 #include <immintrin.h>
 
 namespace frpc {
@@ -217,7 +226,17 @@ public:
 	~RpcServerCallBack() {};
 
 	virtual void operator()(const RpcPckt* rpc_in, TxQueue& tx_queue) const final {
-		uint64_t ret_val;
+		uint8_t ret_buff[cfg::sys::cl_size_bytes];
+		size_t ret_size;
+		RpcRetCode ret_code;
+
+		// Check the fn_id is withing the scope
+		if (rpc_in->hdr.fn_id > rpc_fn_ptr_.size() - 1) {
+			FRPC_ERROR("Too large RPC function id is received, this call will stop here and "
+					   "no value will be returned\\n");
+			return;
+		}
+
 """
 		c_codegen.append_snippet(skeleton_header)
 
@@ -230,6 +249,16 @@ public:
 						))
 
 		# Generate
+		skeleton_ret_code_check = \
+"""
+		if (ret_code == RpcRetCode::Fail) {
+			FRPC_ERROR("RPC returned an error, this call will stop here and "
+					   "no value will be returned\\n");
+			return;
+		}
+"""
+		c_codegen.append_snippet(skeleton_ret_code_check)
+
 		skeleton_change_bit = \
 """
 		uint8_t change_bit;
@@ -241,13 +270,11 @@ public:
 		# Append return code
 		c_codegen.append_from_file(WRITE_TMPL_FILENAME)
 
-		# Make return parameters
-		# TODO: we only support uint64_t so far
 		c_codegen.replace('<CONN_ID>', 'rpc_in->hdr.c_id')
 		c_codegen.replace('<RPC_ID>', 'rpc_in->hdr.rpc_id')
 		c_codegen.replace('<FUN_NUM_OF_FRAMES>', str(1))
 		c_codegen.replace('<FUN_FUNCTION_ID>', str(1))
-		c_codegen.replace('<FUN_ARG_LENGTH_BYTES>', str(8))
+		c_codegen.replace('<FUN_ARG_LENGTH_BYTES>', 'ret_size')
 		c_codegen.replace('<REQ_TYPE>', 'rpc_response')
 
 		# Make data layout
@@ -256,12 +283,8 @@ public:
 			c_codegen.remove_token('/*DATA_LAYOUT*/')
 			c_codegen.append(
 				self.__new_line(
-				self.__assignment(
-				self.__dereference(
-				self.__reinterpret_cast(
-					'uint64_t*',
-					'tx_ptr_casted->argv'
-				)), 'ret_val'), 2))
+				self.__memcpy('tx_ptr_casted->argv', 'ret_buff', 'ret_size'), 2)
+			)
 
 		skeleton_footer = \
 """
@@ -295,9 +318,6 @@ public:
 		arg_list = [type_dict[arg[0]][0] for arg in arg_msg]
 		arg_sizes = [type_dict[arg[0]][1] for arg in arg_msg]
 
-		# Gen casting string
-		assert len(ret_msg) == 1, "Only 1-item return types are supported so far"
-
 		# Gen casting of arguments
 		offset = 0
 		arguments = []
@@ -309,16 +329,25 @@ public:
 							)))
 			offset = offset + size
 
-		cast_string = self.__assignment('ret_val',
+		cast_arg_list = ','.join(arguments) + ', ' + self.__reinterpret_cast(
+					  								 	self.__make_ptr(ret_name),
+					  									'ret_buff')
+
+		cast_string = self.__assignment('ret_code',
 					  self.__new_line(
 					  self.__f_call(
 					  self.__closure(
 					  self.__dereference(
-					  self.__reinterpret_cast('uint64_t(*)(' + ', '.join(arg_list) + ')',
+					  self.__reinterpret_cast('RpcRetCode(*)(' + ', '.join(arg_list)
+					  	                                     + ', '
+					  	                                     + self.__make_ptr(ret_name) + ')',
 						                      'rpc_fn_ptr_[' + str(rpc_id) + ']')
-					  )), ','.join(arguments))))
+					  )), cast_arg_list)))
 
-		return cast_string
+		# Gen return size
+		ret_size_string = self.__new_line(self.__assignment('ret_size', 'sizeof(' + ret_name + ')'), 4)
+
+		return cast_string + ret_size_string
 
 	def __gen_client(self, imessages, s_name, s_functions):
 		print("generating cient for service " + s_name)
@@ -341,6 +370,8 @@ public:
 #include "logger.h"
 #include "rpc_client_nonblocking_base.h"
 #include "utils.h"
+
+#include "rpc_types.h"
 
 #include <immintrin.h>
 
@@ -474,6 +505,26 @@ public:
 
 		return codegen
 
+	def __gen_type_hdr(self, imessages):
+		skeleton_header = \
+"""
+#ifndef _RPC_TYPES_H_
+#define _RPC_TYPES_H_
+
+"""
+		body = ""
+		for (name, arg_list) in imessages.items():
+			body = body + self.__c_struct(name, arg_list)
+			body = body + '\n'
+
+		skeleton_footer = \
+"""
+#endif	// _RPC_TYPES_H_
+"""
+
+		return skeleton_header + body + skeleton_footer
+
+
 	# Expression builders
 	def __offset(self, data, offset):
 		return data + ' + ' + str(offset)
@@ -518,6 +569,17 @@ public:
 
 	def __function(self, ret_type, name, args, tabs=0):
 		return "".join(['\t']*tabs) + ret_type + ' ' + name + '(' + args + ') {\n'
+
+	def __c_struct(self, name, arg_list, tabs=0):
+		result = "".join(['\t']*tabs) + "struct " + name + " {\n";
+		for (arg_type, arg_name) in arg_list:
+			result = result + "".join(['\t']*(tabs+1)) + type_dict[arg_type][0] + ' ' + arg_name + ';\n'
+		result = result + "".join(['\t']*tabs) + "};\n"
+
+		return result;
+
+	def __memcpy(self, dest, src, size):
+		return "memcpy(" + dest + ', ' + src + ', ' + size + ")"
 
 
 #

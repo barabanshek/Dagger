@@ -3,19 +3,41 @@
 #include <cstdlib>
 #include <iostream>
 
+#include "rpc_call.h"
 #include "rpc_server_callback.h"
 #include "rpc_threaded_server.h"
+#include "rpc_types.h"
 
 // HW parameters
 #define NIC_ADDR 0x00000
 
 // RPC functions
-static uint64_t loopback(uint64_t timestamp, uint64_t data);
-static uint64_t add(uint64_t timestamp, uint64_t a, uint64_t b);
-static uint64_t sign(uint64_t timestamp, uint64_t hash_lsb, uint64_t hash_msb,
-                     uint32_t key_0, uint32_t key_1, uint32_t key_2, uint32_t key_3);
-static uint64_t xor_(uint64_t timestamp, uint64_t a, uint64_t b, uint64_t c,
-                     uint64_t d, uint64_t e, uint32_t f);
+static frpc::RpcRetCode loopback(uint64_t timestamp,
+                                 uint64_t data,
+                                 NumericalResult* ret);
+
+static frpc::RpcRetCode add(uint64_t timestamp,
+                            uint64_t a,
+                            uint64_t b,
+                            NumericalResult* ret);
+
+static frpc::RpcRetCode sign(uint64_t timestamp,
+                             uint64_t hash_lsb,
+                             uint64_t hash_msb,
+                             uint32_t key_0,
+                             uint32_t key_1,
+                             uint32_t key_2,
+                             uint32_t key_3,
+                             Signature* ret);
+
+static frpc::RpcRetCode xor_(uint64_t timestamp,
+                             uint64_t a,
+                             uint64_t b,
+                             uint64_t c,
+                             uint64_t d,
+                             uint64_t e,
+                             uint32_t f,
+                             NumericalResult* ret);
 
 
 // <max number of threads, run duration>
@@ -85,34 +107,55 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-static uint64_t loopback(uint64_t timestamp, uint64_t data) {
+static frpc::RpcRetCode loopback(uint64_t timestamp,
+                                 uint64_t data,
+                                 NumericalResult* ret) {
 #ifdef VERBOSE_RPCS
     std::cout << "loopback is called with " << data << std::endl;
 #endif
-    return timestamp;
+    ret->ret_val = timestamp;
+    return frpc::RpcRetCode::Success;
 }
 
-static uint64_t add(uint64_t timestamp, uint64_t a, uint64_t b) {
+static frpc::RpcRetCode add(uint64_t timestamp,
+                            uint64_t a,
+                            uint64_t b,
+                            NumericalResult* ret) {
 #ifdef VERBOSE_RPCS
     std::cout << "add is called with " << a << ", " << b << std::endl;
 #endif
-    return timestamp;
+    ret->ret_val = timestamp;
+    return frpc::RpcRetCode::Success;
 }
 
-static uint64_t sign(uint64_t timestamp, uint64_t hash_lsb, uint64_t hash_msb,
-                     uint32_t key_0, uint32_t key_1, uint32_t key_2, uint32_t key_3) {
+static frpc::RpcRetCode sign(uint64_t timestamp,
+                             uint64_t hash_lsb,
+                             uint64_t hash_msb,
+                             uint32_t key_0,
+                             uint32_t key_1,
+                             uint32_t key_2,
+                             uint32_t key_3,
+                             Signature *ret) {
 #ifdef VERBOSE_RPCS
     std::cout << "sign is called with " << hash_lsb << ", " << hash_msb << ": <"
               << key_0 << " " << key_1 << " " << key_2 << " " << key_3 << ">" << std::endl;
 #endif
-    return timestamp;
+    ret->result = timestamp;
+    return frpc::RpcRetCode::Success;
 }
 
-static uint64_t xor_(uint64_t timestamp, uint64_t a, uint64_t b, uint64_t c,
-                     uint64_t d, uint64_t e, uint32_t f) {
+static frpc::RpcRetCode xor_(uint64_t timestamp,
+                             uint64_t a,
+                             uint64_t b,
+                             uint64_t c,
+                             uint64_t d,
+                             uint64_t e,
+                             uint32_t f,
+                             NumericalResult* ret) {
 #ifdef VERBOSE_RPCS
     std::cout << "xor_ is called with " << a << " " << b << " " << c << " "
                                         << d << " " << e << " " << f << std::endl;
 #endif
-    return timestamp;
+    ret->ret_val = timestamp;
+    return frpc::RpcRetCode::Success;
 }

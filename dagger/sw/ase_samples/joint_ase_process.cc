@@ -43,8 +43,8 @@ int main() {
 //
 #define SERVER_NIC_ADDR 0x20000
 
-static uint64_t loopback(uint64_t data);
-static uint64_t add(uint64_t a, uint64_t b);
+static frpc::RpcRetCode loopback(uint64_t data, NumericalResult* ret);
+static frpc::RpcRetCode add(uint64_t a, uint64_t b, NumericalResult* ret);
 
 static int run_server() {
     frpc::RpcThreadedServer server(SERVER_NIC_ADDR, NUMBER_OF_THREADS);
@@ -108,15 +108,17 @@ static int run_server() {
 }
 
 // RPC function #0
-static uint64_t loopback(uint64_t data) {
+static frpc::RpcRetCode loopback(uint64_t data, NumericalResult* ret) {
     std::cout << "loopback is called with data= " << data << std::endl;
-    return data + 10;
+    ret->data = data + 10;
+    return frpc::RpcRetCode::Success;
 }
 
 // RPC function #1
-static uint64_t add(uint64_t a, uint64_t b) {
+static frpc::RpcRetCode add(uint64_t a, uint64_t b, NumericalResult* ret) {
     std::cout << "add is called with a= " << a << " b= " << b << std::endl;
-    return a + b;
+    ret->data = a + b;
+    return frpc::RpcRetCode::Success;
 }
 
 
@@ -160,7 +162,8 @@ static int client(frpc::RpcClient* rpc_client, size_t thread_id, size_t num_of_r
     std::cout << "Thread " << thread_id << ", CQ entries: " << n_of_cq_entries << std::endl;
     for (int i=0; i<n_of_cq_entries; ++i) {
         std::cout << "Thread " << thread_id << ", RPC returned: " << 
-                         *reinterpret_cast<uint32_t*>(cq->pop_response().argv) << std::endl;
+                         *reinterpret_cast<int64_t*>(
+                            reinterpret_cast<NumericalResult*>(cq->pop_response().argv)) << std::endl;
     }
 
     return 0;
