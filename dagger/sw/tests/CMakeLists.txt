@@ -9,7 +9,8 @@ set(SYSTEM_TEST_SOURCES
     system_tests_fpga/nic_tests.cc
     system_tests_fpga/client_pool_tests.cc
     system_tests_fpga/threaded_server_tests.cc
-    system_tests_fpga/single_threaded_rpc_tests.cc)
+    system_tests_fpga/single_threaded_rpc_tests.cc
+    system_tests_fpga/multi_threaded_rpc_tests.cc)
 
 # Generate RPC stubs for system tests
 execute_process(COMMAND python3 rpc_gen.py ${CMAKE_CURRENT_SOURCE_DIR}/test.dproto ${CMAKE_CURRENT_BINARY_DIR}
