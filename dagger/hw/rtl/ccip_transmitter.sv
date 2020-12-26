@@ -123,46 +123,41 @@ module ccip_transmitter
     // Push logic
     FlowId rpc_flow_id_in_1d, rpc_flow_id_in_2d;
 
-    integer i1;
-    always_comb begin
-        rq_push_data = rpc_in;
-        for(i1=0; i1<MAX_TX_FLOWS; i1=i1+1) begin
-            ff_push_data[i1] = rq_slot_id;
-        end
-    end
-
     integer i2, i3;
     always @(posedge clk) begin
+        // Defaults
+        rq_push_en <= 1'b0;
+        for(i3=0; i3<MAX_TX_FLOWS; i3=i3+1) begin
+            ff_push_en[i3] <= 1'b0;
+        end
+
+        // Put request to request queue
+        rq_push_data <= rpc_in;
+
+        if (start && rpc_in_valid) begin
+            $display("NIC%d: CCI-P transmitter, rpc_in requesed for flow= %d",
+                                        NIC_ID, rpc_flow_id_in);
+            rq_push_en   <= 1'b1;
+        end
+
+        // Delay rpc_flow_id to align with rq look-up
+        rpc_flow_id_in_1d <= rpc_flow_id_in;
+        rpc_flow_id_in_2d <= rpc_flow_id_in_1d;
+
+        // Put slot_id to corresponding flow FIFO
+        if (rq_push_done) begin
+            $display("NIC%d: CCI-P transmitter, writing request to flow fifo= %d, rq_slot_id= %d",
+                                        NIC_ID, rpc_flow_id_in_2d, rq_slot_id);
+            ff_push_data[rpc_flow_id_in_2d] <= rq_slot_id;
+            ff_push_en[rpc_flow_id_in_2d] <= 1'b1;
+        end
+
         if (reset) begin
             rq_push_en <= 1'b0;
+
             for(i2=0; i2<MAX_TX_FLOWS; i2=i2+1) begin
                 ff_push_en[i2] <= 1'b0;
             end
-
-        end else begin
-            rq_push_en <= 1'b0;
-            for(i3=0; i3<MAX_TX_FLOWS; i3=i3+1) begin
-                ff_push_en[i3] <= 1'b0;
-            end
-
-            // Put request to request queue
-            if (start && rpc_in_valid) begin
-                $display("NIC%d: CCI-P transmitter, rpc_in requesed for flow= %d",
-                                            NIC_ID, rpc_flow_id_in);
-                rq_push_en       <= 1'b1;
-                rpc_flow_id_in_1d <= rpc_flow_id_in;
-            end
-
-            // Delay rpc_flow_id to align with rq look-up
-            rpc_flow_id_in_2d <= rpc_flow_id_in_1d;
-
-            // Put slot_id to corresponding flow FIFO
-            if (rq_push_done) begin
-                $display("NIC%d: CCI-P transmitter, writing request to flow fifo= %d, rq_slot_id= %d",
-                                            NIC_ID, rpc_flow_id_in_2d, rq_slot_id);
-                ff_push_en[rpc_flow_id_in_2d] <= 1'b1;
-            end
-
         end
     end
 
