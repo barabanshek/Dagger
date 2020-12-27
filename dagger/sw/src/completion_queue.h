@@ -30,6 +30,7 @@ public:
 
 #ifdef PROFILE_LATENCY
     const std::vector<uint64_t>& get_latency_records() const;
+    void clear_latency_records();
 #endif
 
 private:

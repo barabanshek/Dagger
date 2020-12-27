@@ -71,22 +71,21 @@ static ssize_t tcp_write(conn *arg, void *buf, size_t count);
 static rel_time_t realtime(const time_t exptime);
 
 // Dagger RPC layer
-#include "rpc_threaded_server_wrapper.h"
-
-// Build with the follwoing comand
-// make -j12 CPPFLAGS="-I../../src/" LDFLAGS="-L/homes/nikita/dagger/sw/build" LIBS="-ldagger -lhugetlbfs -levent"
+#include "memcached_cpp_wrapper.h"
+#include "rpc_types.h"
 
 // Export before run
-// export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/homes/nikita/dagger/sw/build/
+// export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/homes/nikita/dagger/sw/build/apps/memcached
 
-static int process_SET_from_dagger(int key, int val) {
+static int process_SET_from_dagger(uint64_t timestamp, uint64_t key, uint64_t val,
+                                   struct SetResponse* ret) {
     //printf("Dagger: new request\n");
 
     char command_key[16];
-    sprintf(command_key, "%d", key);
+    sprintf(command_key, "%" PRIu64, key);
 
     char command_val[16];
-    sprintf(command_val, "%d\r\n", val);
+    sprintf(command_val, "%" PRIu64 "\r\n", val);
 
     // Allocate item
     item *it;
@@ -120,12 +119,16 @@ static int process_SET_from_dagger(int key, int val) {
     do_item_link(it, hv);
     item_unlock(hv);
 
-    return key + val;
+    ret->timestamp = timestamp;
+
+    return 0;
 }
 
-static int process_GET_from_dagger(int key) {
+static int process_GET_from_dagger(uint64_t timestamp,
+                                   uint64_t key,
+                                   struct GetResponse* ret) {
     char command_key[16];
-    sprintf(command_key, "%d", key);
+    sprintf(command_key, "%" PRIu64, key);
     size_t nkey = strlen(command_key);
 
     uint32_t hv;
@@ -139,10 +142,14 @@ static int process_GET_from_dagger(int key) {
 
     if (it != NULL) {
         char* val = ITEM_data(it);
-        return atoi(val);
+        ret->value = atoi(val);
     } else {
-        return 0;
+        ret->value = 0;
     }
+
+    ret->timestamp = timestamp;
+
+    return 0;
 }
 
 
@@ -10376,13 +10383,18 @@ int main (int argc, char **argv) {
     uriencode_init();
 
     /* init Dagger RPC */
-    int r = rpc_server_thread_wrapper_init_and_start_server();
+    int r = memcached_wrapper_init_and_start_server();
     if (r != 0)
         return r;
+
     int ti;
     for (ti=0; ti<settings.num_threads; ++ti) {
-        r = rpc_server_thread_wrapper_register_new_listening_thread(&process_SET_from_dagger,
-                                                                    &process_GET_from_dagger);
+        r = memcached_wrapper_open_connection("192.168.0.2", 3136, ti);
+        if (r != 0)
+            return r;
+
+        r = memcached_wrapper_register_new_listening_thread(&process_SET_from_dagger,
+                                                            &process_GET_from_dagger);
         if (r != 0)
             return r;
     }
