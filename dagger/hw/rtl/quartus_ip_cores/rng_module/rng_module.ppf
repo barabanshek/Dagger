@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pinplan
+ variation_name="rand_gen_0"
+ megafunction_name="ALTERA_RAND_GEN"
+ intended_family="Arria 10"
+ specifies="all_ports">
+ <global>
+  <pin name="clock" direction="input" scope="external" />
+  <pin name="resetn" direction="input" scope="external" />
+  <pin name="rand_num_data[31..0]" direction="output" scope="external" />
+  <pin name="rand_num_ready" direction="input" scope="external" />
+  <pin name="rand_num_valid" direction="output" scope="external" />
+  <pin name="start" direction="input" scope="external" />
+ </global>
+</pinplan>

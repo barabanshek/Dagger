@@ -1,0 +1,11 @@
+	component rng_module is
+		port (
+			start          : in  std_logic                     := 'X'; -- enable
+			clock          : in  std_logic                     := 'X'; -- clk
+			rand_num_data  : out std_logic_vector(31 downto 0);        -- data
+			rand_num_ready : in  std_logic                     := 'X'; -- ready
+			rand_num_valid : out std_logic;                            -- valid
+			resetn         : in  std_logic                     := 'X'  -- reset_n
+		);
+	end component rng_module;
+
