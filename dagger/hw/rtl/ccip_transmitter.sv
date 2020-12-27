@@ -75,19 +75,10 @@ module ccip_transmitter
 	.rand_num_data  (rng_data),  	       // rand_num.data
 	.rand_num_ready (rng_ready),           //         .ready
 	.rand_num_valid (rng_valid),           //         .valid
-	.resetn         (reset)                //    reset.reset_n
+	.resetn         (~reset)                //    reset.reset_n
 	);
 
-    always @(posedge clk) begin
-        rng_ready <= 1'b0;
-        if (reset) begin
-            rng_ready <= 1'b0;
-        end
-        if (start && rpc_in_valid) begin
-            rng_ready <= 1'b1;
-        end
-        
-    end
+    
 
     request_queue #(
             .DATA_WIDTH($bits(RpcIf)),
@@ -154,12 +145,14 @@ module ccip_transmitter
     integer i2, i3;
     always @(posedge clk) begin
         if (reset) begin
+            rng_ready <= 1'b0;
             rq_push_en <= 1'b0;
             for(i2=0; i2<MAX_TX_FLOWS; i2=i2+1) begin
                 ff_push_en[i2] <= 1'b0;
             end
 
         end else begin
+            rng_ready <= 1'b0;
             rq_push_en <= 1'b0;
             for(i3=0; i3<MAX_TX_FLOWS; i3=i3+1) begin
                 ff_push_en[i3] <= 1'b0;
@@ -169,6 +162,7 @@ module ccip_transmitter
             if (start && rpc_in_valid) begin
                 $display("NIC%d: CCI-P transmitter, rpc_in requesed for flow= %d",
                                             NIC_ID, rpc_flow_id_in);
+                rng_ready <= 1'b1;
                 rq_push_en       <= 1'b1;
                 rpc_flow_id_in_d <= rpc_flow_id_in;
             end
@@ -176,8 +170,8 @@ module ccip_transmitter
             // Put slot_id to corresponding flow FIFO
             if (rq_push_done) begin
                 $display("NIC%d: CCI-P transmitter, writing request to flow fifo= %d, rq_slot_id= %d",
-                                            NIC_ID, rpc_flow_id_in_d, rq_slot_id);
-                ff_push_en[rpc_flow_id_in_d] <= 1'b1;
+                                            NIC_ID, rng_data[LMAX_NUM_OF_FLOWS-1:0], rq_slot_id);
+                ff_push_en[rng_data[LMAX_NUM_OF_FLOWS-1:0]] <= 1'b1;
             end
 
         end

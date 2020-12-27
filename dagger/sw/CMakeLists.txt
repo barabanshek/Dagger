@@ -26,7 +26,6 @@ set(LIBRARIES ${LIBRARIES} -z noexecstack)
 set(LIBRARIES ${LIBRARIES} -z relro -z now)
 set(LIBRARIES ${LIBRARIES} pthread -pie)
 set(LIBRARIES ${LIBRARIES} -luuid)
-set(LIBRARIES ${LIBRARIES} -shared)
 
 # Testing
 enable_testing()
@@ -113,4 +112,4 @@ target_link_libraries(rpc_joint_nonblocking_ase ${ASE_LIBS} ${LIBRARIES})
 # Compile Dagger as a static library with a C wrapper
 add_library(dagger SHARED ${SOURCES})
 target_compile_definitions(dagger PRIVATE PROFILE_LATENCY=1)
-target_link_libraries(dagger ${FPGA_LIBS} ${LIBRARIES})
+target_link_libraries(dagger ${FPGA_LIBS} ${LIBRARIES} -shared)
