@@ -1,0 +1,188 @@
+ [WARN]              56660000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              56797500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              56930000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              56940000 :             56940000 | Potential for Write-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540083,8000} arriving earlier than write to same address
+
+ [WARN]              56965000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              56977500 :             56977500 | Potential for Write-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540083,8000} arriving earlier than write to same address
+
+ [WARN]              56982500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              56992500 :             56992500 | Potential for Write-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540080,8000} arriving earlier than write to same address
+
+ [WARN]              56997500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              57007500 :             57007500 | Potential for Write-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540080,8000} arriving earlier than write to same address
+
+ [WARN]              57017500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              57080000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              57085000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              57097500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              57097500 :             57097500 | Potential for Write-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540081,8000} arriving earlier than write to same address
+
+ [WARN]              57105000 :             57105000 | Potential for Write-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540080,8000} arriving earlier than write to same address
+
+ [WARN]              57155000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              57165000 :             57165000 | Potential for Write-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540081,8000} arriving earlier than write to same address
+
+ [WARN]              57175000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              57237500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              57247500 :             57247500 | Potential for Write-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540082,8000} arriving earlier than write to same address
+
+ [WARN]              57345000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              57435000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              57442500 :             57442500 | Potential for Write-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540081,8000} arriving earlier than write to same address
+
+ [WARN]              57577500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              57632500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              57645000 :             57645000 | Potential for Write-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540080,8000} arriving earlier than write to same address
+
+ [WARN]              57662500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              57682500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              57690000 :             57690000 | Potential for Write-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540080,8000} arriving earlier than write to same address
+
+ [WARN]              57702500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              57707500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              57712500 :             57712500 | Potential for Write-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540082,8000} arriving earlier than write to same address
+
+ [WARN]              57720000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              57720000 :             57720000 | Potential for Write-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540082,8000} arriving earlier than write to same address
+
+ [WARN]              57952500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              57960000 :             57960000 | Potential for Write-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540080,8000} arriving earlier than write to same address
+
+ [WARN]              58015000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              58032500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              58042500 :             58042500 | Potential for Write-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540082,8000} arriving earlier than write to same address
+
+ [WARN]              58057500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              58065000 :             58065000 | Potential for Write-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540082,8000} arriving earlier than write to same address
+
+ [WARN]              58070000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              58082500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              58092500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              58100000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              58125000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              58132500 :             58132500 | Potential for Write-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540083,8000} arriving earlier than write to same address
+
+ [WARN]              58195000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              58512500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              58520000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              58522500 :             58522500 | Potential for Read-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555548080,0000} arriving earlier than write to same address
+
+ [WARN]              58530000 :             58530000 | Potential for Read-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540081,8000} arriving earlier than write to same address
+
+ [WARN]              58565000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              58575000 :             58575000 | Potential for Read-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540081,8000} arriving earlier than write to same address
+
+ [WARN]              58610000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              58620000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              58620000 :             58620000 | Potential for Read-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540081,8000} arriving earlier than write to same address
+
+ [WARN]              58630000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              58642500 :             58642500 | Potential for Read-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540081,8000} arriving earlier than write to same address
+
+ [WARN]              58832500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              58845000 :             58845000 | Potential for Read-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540080,8000} arriving earlier than write to same address
+
+ [WARN]              58925000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              58950000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              58957500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              58957500 :             58957500 | Potential for Write-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555548083,0000} arriving earlier than write to same address
+
+ [WARN]              58965000 :             58965000 | Potential for Read-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555548080,0000} arriving earlier than write to same address
+
+ [WARN]              59022500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              59032500 :             59032500 | Potential for Read-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555548080,0000} arriving earlier than write to same address
+
+ [WARN]              59072500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              59075000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              59085000 :             59085000 | Potential for Read-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555540082,8000} arriving earlier than write to same address
+
+ [WARN]              59092500 :             59092500 | Potential for Read-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555548082,0000} arriving earlier than write to same address
+
+ [WARN]              59375000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              59385000 :             59385000 | Potential for Read-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555548081,0000} arriving earlier than write to same address
+
+ [WARN]              59430000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              59437500 :             59437500 | Potential for Read-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555548081,0000} arriving earlier than write to same address
+
+ [WARN]              59452500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              59460000 :             59460000 | Potential for Read-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555548080,0000} arriving earlier than write to same address
+
+ [WARN]              59530000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              59542500 :             59542500 | Potential for Read-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555548081,0000} arriving earlier than write to same address
+
+ [WARN]              59550000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              59892500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              59900000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              59902500 :             59902500 | Potential for Read-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555548082,0000} arriving earlier than write to same address
+
+ [WARN]              59910000 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              59910000 :             59910000 | Potential for Write-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555548083,0000} arriving earlier than write to same address
+
+ [WARN]              59917500 :             59917500 | Potential for Read-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555548081,0000} arriving earlier than write to same address
+
+ [WARN]              60022500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              60030000 :             60030000 | Potential for Read-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555548080,0000} arriving earlier than write to same address
+
+ [WARN]              60477500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              60487500 :             60487500 | Potential for Read-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555548080,0000} arriving earlier than write to same address
+
+ [WARN]              61057500 : [SNIFF_C1TX_XZ_FOUND_WARN] C1TxHdr request contained a 'Z' or 'X' !
+
+ [WARN]              61065000 :             61065000 | Potential for Read-after-Write hazard with potential for C1TxHdr=TxHdr = {WrI,#1CL,VH0,15555548082,0000} arriving earlier than write to same address
+

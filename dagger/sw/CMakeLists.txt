@@ -90,6 +90,7 @@ target_link_libraries(dagger_ase ${ASE_LIBS} ${LIBRARIES} -shared)
 add_library(dagger SHARED ${SOURCES})
 target_compile_definitions(dagger PRIVATE PROFILE_LATENCY=1)
 target_link_libraries(dagger ${FPGA_LIBS} ${LIBRARIES} -shared)
+<<<<<<< HEAD
 
 #
 # Build tests
@@ -105,3 +106,5 @@ add_subdirectory(ase_samples)
 # Build microbenchmarks
 #
 add_subdirectory(microbenchmarks)
+=======
+>>>>>>> Cleaned Up Build Folder
