@@ -1,0 +1,92 @@
+set_global_assignment -entity "rng_module" -library "rng_module" -name IP_TOOL_NAME "QsysPrimePro"
+set_global_assignment -entity "rng_module" -library "rng_module" -name IP_TOOL_VERSION "16.0"
+set_global_assignment -entity "rng_module" -library "rng_module" -name IP_TOOL_ENV "QsysPrimePro"
+set_global_assignment -library "rng_module" -name SOPCINFO_FILE [file join $::quartus(qip_path) "../rng_module.sopcinfo"]
+set_global_assignment -entity "rng_module" -library "rng_module" -name SLD_INFO "QSYS_NAME rng_module HAS_SOPCINFO 1 GENERATION_ID 1606035740"
+set_global_assignment -library "rng_module" -name MISC_FILE [file join $::quartus(qip_path) "rng_module.cmp"]
+set_global_assignment -entity "rng_module" -library "rng_module" -name IP_TARGETED_DEVICE_FAMILY "Arria 10"
+set_global_assignment -entity "rng_module" -library "rng_module" -name IP_GENERATED_DEVICE_FAMILY "{Arria 10}"
+set_global_assignment -entity "rng_module" -library "rng_module" -name IP_QSYS_MODE "STANDALONE"
+set_global_assignment -name SYNTHESIS_ONLY_QIP ON
+set_global_assignment -library "rng_module" -name MISC_FILE [file join $::quartus(qip_path) "../rng_module.qsys"]
+set_global_assignment -entity "rng_module" -library "rng_module" -name IP_COMPONENT_NAME "cm5nX21vZHVsZQ=="
+set_global_assignment -entity "rng_module" -library "rng_module" -name IP_COMPONENT_DISPLAY_NAME "cm5nX21vZHVsZQ=="
+set_global_assignment -entity "rng_module" -library "rng_module" -name IP_COMPONENT_REPORT_HIERARCHY "On"
+set_global_assignment -entity "rng_module" -library "rng_module" -name IP_COMPONENT_INTERNAL "Off"
+set_global_assignment -entity "rng_module" -library "rng_module" -name IP_COMPONENT_VERSION "MS4w"
+set_global_assignment -entity "rng_module" -library "rng_module" -name IP_COMPONENT_PARAMETER "QVVUT19HRU5FUkFUSU9OX0lE::MTYwNjAzNTc0MA==::QXV0byBHRU5FUkFUSU9OX0lE"
+set_global_assignment -entity "rng_module" -library "rng_module" -name IP_COMPONENT_PARAMETER "QVVUT19ERVZJQ0VfRkFNSUxZ::QXJyaWEgMTA=::QXV0byBERVZJQ0VfRkFNSUxZ"
+set_global_assignment -entity "rng_module" -library "rng_module" -name IP_COMPONENT_PARAMETER "QVVUT19ERVZJQ0U=::MTBBWDExNVUzRjQ1RTJTR0Uz::QXV0byBERVZJQ0U="
+set_global_assignment -entity "rng_module" -library "rng_module" -name IP_COMPONENT_PARAMETER "QVVUT19ERVZJQ0VfU1BFRURHUkFERQ==::Mg==::QXV0byBERVZJQ0VfU1BFRURHUkFERQ=="
+set_global_assignment -entity "rng_module" -library "rng_module" -name IP_COMPONENT_PARAMETER "QVVUT19DTE9DS19DTE9DS19SQVRF::LTE=::QXV0byBDTE9DS19SQVRF"
+set_global_assignment -entity "rng_module" -library "rng_module" -name IP_COMPONENT_PARAMETER "QVVUT19DTE9DS19DTE9DS19ET01BSU4=::LTE=::QXV0byBDTE9DS19ET01BSU4="
+set_global_assignment -entity "rng_module" -library "rng_module" -name IP_COMPONENT_PARAMETER "QVVUT19DTE9DS19SRVNFVF9ET01BSU4=::LTE=::QXV0byBSRVNFVF9ET01BSU4="
+set_global_assignment -entity "rng_module" -library "rng_module" -name IP_COMPONENT_GROUP "U3lzdGVt"
+set_global_assignment -entity "rng_module_altera_rand_gen_160_uinfc3a" -library "altera_rand_gen_160" -name IP_COMPONENT_NAME "cm5nX21vZHVsZV9hbHRlcmFfcmFuZF9nZW5fMTYwX3VpbmZjM2E="
+set_global_assignment -entity "rng_module_altera_rand_gen_160_uinfc3a" -library "altera_rand_gen_160" -name IP_COMPONENT_DISPLAY_NAME "UmFuZG9tIE51bWJlciBHZW5lcmF0b3I="
+set_global_assignment -entity "rng_module_altera_rand_gen_160_uinfc3a" -library "altera_rand_gen_160" -name IP_COMPONENT_REPORT_HIERARCHY "Off"
+set_global_assignment -entity "rng_module_altera_rand_gen_160_uinfc3a" -library "altera_rand_gen_160" -name IP_COMPONENT_INTERNAL "Off"
+set_global_assignment -entity "rng_module_altera_rand_gen_160_uinfc3a" -library "altera_rand_gen_160" -name IP_COMPONENT_AUTHOR "QWx0ZXJhIENvcnBvcmF0aW9u"
+set_global_assignment -entity "rng_module_altera_rand_gen_160_uinfc3a" -library "altera_rand_gen_160" -name IP_COMPONENT_VERSION "MTYuMA=="
+set_global_assignment -entity "rng_module_altera_rand_gen_160_uinfc3a" -library "altera_rand_gen_160" -name IP_COMPONENT_DESCRIPTION "VGhlIFJhbmRvbSBOdW1iZXIgR2VuZXJhdG9yIGNvcmUgcHJvZHVjZXMgcHNldWRvIHJhbmRvbSBudW1iZXJzIHVuZGVyIHVuaWZvcm0gb3IgTm9ybWFsIGRpc3RyaWJ1dGlvbg=="
+set_global_assignment -entity "rng_module_altera_rand_gen_160_uinfc3a" -library "altera_rand_gen_160" -name IP_COMPONENT_PARAMETER "ZGVzaWduX2Vudg==::TkFUSVZF::ZGVzaWduX2Vudg=="
+set_global_assignment -entity "rng_module_altera_rand_gen_160_uinfc3a" -library "altera_rand_gen_160" -name IP_COMPONENT_PARAMETER "R0VOX1RZUEU=::MQ==::R2VuZXJhdG9yIHR5cGU="
+set_global_assignment -entity "rng_module_altera_rand_gen_160_uinfc3a" -library "altera_rand_gen_160" -name IP_COMPONENT_PARAMETER "TU9ERUxfT1BUSU9O::MQ==::R2VuZXJhdG9yIGFyY2hpdGVjdHVyZQ=="
+set_global_assignment -entity "rng_module_altera_rand_gen_160_uinfc3a" -library "altera_rand_gen_160" -name IP_COMPONENT_PARAMETER "U0VFRF9HRU4=::QXV0bw==::U2VlZCBzZWxlY3Rpb24="
+set_global_assignment -entity "rng_module_altera_rand_gen_160_uinfc3a" -library "altera_rand_gen_160" -name IP_COMPONENT_PARAMETER "c2VsZWN0ZWRfZGV2aWNlX2ZhbWlseQ==::QXJyaWEgMTA=::c2VsZWN0ZWRfZGV2aWNlX2ZhbWlseQ=="
+set_global_assignment -entity "rng_module_altera_rand_gen_160_uinfc3a" -library "altera_rand_gen_160" -name IP_COMPONENT_PARAMETER "SVNfVEVTVElORw==::ZmFsc2U=::SVNfVEVTVElORw=="
+set_global_assignment -entity "rng_module_altera_rand_gen_160_uinfc3a" -library "altera_rand_gen_160" -name IP_COMPONENT_GROUP "RFNQL0Vycm9yIERldGVjdGlvbiBhbmQgQ29ycmVjdGlvbg=="
+
+set_global_assignment -library "rng_module" -name VERILOG_FILE [file join $::quartus(qip_path) "synth/rng_module.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/altera_rand_gen.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_stream_fifo.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_data_fifo.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_fifo.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_ll_fifo.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_valid_fifo_counter.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_arb2.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_arb_intf.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_avm_to_ic.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_ic_intf.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_ic_master_endpoint.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_ic_slave_endpoint.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_ic_slave_rrp.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_ic_slave_wrp.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_ic_rrp_reg.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_ic_wrp_reg.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_ic_to_avm.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_atomics_nostall.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_atomics_arb_stall.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_staging_reg.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_pop.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_push.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_token_fifo_counter.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_ll_ram_fifo.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/st_top.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_pipeline.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_enable_sink.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_loop_limiter.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_work_group_limiter.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_multistage_accumulator.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_work_item_iterator.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_shift_register.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_multistage_adder.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_id_iterator.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_kernel_finish_detector.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_task_copy_finish_detector.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_start_signal_chain_element.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_finish_signal_chain_element.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_work_group_dispatcher.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_toggle_detect.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/acl_debug_mem.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/altera_rand_gen_basic_block_0.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/altera_rand_gen_basic_block_1.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/altera_rand_gen_function.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/altera_rand_gen_function_wrapper.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/rand_gen.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/altera_rand_gen_internal.v"]
+set_global_assignment -library "altera_rand_gen_160" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_rand_gen_160/synth/rng_module_altera_rand_gen_160_uinfc3a.sv"]
+
+set_global_assignment -entity "rng_module_altera_rand_gen_160_uinfc3a" -library "altera_rand_gen_160" -name IP_TOOL_NAME "altera_rand_gen"
+set_global_assignment -entity "rng_module_altera_rand_gen_160_uinfc3a" -library "altera_rand_gen_160" -name IP_TOOL_VERSION "16.0"
+set_global_assignment -entity "rng_module_altera_rand_gen_160_uinfc3a" -library "altera_rand_gen_160" -name IP_TOOL_ENV "QsysPrimePro"
