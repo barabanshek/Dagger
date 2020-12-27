@@ -88,7 +88,6 @@ module ccip_transmitter
 	.rand_num_valid (rng_valid),           //         .valid
 	.resetn         (~reset)                //    reset.reset_n
 	);
-
     request_queue #(
             .DATA_WIDTH($bits(RpcIf)),
             .LSIZE(LMAX_NUM_OF_FLOWS + LTX_FIFO_DEPTH)
@@ -148,6 +147,7 @@ module ccip_transmitter
     always @(posedge clk) begin
         // Defaults
         rq_push_en <= 1'b0;
+        rng_ready <= 1'b0;
         for(i3=0; i3<MAX_TX_FLOWS; i3=i3+1) begin
             ff_push_en[i3] <= 1'b0;
         end
@@ -159,6 +159,7 @@ module ccip_transmitter
             $display("NIC%d: CCI-P transmitter, rpc_in requesed for flow= %d",
                                         NIC_ID, rpc_flow_id_in);
             rq_push_en   <= 1'b1;
+            rng_ready <= 1'b1;
         end
 
         // Delay rpc_flow_id to align with rq look-up
@@ -168,9 +169,9 @@ module ccip_transmitter
         // Put slot_id to corresponding flow FIFO
         if (rq_push_done) begin
             $display("NIC%d: CCI-P transmitter, writing request to flow fifo= %d, rq_slot_id= %d",
-                                        NIC_ID, rpc_flow_id_in_2d, rq_slot_id);
-            ff_push_data[rpc_flow_id_in_2d] <= rq_slot_id;
-            ff_push_en[rpc_flow_id_in_2d] <= 1'b1;
+                                        NIC_ID, rng_data[LMAX_NUM_OF_FLOWS-1:0], rq_slot_id);
+            ff_push_data[rng_data[LMAX_NUM_OF_FLOWS-1:0]] <= rq_slot_id;
+            ff_push_en[rng_data[LMAX_NUM_OF_FLOWS-1:0]] <= 1'b1;
         end
 
         if (reset) begin
