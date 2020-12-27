@@ -1,9 +1,0 @@
-//
-// This file has been generated automatically by afu_platform_config.
-// Do not edit it by hand.
-//
-// Platform: a10_gx_intg_xeon_bdx
-// AFU top-level interface: ccip_std_afu
-//
-
--F /export/fpga/release/SR-5.0.3-Release/hw/lib/build/platform/ofs_plat_if/sim/platform_if_includes.txt
