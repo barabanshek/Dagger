@@ -141,7 +141,7 @@ module ccip_transmitter
     endgenerate
 
     // Push logic
-    FlowId rpc_flow_id_in_1d, rpc_flow_id_in_2d;
+    FlowId rpc_flow_id_in_1d;
 
     integer i2, i3;
     always @(posedge clk) begin
@@ -163,15 +163,14 @@ module ccip_transmitter
         end
 
         // Delay rpc_flow_id to align with rq look-up
-        rpc_flow_id_in_1d <= rpc_flow_id_in;
-        rpc_flow_id_in_2d <= rpc_flow_id_in_1d;
+        rpc_flow_id_in_1d <= rng_data[LMAX_NUM_OF_FLOWS-1:0];
 
         // Put slot_id to corresponding flow FIFO
         if (rq_push_done) begin
             $display("NIC%d: CCI-P transmitter, writing request to flow fifo= %d, rq_slot_id= %d",
-                                        NIC_ID, rng_data[LMAX_NUM_OF_FLOWS-1:0], rq_slot_id);
-            ff_push_data[rng_data[LMAX_NUM_OF_FLOWS-1:0]] <= rq_slot_id;
-            ff_push_en[rng_data[LMAX_NUM_OF_FLOWS-1:0]] <= 1'b1;
+                                        NIC_ID, rpc_flow_id_in_1d, rq_slot_id);
+            ff_push_data[rpc_flow_id_in_1d] <= rq_slot_id;
+            ff_push_en[rpc_flow_id_in_1d] <= 1'b1;
         end
 
         if (reset) begin
