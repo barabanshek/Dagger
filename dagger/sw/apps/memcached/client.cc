@@ -9,14 +9,16 @@
 #include <thread>
 #include <vector>
 
-#include "rpc_client_nonblocking.h"
+#include "rpc_call.h"
+#include "rpc_client.h"
 #include "rpc_client_pool.h"
+#include "rpc_types.h"
 #include "utils.h"
 
 // HW parameters
 #define NIC_ADDR 0x20000
 
-static int run_set_benchmark(frpc::RpcClientNonBlock* rpc_client,
+static int run_set_benchmark(frpc::RpcClient* rpc_client,
                              int thread_id,
                              size_t num_iterations,
                              size_t req_delay,
@@ -34,7 +36,6 @@ static double rdtsc_in_ns() {
     return (b - a)/1000000000.0;
 }
 
-// <number of threads, number of requests per thread, RPC issue delay>
 int main(int argc, char* argv[]) {
     double cycles_in_ns = rdtsc_in_ns();
     std::cout << "Cycles in ns: " << cycles_in_ns << std::endl;
@@ -46,12 +47,7 @@ int main(int argc, char* argv[]) {
     size_t set_get_fraction = atoi(argv[5]);
     size_t set_get_req_delay = atoi(argv[6]);
 
-    //if (num_of_threads > 1) {
-    //  std::cout << "Only one thread is currently supported" << std::endl;
-    //  return 1;
-    //}
-
-    frpc::RpcClientPool<frpc::RpcClientNonBlock> rpc_client_pool(NIC_ADDR,
+    frpc::RpcClientPool<frpc::RpcClient> rpc_client_pool(NIC_ADDR,
                                                          num_of_threads);
 
     // Init client pool
@@ -68,17 +64,26 @@ int main(int argc, char* argv[]) {
 
     // Run client threads
     std::vector<std::thread> threads;
-    for (int i=0; i<num_of_threads; ++i) {
-        frpc::RpcClientNonBlock* rpc_client = rpc_client_pool.pop();
+    for (int thread_id=0; thread_id<num_of_threads; ++thread_id) {
+        frpc::RpcClient* rpc_client = rpc_client_pool.pop();
         assert(rpc_client != nullptr);
+
+        // Open connection
+        frpc::IPv4 server_addr("192.168.0.1", 3136);
+        if (rpc_client->connect(server_addr, thread_id) != 0) {
+            std::cout << "Failed to open connection on client" << std::endl;
+            exit(1);
+        } else {
+            std::cout << "Connection is open on client" << std::endl;
+        }
 
         std::thread thr = std::thread(&run_set_benchmark,
                                       rpc_client,
-                                      i,
+                                      thread_id,
                                       num_of_requests,
                                       req_delay,
                                       cycles_in_ns,
-                                      i*num_of_requests,
+                                      thread_id*num_of_requests,
                                       dst_file_name,
                                       set_get_fraction,
                                       set_get_req_delay);
@@ -104,45 +109,30 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-static bool sortbysec(const std::pair<uint32_t,uint64_t> &a,
-              const std::pair<uint32_t,uint64_t> &b) {
-    return (a.second < b.second);
+static bool sortbysec(const uint64_t &a, const uint64_t &b) {
+    return a < b;
 }
 
-static void print_latency(uint64_t* timestamp_send, uint64_t* timestamp_recv, size_t n_entries, size_t thread_id, double cycles_in_ns) {
-    // Get latency profile
-    std::vector<std::pair<uint32_t, uint64_t>> latency_results;
-    for (size_t i=0; i<n_entries; ++i) {
-        if (timestamp_send[i] != 0 && timestamp_recv[i] != 0) {
-            latency_results.push_back(std::make_pair(
-                                    i, timestamp_recv[i] - timestamp_send[i]));
-        }
-    }
-
-    std::sort(latency_results.begin(), latency_results.end(), sortbysec);
+static void print_latency(std::vector<uint64_t>& latency_records,
+                          size_t thread_id,
+                          double cycles_in_ns) {
+    std::sort(latency_records.begin(), latency_records.end(), sortbysec);
 
     std::cout << "***** latency results for thread #" << thread_id
               << " *****" << std::endl;
-    std::cout << "  total records= " << latency_results.size() << std::endl;
+    std::cout << "  total records= " << latency_records.size() << std::endl;
     std::cout << "  median= "
-              << latency_results[latency_results.size()*0.5].second/cycles_in_ns
+              << latency_records[latency_records.size()*0.5]/cycles_in_ns
               << " ns" << std::endl;
     std::cout << "  90th= "
-              << latency_results[latency_results.size()*0.9].second/cycles_in_ns
+              << latency_records[latency_records.size()*0.9]/cycles_in_ns
               << " ns" << std::endl;
     std::cout << "  99th= "
-              << latency_results[latency_results.size()*0.99].second/cycles_in_ns
+              << latency_records[latency_records.size()*0.99]/cycles_in_ns
               << " ns" << std::endl;
 }
 
-static void zero_out_latency(uint64_t* timestamp_send, uint64_t* timestamp_recv, size_t n_entries) {
-  for(size_t i=0; i<n_entries; ++i) {
-    timestamp_send[i] = 0;
-    timestamp_recv[i] = 0;
-  }
-}
-
-static int run_set_benchmark(frpc::RpcClientNonBlock* rpc_client,
+static int run_set_benchmark(frpc::RpcClient* rpc_client,
                          int thread_id,
                          size_t num_iterations,
                          size_t req_delay,
@@ -151,16 +141,13 @@ static int run_set_benchmark(frpc::RpcClientNonBlock* rpc_client,
                          const char* dst_file_name,
                          size_t set_get_fraction,
                          size_t set_get_req_delay) {
-    uint64_t* timestamp_send = new uint64_t[10*num_iterations+100];
-    uint64_t* timestamp_recv = new uint64_t[10*num_iterations+100];
-
-    rpc_client->init_latency_profile(timestamp_send, timestamp_recv);
-
     // Make an RPC call (SET)
     std::cout << "----------------- doing SET -----------------" << std::endl;
     for(int i=0; i<num_iterations; ++i) {
         // Set <key, value> <i, i+10>
-        rpc_client->foo(starting_key + i, starting_key + i + 10);
+        rpc_client->set(frpc::utils::rdtsc(),
+                        starting_key + i,
+                        starting_key + i + 10);
 
        // Blocking delay to control rps rate
        for (int delay=0; delay<req_delay; ++delay) {
@@ -172,9 +159,11 @@ static int run_set_benchmark(frpc::RpcClientNonBlock* rpc_client,
     sleep(5);
 
     // Print Latencies
-    // Get latency profile
-    print_latency(timestamp_send, timestamp_recv, 10*num_iterations+100, thread_id, cycles_in_ns);
-    zero_out_latency(timestamp_send, timestamp_recv, 10*num_iterations+100);
+    auto cq = rpc_client->get_completion_queue();
+    auto latency_records = cq->get_latency_records();
+    print_latency(latency_records, thread_id, cycles_in_ns);
+
+    cq->clear_latency_records();
 
     // Make an RPC call (GET)
     std::cout << "----------------- doing SET/GET -----------------" << std::endl;
@@ -185,38 +174,39 @@ static int run_set_benchmark(frpc::RpcClientNonBlock* rpc_client,
     size_t i = 0;
     std::string line;
     if (dst_file.is_open()) {
-      while ( getline (dst_file,line) ) {
-        get_dstrs[i++] = atoi(line.c_str());
-      }
+        while ( getline (dst_file,line) ) {
+            get_dstrs[i++] = atoi(line.c_str());
+        }
     } else {
-      std::cout << "Failed to open distribution file for GET requests" << std::endl;
+        std::cout << "Failed to open distribution file for GET requests" << std::endl;
     }
     assert(i == num_iterations);
 
-     std::cout << "GET distribution > ";
+    std::cout << "GET distribution > ";
     for (int i=0; i<100; ++i) {
-      std::cout << get_dstrs[i] << " ";
+        std::cout << get_dstrs[i] << " ";
     }
     std::cout << "..." << std::endl;
 
     for(int i=0; i<num_iterations; ++i) {
         if (i%set_get_fraction != 0) {
-          rpc_client->boo(starting_key + get_dstrs[i]);
+            rpc_client->get(frpc::utils::rdtsc(), starting_key + get_dstrs[i]);
         } else {
-          rpc_client->foo(num_iterations + starting_key + i, num_iterations + starting_key + i + 10);
+            rpc_client->set(frpc::utils::rdtsc(),
+                            num_iterations + starting_key + i,
+                            num_iterations + starting_key + i + 10);
         }
 
-       // Blocking delay to control rps rate
-       for (int delay=0; delay<set_get_req_delay; ++delay) {
-           asm("");
-       }
+        // Blocking delay to control rps rate
+        for (int delay=0; delay<set_get_req_delay; ++delay) {
+            asm("");
+        }
     }
 
     // Wait a bit
     sleep(5);
 
     // Get data
-    //auto cq = rpc_client->get_completion_queue();
     //size_t cq_size = cq->get_number_of_completed_requests();
     //std::cout << "Thread #" << thread_id
     //          << ": CQ size= " << cq_size << std::endl;
@@ -224,11 +214,10 @@ static int run_set_benchmark(frpc::RpcClientNonBlock* rpc_client,
     //    std::cout << cq->pop_response().ret_val << std::endl;
     //}
 
-    // Get latency profile
-    print_latency(timestamp_send, timestamp_recv, 10*num_iterations+100, thread_id, cycles_in_ns);
+    // Print Latencies
+    latency_records = cq->get_latency_records();
+    print_latency(latency_records, thread_id, cycles_in_ns);
 
-    delete[] timestamp_send;
-    delete[] timestamp_recv;
     delete[] get_dstrs;
     return 0;
 }

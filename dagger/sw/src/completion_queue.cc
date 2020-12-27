@@ -56,9 +56,16 @@ void CompletionQueue::_PullListen() {
         cq_lock_.lock();
 
 #ifdef PROFILE_LATENCY
-        // Record latency
-        uint64_t arrival_timestamp = *reinterpret_cast<uint64_t*>(resp_pckt->argv);
-        timestamps_.push_back(frpc::utils::rdtsc() - arrival_timestamp);
+        // Record latency:
+        // the RPC definition should contain a 64-bit integer as the first entry
+        // e.g.
+        // message Msg {
+        //    int64 timestamp;
+        // }
+        // and it should be written with the current time stamp on the client when
+        // issuing the request.
+        uint64_t issuing_timestamp = *reinterpret_cast<uint64_t*>(resp_pckt->argv);
+        timestamps_.push_back(frpc::utils::rdtsc() - issuing_timestamp);
 #endif
 
         // Append to queue
@@ -88,6 +95,10 @@ RpcPckt CompletionQueue::pop_response() {
 #ifdef PROFILE_LATENCY
 const std::vector<uint64_t>& CompletionQueue::get_latency_records() const {
     return timestamps_;
+}
+
+void CompletionQueue::clear_latency_records() {
+    timestamps_.clear();
 }
 #endif
 
