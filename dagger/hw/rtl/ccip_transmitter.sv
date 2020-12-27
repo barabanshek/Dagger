@@ -78,19 +78,10 @@ module ccip_transmitter
 	.rand_num_data  (rng_data),  	       // rand_num.data
 	.rand_num_ready (rng_ready),           //         .ready
 	.rand_num_valid (rng_valid),           //         .valid
-	.resetn         (reset)                //    reset.reset_n
+	.resetn         (~reset)                //    reset.reset_n
 	);
 
-    always @(posedge clk) begin
-        rng_ready <= 1'b0;
-        if (reset) begin
-            rng_ready <= 1'b0;
-        end
-        if (start && rpc_in_valid) begin
-            rng_ready <= 1'b1;
-        end
-        
-    end
+    
 
     request_queue #(
             .DATA_WIDTH($bits(RpcIf)),
@@ -177,6 +168,7 @@ module ccip_transmitter
         end
 
         if (reset) begin
+            rng_ready <= 1'b0;
             rq_push_en <= 1'b0;
 
             for(i2=0; i2<MAX_TX_FLOWS; i2=i2+1) begin
