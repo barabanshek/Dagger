@@ -1,0 +1,29 @@
+Info: Starting: Create HDL design files for synthesis
+Info: qsys-generate /homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module.qsys --synthesis=VERILOG --output-directory=/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module --family="Arria 10" --part=10AX115U3F45E2SGE3
+Progress: Loading build/rng_module.qsys
+Progress: Reading input file
+Progress: Adding rand_gen_0 [altera_rand_gen 16.0]
+Progress: Parameterizing module rand_gen_0
+Progress: Building connections
+Progress: Parameterizing connections
+Progress: Validating
+Progress: Done reading input file
+Info: rng_module: "Transforming system: rng_module"
+Info: rng_module: Running transform generation_view_transform
+Info: rng_module: Running transform generation_view_transform took 0.000s
+Info: rand_gen_0: Running transform generation_view_transform
+Info: rand_gen_0: Running transform generation_view_transform took 0.000s
+Info: rng_module: Running transform merlin_avalon_transform
+Info: rng_module: Running transform merlin_avalon_transform took 0.024s
+Info: rng_module: "Naming system components in system: rng_module"
+Info: rng_module: "Processing generation queue"
+Info: rng_module: "Generating: rng_module"
+Info: rng_module: "Generating: rng_module_altera_rand_gen_160_uinfc3a"
+Info: rand_gen_0: /export/quartus_pro/16.0.0/quartus/../hls/bin/internal_matrixmult_helper -march=altera --RTL-only -o rand_gen --device {Arria 10} --clang-arg -generate-altera-ip --fpc -I. /export/quartus_pro/16.0.0/ip/altera/dsp/altera_rand_gen/rand_gen.cpp
+Info: rand_gen_0: rng_module_altera_rand_gen_160_uinfc3a.sv
+Info: rand_gen_0: top.sv.terp
+Info: rand_gen_0: /export/quartus_pro/16.0.0/ip/altera/dsp/altera_rand_gen
+Info: rand_gen_0: // (C) 2001-2016 Altera Corporation. All rights reserved. // Your use of Altera Corporation's design tools, logic functions and other  // software and tools, and its AMPP partner logic functions, and any output  // files any of the foregoing (including device programming or simulation  // files), and any associated documentation or information are expressly subject  // to the terms and conditions of the Altera Program License Subscription  // Agreement, Altera MegaCore Function License Agreement, or other applicable  // license agreement, including, without limitation, that your use is for the  // sole purpose of programming logic devices manufactured by Altera and sold by  // Altera or its authorized distributors.  Please refer to the applicable  // agreement for further details.   module rng_module_altera_rand_gen_160_uinfc3a (         input  wire        start,          //     call.valid 		output wire        busy,           //         .stall 		input  wire        clock,          //    clock.clk 		output wire [31:0] rand_num_data,  // rand_num.data 		input  wire        rand_num_ready, //         .ready 		output wire        rand_num_valid, //         .valid 		input  wire        resetn,         //    reset.reset_n 		output wire        done,           //   return.valid 		input  wire        stall           //         .stall 	);  	altera_rand_gen altera_rand_gen_inst ( 		.clock          (clock),          //    clock.clk 		.resetn         (resetn),         //    reset.reset_n 		.rand_num_data  (rand_num_data),  // rand_num.data 		.rand_num_ready (rand_num_ready), //         .ready 		.rand_num_valid (rand_num_valid), //         .valid 		.start          (start),          //     call.valid 		.busy           (busy),           //         .stall 		.done           (done),           //   return.valid 		.stall          (stall)           //         .stall 	);   endmodule 
+Info: rng_module: Done "rng_module" with 2 modules, 49 files
+Info: qsys-generate succeeded.
+Info: Finished: Create HDL design files for synthesis

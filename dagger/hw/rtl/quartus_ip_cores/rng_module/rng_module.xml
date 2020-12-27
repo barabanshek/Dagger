@@ -1,0 +1,521 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<deploy
+ date="2020.11.22.01:03:02"
+ outputDirectory="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/">
+ <perimeter>
+  <parameter
+     name="AUTO_GENERATION_ID"
+     type="Integer"
+     defaultValue="0"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_UNIQUE_ID"
+     type="String"
+     defaultValue=""
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE_FAMILY"
+     type="String"
+     defaultValue="Arria 10"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE"
+     type="String"
+     defaultValue="10AX115U3F45E2SGE3"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE_SPEEDGRADE"
+     type="String"
+     defaultValue="2"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_CLOCK_CLOCK_RATE"
+     type="Long"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_CLOCK_CLOCK_DOMAIN"
+     type="Integer"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_CLOCK_RESET_DOMAIN"
+     type="Integer"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <interface name="call" kind="conduit" start="0">
+   <property name="associatedClock" value="clock" />
+   <property name="associatedReset" value="reset" />
+   <port name="start" direction="input" role="enable" width="1" />
+  </interface>
+  <interface name="clock" kind="clock" start="0">
+   <property name="clockRate" value="0" />
+   <property name="externallyDriven" value="false" />
+   <property name="ptfSchematicName" value="" />
+   <port name="clock" direction="input" role="clk" width="1" />
+  </interface>
+  <interface name="rand_num" kind="avalon_streaming" start="1">
+   <property name="associatedClock" value="clock" />
+   <property name="associatedReset" value="reset" />
+   <property name="beatsPerCycle" value="1" />
+   <property name="dataBitsPerSymbol" value="32" />
+   <property name="emptyWithinPacket" value="false" />
+   <property name="errorDescriptor" value="" />
+   <property name="firstSymbolInHighOrderBits" value="true" />
+   <property name="highOrderSymbolAtMSB" value="false" />
+   <property name="maxChannel" value="0" />
+   <property name="packetDescription" value="" />
+   <property name="readyLatency" value="0" />
+   <property name="symbolsPerBeat" value="1" />
+   <port name="rand_num_data" direction="output" role="data" width="32" />
+   <port name="rand_num_ready" direction="input" role="ready" width="1" />
+   <port name="rand_num_valid" direction="output" role="valid" width="1" />
+  </interface>
+  <interface name="reset" kind="reset" start="0">
+   <property name="associatedClock" value="clock" />
+   <property name="synchronousEdges" value="DEASSERT" />
+   <port name="resetn" direction="input" role="reset_n" width="1" />
+  </interface>
+ </perimeter>
+ <entity kind="rng_module" version="1.0" name="rng_module">
+  <parameter name="AUTO_CLOCK_CLOCK_RATE" value="-1" />
+  <parameter name="AUTO_CLOCK_CLOCK_DOMAIN" value="-1" />
+  <parameter name="AUTO_CLOCK_RESET_DOMAIN" value="-1" />
+  <parameter name="AUTO_GENERATION_ID" value="1606035740" />
+  <parameter name="AUTO_DEVICE" value="10AX115U3F45E2SGE3" />
+  <parameter name="AUTO_DEVICE_FAMILY" value="Arria 10" />
+  <parameter name="AUTO_UNIQUE_ID" value="" />
+  <parameter name="AUTO_DEVICE_SPEEDGRADE" value="2" />
+  <generatedFiles>
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/synth/rng_module.v"
+       attributes="CONTAINS_INLINE_CONFIGURATION" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/synth/rng_module.v"
+       attributes="CONTAINS_INLINE_CONFIGURATION" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module.qsys" />
+  </sourceFiles>
+  <childSourceFiles>
+   <file
+       path="/export/quartus_pro/16.0.0/ip/altera/dsp/altera_rand_gen/altera_rand_gen_hw.tcl" />
+  </childSourceFiles>
+  <messages>
+   <message level="Info" culprit="rng_module">"Generating: rng_module"</message>
+   <message level="Info" culprit="rng_module">"Generating: rng_module_altera_rand_gen_160_uinfc3a"</message>
+   <message level="Info" culprit="rand_gen_0">/export/quartus_pro/16.0.0/quartus/../hls/bin/internal_matrixmult_helper -march=altera --RTL-only -o rand_gen --device {Arria 10} --clang-arg -generate-altera-ip --fpc -I. /export/quartus_pro/16.0.0/ip/altera/dsp/altera_rand_gen/rand_gen.cpp</message>
+   <message level="Info" culprit="rand_gen_0">rng_module_altera_rand_gen_160_uinfc3a.sv</message>
+   <message level="Info" culprit="rand_gen_0">top.sv.terp</message>
+   <message level="Info" culprit="rand_gen_0">/export/quartus_pro/16.0.0/ip/altera/dsp/altera_rand_gen</message>
+   <message level="Info" culprit="rand_gen_0"><![CDATA[// (C) 2001-2016 Altera Corporation. All rights reserved.
+// Your use of Altera Corporation's design tools, logic functions and other 
+// software and tools, and its AMPP partner logic functions, and any output 
+// files any of the foregoing (including device programming or simulation 
+// files), and any associated documentation or information are expressly subject 
+// to the terms and conditions of the Altera Program License Subscription 
+// Agreement, Altera MegaCore Function License Agreement, or other applicable 
+// license agreement, including, without limitation, that your use is for the 
+// sole purpose of programming logic devices manufactured by Altera and sold by 
+// Altera or its authorized distributors.  Please refer to the applicable 
+// agreement for further details.
+
+
+module rng_module_altera_rand_gen_160_uinfc3a (
+        input  wire        start,          //     call.valid
+		output wire        busy,           //         .stall
+		input  wire        clock,          //    clock.clk
+		output wire [31:0] rand_num_data,  // rand_num.data
+		input  wire        rand_num_ready, //         .ready
+		output wire        rand_num_valid, //         .valid
+		input  wire        resetn,         //    reset.reset_n
+		output wire        done,           //   return.valid
+		input  wire        stall           //         .stall
+	);
+
+	altera_rand_gen altera_rand_gen_inst (
+		.clock          (clock),          //    clock.clk
+		.resetn         (resetn),         //    reset.reset_n
+		.rand_num_data  (rand_num_data),  // rand_num.data
+		.rand_num_ready (rand_num_ready), //         .ready
+		.rand_num_valid (rand_num_valid), //         .valid
+		.start          (start),          //     call.valid
+		.busy           (busy),           //         .stall
+		.done           (done),           //   return.valid
+		.stall          (stall)           //         .stall
+	);
+
+
+endmodule
+]]></message>
+  </messages>
+ </entity>
+ <entity
+   kind="altera_rand_gen"
+   version="16.0"
+   name="rng_module_altera_rand_gen_160_uinfc3a">
+  <parameter name="SEED_VALUE" value="68997764" />
+  <parameter name="GEN_TYPE" value="1" />
+  <parameter name="MODEL_OPTION" value="1" />
+  <parameter name="IS_TESTING" value="false" />
+  <parameter name="SEED_GEN" value="Auto" />
+  <parameter name="selected_device_family" value="Arria 10" />
+  <parameter name="design_env" value="NATIVE" />
+  <generatedFiles>
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/altera_rand_gen.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_stream_fifo.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_data_fifo.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_fifo.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ll_fifo.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_valid_fifo_counter.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_arb2.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_arb_intf.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_avm_to_ic.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ic_intf.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ic_master_endpoint.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ic_slave_endpoint.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ic_slave_rrp.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ic_slave_wrp.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ic_rrp_reg.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ic_wrp_reg.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ic_to_avm.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_atomics_nostall.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_atomics_arb_stall.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_staging_reg.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_pop.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_push.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_token_fifo_counter.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ll_ram_fifo.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/st_top.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_pipeline.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_enable_sink.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_loop_limiter.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_work_group_limiter.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_multistage_accumulator.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_work_item_iterator.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_shift_register.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_multistage_adder.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_id_iterator.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_kernel_finish_detector.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_task_copy_finish_detector.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_start_signal_chain_element.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_finish_signal_chain_element.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_work_group_dispatcher.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_toggle_detect.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_debug_mem.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/altera_rand_gen_basic_block_0.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/altera_rand_gen_basic_block_1.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/altera_rand_gen_function.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/altera_rand_gen_function_wrapper.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/rand_gen.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/altera_rand_gen_internal.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/rng_module_altera_rand_gen_160_uinfc3a.sv"
+       attributes="" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/altera_rand_gen.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_stream_fifo.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_data_fifo.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_fifo.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ll_fifo.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_valid_fifo_counter.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_arb2.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_arb_intf.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_avm_to_ic.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ic_intf.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ic_master_endpoint.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ic_slave_endpoint.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ic_slave_rrp.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ic_slave_wrp.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ic_rrp_reg.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ic_wrp_reg.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ic_to_avm.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_atomics_nostall.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_atomics_arb_stall.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_staging_reg.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_pop.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_push.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_token_fifo_counter.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_ll_ram_fifo.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/st_top.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_pipeline.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_enable_sink.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_loop_limiter.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_work_group_limiter.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_multistage_accumulator.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_work_item_iterator.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_shift_register.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_multistage_adder.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_id_iterator.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_kernel_finish_detector.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_task_copy_finish_detector.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_start_signal_chain_element.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_finish_signal_chain_element.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_work_group_dispatcher.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_toggle_detect.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/acl_debug_mem.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/altera_rand_gen_basic_block_0.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/altera_rand_gen_basic_block_1.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/altera_rand_gen_function.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/altera_rand_gen_function_wrapper.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/rand_gen.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/altera_rand_gen_internal.v"
+       attributes="" />
+   <file
+       path="/homes/nikita/intel-fpga-bbb/samples/tutorial/build_1/hw/build_fpga/build/rng_module/altera_rand_gen_160/synth/rng_module_altera_rand_gen_160_uinfc3a.sv"
+       attributes="" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file
+       path="/export/quartus_pro/16.0.0/ip/altera/dsp/altera_rand_gen/altera_rand_gen_hw.tcl" />
+  </sourceFiles>
+  <childSourceFiles/>
+  <instantiator instantiator="rng_module" as="rand_gen_0" />
+  <messages>
+   <message level="Info" culprit="rng_module">"Generating: rng_module_altera_rand_gen_160_uinfc3a"</message>
+   <message level="Info" culprit="rand_gen_0">/export/quartus_pro/16.0.0/quartus/../hls/bin/internal_matrixmult_helper -march=altera --RTL-only -o rand_gen --device {Arria 10} --clang-arg -generate-altera-ip --fpc -I. /export/quartus_pro/16.0.0/ip/altera/dsp/altera_rand_gen/rand_gen.cpp</message>
+   <message level="Info" culprit="rand_gen_0">rng_module_altera_rand_gen_160_uinfc3a.sv</message>
+   <message level="Info" culprit="rand_gen_0">top.sv.terp</message>
+   <message level="Info" culprit="rand_gen_0">/export/quartus_pro/16.0.0/ip/altera/dsp/altera_rand_gen</message>
+   <message level="Info" culprit="rand_gen_0"><![CDATA[// (C) 2001-2016 Altera Corporation. All rights reserved.
+// Your use of Altera Corporation's design tools, logic functions and other 
+// software and tools, and its AMPP partner logic functions, and any output 
+// files any of the foregoing (including device programming or simulation 
+// files), and any associated documentation or information are expressly subject 
+// to the terms and conditions of the Altera Program License Subscription 
+// Agreement, Altera MegaCore Function License Agreement, or other applicable 
+// license agreement, including, without limitation, that your use is for the 
+// sole purpose of programming logic devices manufactured by Altera and sold by 
+// Altera or its authorized distributors.  Please refer to the applicable 
+// agreement for further details.
+
+
+module rng_module_altera_rand_gen_160_uinfc3a (
+        input  wire        start,          //     call.valid
+		output wire        busy,           //         .stall
+		input  wire        clock,          //    clock.clk
+		output wire [31:0] rand_num_data,  // rand_num.data
+		input  wire        rand_num_ready, //         .ready
+		output wire        rand_num_valid, //         .valid
+		input  wire        resetn,         //    reset.reset_n
+		output wire        done,           //   return.valid
+		input  wire        stall           //         .stall
+	);
+
+	altera_rand_gen altera_rand_gen_inst (
+		.clock          (clock),          //    clock.clk
+		.resetn         (resetn),         //    reset.reset_n
+		.rand_num_data  (rand_num_data),  // rand_num.data
+		.rand_num_ready (rand_num_ready), //         .ready
+		.rand_num_valid (rand_num_valid), //         .valid
+		.start          (start),          //     call.valid
+		.busy           (busy),           //         .stall
+		.done           (done),           //   return.valid
+		.stall          (stall)           //         .stall
+	);
+
+
+endmodule
+]]></message>
+  </messages>
+ </entity>
+</deploy>
