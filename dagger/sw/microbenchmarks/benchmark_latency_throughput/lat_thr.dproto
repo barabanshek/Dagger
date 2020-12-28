@@ -43,9 +43,22 @@ message XorArgs {
     int32 f;
 }
 
+/* 48 Byte */
+message UserName {
+    int64 timestamp;
+    char[20] first_name;
+    char[20] given_name;
+}
+
+message UserData {
+    int64 timestamp;
+    char[40] data;
+}
+
 service MyService {
 	rpc loopback(LoopBackArgs) returns (NumericalResult);
     rpc add(AddArgs) returns (NumericalResult);
     rpc sign(SigningArgs) returns (Signature);
     rpc xor_(XorArgs) returns (NumericalResult);
+    rpc getUserData(UserName) returns (UserData);
 }

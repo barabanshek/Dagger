@@ -1,6 +1,12 @@
 #ifndef _CLIENT_SERVER_PAIR_H_
 #define _CLIENT_SERVER_PAIR_H_
 
+/*
+ * ********** IMPORTANT ***********
+ * ********************************
+ * ** Configure all batches to 1 **
+ */
+
 #include "rpc_call.h"
 #include "rpc_client.h"
 #include "rpc_client_pool.h"
@@ -17,6 +23,8 @@ protected:
     static constexpr uint64_t client_nic_mmio_base = 0x00000;
 
     virtual void SetUp(size_t num_of_threads_, bool with_stat = false) {
+        ASSERT_EQ(frpc::cfg::nic::l_rx_batch_size, 0);
+
         num_of_threads = num_of_threads_;
 
         server = std::unique_ptr<frpc::RpcThreadedServer>(
@@ -40,6 +48,7 @@ protected:
         fn_ptr.push_back(reinterpret_cast<const void*>(&ClientServerPair::loopback2));
         fn_ptr.push_back(reinterpret_cast<const void*>(&ClientServerPair::loopback3));
         fn_ptr.push_back(reinterpret_cast<const void*>(&ClientServerPair::loopback4));
+        fn_ptr.push_back(reinterpret_cast<const void*>(&ClientServerPair::loopback5));
         server_callback = std::unique_ptr<frpc::RpcServerCallBack>(
                                                 new frpc::RpcServerCallBack(fn_ptr));
 
@@ -82,43 +91,38 @@ protected:
     }
 
     // RPC functions
-    static frpc::RpcRetCode loopback1(uint64_t a, Ret1* ret) {
+    static frpc::RpcRetCode loopback1(Arg1 arg, Ret1* ret) {
         ret->f_id = 0;
-        ret->ret_val = a + loopback1_const;
+        ret->ret_val = arg.a + loopback1_const;
 
         return frpc::RpcRetCode::Success;
     }
 
-    static frpc::RpcRetCode loopback2(uint64_t a,
-                                      uint64_t b,
-                                      uint64_t c,
-                                      uint64_t d,
-                                      Ret1* ret) {
+    static frpc::RpcRetCode loopback2(Arg2 arg, Ret1* ret) {
         ret->f_id = 1;
-        ret->ret_val = a + b + c + d;
+        ret->ret_val = arg.a + arg.b + arg.c + arg.d;
 
         return frpc::RpcRetCode::Success;
     }
 
-    static frpc::RpcRetCode loopback3(uint8_t a,
-                                      uint16_t b,
-                                      uint32_t c,
-                                      uint64_t d,
-                                      Ret1* ret) {
+    static frpc::RpcRetCode loopback3(Arg3 arg, Ret1* ret) {
         ret->f_id = 2;
-        ret->ret_val = a*b + c*d;
+        ret->ret_val = (arg.a)*(arg.b) + (arg.c)*(arg.d);
 
         return frpc::RpcRetCode::Success;
     }
 
-    static frpc::RpcRetCode loopback4(uint8_t a,
-                                      uint16_t b,
-                                      uint32_t c,
-                                      uint64_t d,
-                                      Ret2* ret) {
+    static frpc::RpcRetCode loopback4(Arg3 arg, Ret2* ret) {
         ret->f_id = 3;
-        ret->ret_val = a*b + c*d;
-        ret->ret_val_1 = a*c + b*d;
+        ret->ret_val = arg.a*arg.b + arg.c*arg.d;
+        ret->ret_val_1 = arg.a*arg.c + arg.b*arg.d;
+
+        return frpc::RpcRetCode::Success;
+    }
+
+    static frpc::RpcRetCode loopback5(StringArg arg, StringRet* ret) {
+        ret->f_id = 4;
+        sprintf(ret->str, arg.str);
 
         return frpc::RpcRetCode::Success;
     }

@@ -35,10 +35,10 @@ TEST_F(ClientServerTestMultithreaded, SingleSameCallSingleThreadTest) {
     }
 
     // Make a single call in every client
-    clients[0]->loopback1(12);
-    clients[1]->loopback1(23);
-    clients[2]->loopback1(34);
-    clients[3]->loopback1(45);
+    clients[0]->loopback1({12});
+    clients[1]->loopback1({23});
+    clients[2]->loopback1({34});
+    clients[3]->loopback1({45});
 
     // Wait
     size_t t_out_cnt = 0;
@@ -99,12 +99,12 @@ TEST_F(ClientServerTestMultithreaded, SingleDifferentCallsSingleThreadTest) {
     }
 
     // Make a single call in every client
-    clients[0]->loopback1(12);
-    clients[1]->loopback2(1, 2, 3, 4);
-    clients[2]->loopback3(11, 12, 13, 14);
-    clients[3]->loopback4(111, 222, 333, 444);
-    clients[4]->loopback1(13);
-    clients[5]->loopback2(101, 102, 201, 202);
+    clients[0]->loopback1({12});
+    clients[1]->loopback2({1, 2, 3, 4});
+    clients[2]->loopback3({11, 12, 13, 14});
+    clients[3]->loopback4({111, 222, 333, 444});
+    clients[4]->loopback1({13});
+    clients[5]->loopback2({101, 102, 201, 202});
 
     // Wait
     size_t t_out_cnt = 0;
@@ -156,7 +156,7 @@ TEST_F(ClientServerTestMultithreaded, MultipleDifferentCallsSingleThreadTest) {
     constexpr size_t num_of_threads = 4;
     SetUp(num_of_threads);
 
-    constexpr size_t num_of_it = 100;
+    constexpr size_t num_of_it = 1000;
     constexpr size_t num_of_wait_us = 100;
 
     // Run multiple clients
@@ -197,7 +197,7 @@ TEST_F(ClientServerTestMultithreaded, MultipleDifferentCallsSingleThreadTest) {
         for(int client_i=0; client_i<num_of_threads; ++client_i) {
             switch (it%3) {
                 case 0: {
-                    clients[client_i]->loopback1((it+1)*(client_i+1));
+                    clients[client_i]->loopback1({(it+1)*(client_i+1)});
                     expected_loopback1[client_i].insert(
                                     (it+1)*(client_i+1) + ClientServerPair::loopback1_const);
                     usleep(num_of_wait_us);
@@ -205,7 +205,7 @@ TEST_F(ClientServerTestMultithreaded, MultipleDifferentCallsSingleThreadTest) {
                 }
 
                 case 1: {
-                    clients[client_i]->loopback2(it+1, client_i+1, it*client_i+1, it+client_i+1);
+                    clients[client_i]->loopback2({it+1, client_i+1, it*client_i+1, it+client_i+1});
                     expected_loopback2[client_i].insert(
                                             it+1 + client_i+1 + it*client_i+1 + it+client_i+1);
                     usleep(num_of_wait_us);
@@ -213,7 +213,7 @@ TEST_F(ClientServerTestMultithreaded, MultipleDifferentCallsSingleThreadTest) {
                 }
 
                 case 2: {
-                    clients[client_i]->loopback3(it+1, client_i+1, it+client_i+1, it*client_i+1);
+                    clients[client_i]->loopback3({it+1, client_i+1, it+client_i+1, it*client_i+1});
                     expected_loopback3[client_i].insert(
                                         (it+1)*(client_i+1) + (it+client_i+1)*(it*client_i+1));
                     usleep(num_of_wait_us);
@@ -300,7 +300,7 @@ static void test_thread(frpc::RpcClient* client,
 
     // Make calls
     for(int i=0; i<num_of_it; ++i) {
-        client->loopback4(thread_id, i, thread_id+i, thread_id*i);
+        client->loopback4({thread_id, i, thread_id+i, thread_id*i});
         expected.insert(std::make_pair(
                         (thread_id * i) + ((thread_id+i) * (thread_id*i)),
                         (thread_id * (thread_id+i)) + (i*(thread_id*i)))
@@ -313,7 +313,7 @@ TEST_F(ClientServerTestMultithreaded, MultipleDifferentCallsMultipleThreadTest) 
     constexpr size_t num_of_threads = 4;
     SetUp(num_of_threads);
 
-    constexpr size_t num_of_it = 100;
+    constexpr size_t num_of_it = 1000;
 
     // Run multiple clients
     std::vector<frpc::RpcClient*> clients;

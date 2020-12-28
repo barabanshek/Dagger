@@ -19,8 +19,8 @@ EXTERNC int memcached_wrapper_open_connection(const char* client_ip,
 											  uint16_t client_port,
 	                                      	  uint32_t c_id);
 
-EXTERNC int memcached_wrapper_register_new_listening_thread(int (*set)(uint64_t, uint64_t, uint64_t, struct SetResponse*),
-															int (*get)(uint64_t, uint64_t, struct GetResponse*));
+EXTERNC int memcached_wrapper_register_new_listening_thread(int (*set)(struct SetRequest, struct SetResponse*),
+															int (*get)(struct GetRequest, struct GetResponse*));
 
 #undef EXTERNC
 

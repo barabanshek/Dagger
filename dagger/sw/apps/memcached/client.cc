@@ -145,9 +145,9 @@ static int run_set_benchmark(frpc::RpcClient* rpc_client,
     std::cout << "----------------- doing SET -----------------" << std::endl;
     for(int i=0; i<num_iterations; ++i) {
         // Set <key, value> <i, i+10>
-        rpc_client->set(frpc::utils::rdtsc(),
+        rpc_client->set({frpc::utils::rdtsc(),
                         starting_key + i,
-                        starting_key + i + 10);
+                        starting_key + i + 10});
 
        // Blocking delay to control rps rate
        for (int delay=0; delay<req_delay; ++delay) {
@@ -190,11 +190,11 @@ static int run_set_benchmark(frpc::RpcClient* rpc_client,
 
     for(int i=0; i<num_iterations; ++i) {
         if (i%set_get_fraction != 0) {
-            rpc_client->get(frpc::utils::rdtsc(), starting_key + get_dstrs[i]);
+            rpc_client->get({frpc::utils::rdtsc(), starting_key + get_dstrs[i]});
         } else {
-            rpc_client->set(frpc::utils::rdtsc(),
+            rpc_client->set({frpc::utils::rdtsc(),
                             num_iterations + starting_key + i,
-                            num_iterations + starting_key + i + 10);
+                            num_iterations + starting_key + i + 10});
         }
 
         // Blocking delay to control rps rate

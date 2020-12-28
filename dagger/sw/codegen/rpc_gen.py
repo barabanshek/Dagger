@@ -18,6 +18,7 @@ WRITE_TMPL_FILENAME = "dagger_write.tmpl"
 
 # <proto_type: (C++_type, sizeof)>
 type_dict = {
+	'char': ('char', 1),
 	'int8': ('uint8_t', 1),
 	'int16': ('uint16_t', 2),
 	'int32': ('uint32_t', 4),
@@ -140,14 +141,22 @@ class RPCGenerator:
 
 			elif i < len(frame)-1:
 				# Body lines
-				regexp = r"^([a-z][a-z0-9]*) ([a-zA-Z][a-zA-Z0-9_]*);$"
-				m = re.search(regexp, l)
+				regexp_simple = r"^([a-z][a-z0-9]*) ([a-zA-Z][a-zA-Z0-9_]*);$"
+				regexp_array = r"^([a-z][a-z0-9]*)\[([0-9]+)\] ([a-zA-Z][a-zA-Z0-9_]*);$"
+				m = re.search(regexp_simple, l)
 				if not m == None:
 					arg_type = m.group(1)
 					arg_name = m.group(2)
-					arg_list.append((arg_type, arg_name))
+					arg_list.append((arg_type, arg_name, None))
 				else:
-					assert False, "Message parsing error, wrong body format in line <" + l + ">"
+					m = re.search(regexp_array, l)
+					if not m == None:
+						arg_type = m.group(1)
+						arg_array_size = int(m.group(2))
+						arg_name = m.group(3)
+						arg_list.append((arg_type, arg_name, arg_array_size))
+					else:
+						assert False, "Message parsing error, wrong body format in line <" + l + ">"
 
 			else:
 				# Last line
@@ -304,45 +313,25 @@ public:
 		ret_name = fn[2]
 		rpc_id = fn[3]
 
-		if arg_name in imessages:
-			arg_msg = imessages[arg_name]
-		else:
-			assert False, "Message type " + arg_name + " not found"
-
-		if ret_name in imessages:
-			ret_msg = imessages[ret_name]
-		else:
-			assert False, "Message type " + ret_name + " not found"
-
-		# Gen argument casting string
-		arg_list = [type_dict[arg[0]][0] for arg in arg_msg]
-		arg_sizes = [type_dict[arg[0]][1] for arg in arg_msg]
-
-		# Gen casting of arguments
-		offset = 0
-		arguments = []
-		for arg, size in zip(arg_list, arg_sizes):
-			arguments.append(self.__dereference(
-							 self.__reinterpret_cast(
-								self.__make_const(self.__make_ptr(arg)),
-								self.__offset('rpc_in->argv', offset)
-							)))
-			offset = offset + size
-
-		cast_arg_list = ','.join(arguments) + ', ' + self.__reinterpret_cast(
-					  								 	self.__make_ptr(ret_name),
-					  									'ret_buff')
-
 		cast_string = self.__assignment('ret_code',
 					  self.__new_line(
 					  self.__f_call(
-					  self.__closure(
-					  self.__dereference(
-					  self.__reinterpret_cast('RpcRetCode(*)(' + ', '.join(arg_list)
-					  	                                     + ', '
-					  	                                     + self.__make_ptr(ret_name) + ')',
-						                      'rpc_fn_ptr_[' + str(rpc_id) + ']')
-					  )), cast_arg_list)))
+						  self.__closure(
+						  self.__dereference(
+						  self.__reinterpret_cast('RpcRetCode(*)(' + arg_name + ', '
+						  	                                       + self.__make_ptr(ret_name) + ')',
+							                      'rpc_fn_ptr_[' + str(rpc_id) + ']')
+						  )),
+
+						  self.__dereference(
+						  self.__reinterpret_cast(
+						  	self.__make_const(self.__make_ptr(arg_name)),
+						    'rpc_in->argv')) + ', ' +
+						  self.__reinterpret_cast(
+						  	self.__make_ptr(ret_name),
+							'ret_buff')
+					  )
+		))
 
 		# Gen return size
 		ret_size_string = self.__new_line(self.__assignment('ret_size', 'sizeof(' + ret_name + ')'), 4)
@@ -403,8 +392,8 @@ public:
 				assert False, "Message type " + arg_name + " not found"
 
 			# Generate function prototype
-			arg_string, arg_size_bytes = self.__make_fparam_layout(msg)
-			f_codegen.append(self.__function('int', f_name, arg_string, 1));
+			f_codegen.append(self.__function(
+								'int', f_name, self.__make_const(self.__make_ref(arg_name)) + ' args', 1));
 
 			# Generate function header
 			f_codegen.append(
@@ -429,14 +418,21 @@ public:
 			f_codegen.replace('<RPC_ID>', 'rpc_id')
 			f_codegen.replace('<FUN_NUM_OF_FRAMES>', str(1))
 			f_codegen.replace('<FUN_FUNCTION_ID>', f_id)
-			f_codegen.replace('<FUN_ARG_LENGTH_BYTES>', str(arg_size_bytes))
+			f_codegen.replace('<FUN_ARG_LENGTH_BYTES>', 'sizeof(' + arg_name + ')')
 			f_codegen.replace('<REQ_TYPE>', 'rpc_request')
 
 			# Make data layout
 			for i in range(3):
 				f_codegen.seek('/*DATA_LAYOUT*/')
 				f_codegen.remove_token('/*DATA_LAYOUT*/')
-				f_codegen.append_codegen(self.__make_data_layout(msg))
+				f_codegen.append(self.__new_line(
+								 self.__assignment(
+									 self.__dereference(
+									 self.__reinterpret_cast(
+									 	self.__make_ptr(arg_name),
+									 	'tx_ptr_casted->argv')),
+									 'args'), 2)
+				)
 
 			# Generate function footer
 			f_codegen.append("""
@@ -461,49 +457,6 @@ public:
 
 		c_codegen.append_snippet(skeleton_footer)
 		return c_codegen.get_code()
-
-	def __make_fparam_layout(self, msg):
-		arg_list = []
-		arg_size_bytes = 0
-
-		for field in msg:
-			field_type = field[0]
-			field_var = field[1]
-			try:
-				cpp_field_type = type_dict[field_type][0]
-				arg_size_bytes = arg_size_bytes + type_dict[field_type][1]
-			except:
-				assert False, "Data type " + field_type + " not found in dictionary"
-
-			arg_list.append(cpp_field_type + " " + field_var)
-
-		return (', '.join(arg_list), arg_size_bytes)
-
-	def __make_data_layout(self, msg):
-		codegen = CodeGen()
-		cpp_field_offset = 0;
-
-		for field in msg:
-			field_type = field[0]
-			field_var = field[1]
-			try:
-				cpp_field_type = type_dict[field_type][0]
-				cpp_field_size = type_dict[field_type][1]
-			except:
-				assert False, "Data type " + field_type + " not found in dictionary"
-
-			codegen.append(
-				self.__new_line(
-				self.__assignment(
-				self.__dereference(
-				self.__reinterpret_cast(
-					self.__make_ptr(cpp_field_type),
-					self.__offset('tx_ptr_casted->argv', cpp_field_offset)
-				)), str(field_var)), 2))
-
-			cpp_field_offset = cpp_field_offset + cpp_field_size
-
-		return codegen
 
 	def __gen_type_hdr(self, imessages):
 		skeleton_header = \
@@ -550,6 +503,9 @@ public:
 	def __make_ptr(self, expr):
 		return expr + '*'
 
+	def __make_ref(self, expr):
+		return expr + '&'
+
 	def __make_const(self, expr):
 		return 'const ' + expr
 
@@ -572,8 +528,15 @@ public:
 
 	def __c_struct(self, name, arg_list, tabs=0):
 		result = "".join(['\t']*tabs) + "struct " + name + " {\n";
-		for (arg_type, arg_name) in arg_list:
-			result = result + "".join(['\t']*(tabs+1)) + type_dict[arg_type][0] + ' ' + arg_name + ';\n'
+		for (arg_type, arg_name, arg_array_size) in arg_list:
+			if arg_array_size == None:
+				# Simple field
+				result = result + "".join(['\t']*(tabs+1)) + type_dict[arg_type][0] + ' ' + arg_name + ';\n'
+			else:
+				# Array field
+				result = result + "".join(['\t']*(tabs+1)) + type_dict[arg_type][0] + ' ' \
+				                + arg_name + '[' + str(arg_array_size) + ']' + ';\n'
+
 		result = result + "".join(['\t']*tabs) + "};\n"
 
 		return result;

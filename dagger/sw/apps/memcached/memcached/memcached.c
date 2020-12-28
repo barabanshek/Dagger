@@ -77,15 +77,14 @@ static rel_time_t realtime(const time_t exptime);
 // Export before run
 // export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/homes/nikita/dagger/sw/build/apps/memcached
 
-static int process_SET_from_dagger(uint64_t timestamp, uint64_t key, uint64_t val,
-                                   struct SetResponse* ret) {
+static int process_SET_from_dagger(struct SetRequest arg, struct SetResponse* ret) {
     //printf("Dagger: new request\n");
 
     char command_key[16];
-    sprintf(command_key, "%" PRIu64, key);
+    sprintf(command_key, "%" PRIu64, arg.key);
 
     char command_val[16];
-    sprintf(command_val, "%" PRIu64 "\r\n", val);
+    sprintf(command_val, "%" PRIu64 "\r\n", arg.value);
 
     // Allocate item
     item *it;
@@ -119,16 +118,14 @@ static int process_SET_from_dagger(uint64_t timestamp, uint64_t key, uint64_t va
     do_item_link(it, hv);
     item_unlock(hv);
 
-    ret->timestamp = timestamp;
+    ret->timestamp = arg.timestamp;
 
     return 0;
 }
 
-static int process_GET_from_dagger(uint64_t timestamp,
-                                   uint64_t key,
-                                   struct GetResponse* ret) {
+static int process_GET_from_dagger(struct GetRequest arg, struct GetResponse* ret) {
     char command_key[16];
-    sprintf(command_key, "%" PRIu64, key);
+    sprintf(command_key, "%" PRIu64, arg.key);
     size_t nkey = strlen(command_key);
 
     uint32_t hv;
@@ -147,7 +144,7 @@ static int process_GET_from_dagger(uint64_t timestamp,
         ret->value = 0;
     }
 
-    ret->timestamp = timestamp;
+    ret->timestamp = arg.timestamp;
 
     return 0;
 }

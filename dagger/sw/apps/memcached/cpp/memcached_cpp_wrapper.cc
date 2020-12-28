@@ -38,8 +38,8 @@ int memcached_wrapper_open_connection(const char* client_ip,
     }
 }
 
-int memcached_wrapper_register_new_listening_thread(int (*set)(uint64_t, uint64_t, uint64_t, SetResponse*),
-                                                    int (*get)(uint64_t, uint64_t, GetResponse*)) {
+int memcached_wrapper_register_new_listening_thread(int (*set)(struct SetRequest, SetResponse*),
+                                                    int (*get)(struct GetRequest, GetResponse*)) {
     fn_ptr.push_back(reinterpret_cast<const void*>(set));
     fn_ptr.push_back(reinterpret_cast<const void*>(get));
     server_callback = std::unique_ptr<frpc::RpcServerCallBack>(
