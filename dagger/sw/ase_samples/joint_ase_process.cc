@@ -60,8 +60,8 @@ int main() {
 //
 #define SERVER_NIC_ADDR 0x20000
 
-static frpc::RpcRetCode loopback(uint64_t data, NumericalResult* ret);
-static frpc::RpcRetCode add(uint64_t a, uint64_t b, NumericalResult* ret);
+static frpc::RpcRetCode loopback(LoopBackArgs args, NumericalResult* ret);
+static frpc::RpcRetCode add(AddArgs args, NumericalResult* ret);
 
 static int run_server(std::promise<bool>& init_pr, std::future<bool>& cmpl_ft) {
     frpc::RpcThreadedServer server(SERVER_NIC_ADDR, NUMBER_OF_THREADS);
@@ -134,16 +134,16 @@ static int run_server(std::promise<bool>& init_pr, std::future<bool>& cmpl_ft) {
 }
 
 // RPC function #0
-static frpc::RpcRetCode loopback(uint64_t data, NumericalResult* ret) {
-    std::cout << "loopback is called with data= " << data << std::endl;
-    ret->data = data + 1;
+static frpc::RpcRetCode loopback(LoopBackArgs args, NumericalResult* ret) {
+    std::cout << "loopback is called with data= " << args.data << std::endl;
+    ret->data = args.data + 1;
     return frpc::RpcRetCode::Success;
 }
 
 // RPC function #1
-static frpc::RpcRetCode add(uint64_t a, uint64_t b, NumericalResult* ret) {
-    std::cout << "add is called with a= " << a << " b= " << b << std::endl;
-    ret->data = a + b;
+static frpc::RpcRetCode add(AddArgs args, NumericalResult* ret) {
+    std::cout << "add is called with a= " << args.a << " b= " << args.b << std::endl;
+    ret->data = args.a + args.b;
     return frpc::RpcRetCode::Success;
 }
 
@@ -169,7 +169,7 @@ static int client(frpc::RpcClient* rpc_client, size_t thread_id, size_t num_of_r
 
     // Make an RPC call
     for (int i=0; i<num_of_requests; ++i) {
-        int res = rpc_client->loopback(thread_id*10 + i);
+        int res = rpc_client->loopback({thread_id*10 + i});
         assert(res == 0);
 
         usleep(200000);

@@ -52,6 +52,8 @@ int main(int argc, char* argv[]) {
         function_to_call = 2;
     else if (strcmp(argv[4], "-xor") == 0)
         function_to_call = 3;
+    else if (strcmp(argv[4], "-getUserData") == 0)
+        function_to_call = 4;
     else {
         std::cout << "wrong parameter: function name" << std::endl;
         return 1;
@@ -129,14 +131,27 @@ static int run_benchmark(frpc::RpcClient* rpc_client,
     // Make an RPC call
     for(int i=0; i<num_iterations; ++i) {
         switch (function_to_call) {
-            case 0: rpc_client->loopback(frpc::utils::rdtsc(), i); break;
-            case 1: rpc_client->add(frpc::utils::rdtsc(), i, i+1); break;
-            case 2: rpc_client->sign(frpc::utils::rdtsc(),
+            case 0: rpc_client->loopback({frpc::utils::rdtsc(), i}); break;
+
+            case 1: rpc_client->add({frpc::utils::rdtsc(), i, i+1}); break;
+
+            case 2: rpc_client->sign({frpc::utils::rdtsc(),
                                      0xaabbccdd,
                                      0x11223344,
-                                     i, i+1, i+2, i+3); break;
-            case 3: rpc_client->xor_(frpc::utils::rdtsc(),
-                                     i, i+1, i+2, i+3, i+4, i+5); break;
+                                     i, i+1, i+2, i+3}); break;
+
+            case 3: rpc_client->xor_({frpc::utils::rdtsc(),
+                                     i, i+1, i+2, i+3, i+4, i+5}); break;
+
+            case 4: {
+                UserName request;
+                request.timestamp = frpc::utils::rdtsc();
+                sprintf(request.first_name, "Buffalo");
+                sprintf(request.given_name, "Bill");
+
+                rpc_client->getUserData(request);
+                break;
+            }
         }
 
         // Blocking delay to control rps rate
@@ -156,7 +171,24 @@ static int run_benchmark(frpc::RpcClient* rpc_client,
 #ifdef VERBOSE_RPCS
     // Output data
     for (int i=0; i<cq_size; ++i) {
-        std::cout << *reinterpret_cast<uint64_t*>(cq->pop_response().argv) << std::endl;
+        switch (function_to_call) {
+            case 0:
+            case 1:
+            case 3: {
+                std::cout << reinterpret_cast<NumericalResult*>(cq->pop_response().argv)->ret_val << std::endl;
+                break;
+            }
+
+            case 2: {
+                std::cout << reinterpret_cast<Signature*>(cq->pop_response().argv)->result << std::endl;
+                break;
+            }
+
+            case 4: {
+                std::cout << reinterpret_cast<UserData*>(cq->pop_response().argv)->data << std::endl;
+                break;
+            }
+        }
     }
 #endif
 

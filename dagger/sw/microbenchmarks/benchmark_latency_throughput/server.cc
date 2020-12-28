@@ -12,33 +12,15 @@
 #define NIC_ADDR 0x00000
 
 // RPC functions
-static frpc::RpcRetCode loopback(uint64_t timestamp,
-                                 uint64_t data,
-                                 NumericalResult* ret);
+static frpc::RpcRetCode loopback(LoopBackArgs args, NumericalResult* ret);
 
-static frpc::RpcRetCode add(uint64_t timestamp,
-                            uint64_t a,
-                            uint64_t b,
-                            NumericalResult* ret);
+static frpc::RpcRetCode add(AddArgs args, NumericalResult* ret);
 
-static frpc::RpcRetCode sign(uint64_t timestamp,
-                             uint64_t hash_lsb,
-                             uint64_t hash_msb,
-                             uint32_t key_0,
-                             uint32_t key_1,
-                             uint32_t key_2,
-                             uint32_t key_3,
-                             Signature* ret);
+static frpc::RpcRetCode sign(SigningArgs args, Signature* ret);
 
-static frpc::RpcRetCode xor_(uint64_t timestamp,
-                             uint64_t a,
-                             uint64_t b,
-                             uint64_t c,
-                             uint64_t d,
-                             uint64_t e,
-                             uint32_t f,
-                             NumericalResult* ret);
+static frpc::RpcRetCode xor_(XorArgs args, NumericalResult* ret);
 
+static frpc::RpcRetCode getUserData(UserName args, UserData* ret);
 
 // <max number of threads, run duration>
 int main(int argc, char* argv[]) {
@@ -74,6 +56,7 @@ int main(int argc, char* argv[]) {
     fn_ptr.push_back(reinterpret_cast<const void*>(&add));
     fn_ptr.push_back(reinterpret_cast<const void*>(&sign));
     fn_ptr.push_back(reinterpret_cast<const void*>(&xor_));
+    fn_ptr.push_back(reinterpret_cast<const void*>(&getUserData));
 
     frpc::RpcServerCallBack server_callback(fn_ptr);
 
@@ -107,55 +90,50 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-static frpc::RpcRetCode loopback(uint64_t timestamp,
-                                 uint64_t data,
-                                 NumericalResult* ret) {
+static frpc::RpcRetCode loopback(LoopBackArgs args, NumericalResult* ret) {
 #ifdef VERBOSE_RPCS
-    std::cout << "loopback is called with " << data << std::endl;
+    std::cout << "loopback is called with " << args.data << std::endl;
 #endif
-    ret->ret_val = timestamp;
+    ret->ret_val = args.timestamp;
     return frpc::RpcRetCode::Success;
 }
 
-static frpc::RpcRetCode add(uint64_t timestamp,
-                            uint64_t a,
-                            uint64_t b,
-                            NumericalResult* ret) {
+static frpc::RpcRetCode add(AddArgs args, NumericalResult* ret) {
 #ifdef VERBOSE_RPCS
-    std::cout << "add is called with " << a << ", " << b << std::endl;
+    std::cout << "add is called with " << args.a << ", " << args.b << std::endl;
 #endif
-    ret->ret_val = timestamp;
+    ret->ret_val = args.timestamp;
     return frpc::RpcRetCode::Success;
 }
 
-static frpc::RpcRetCode sign(uint64_t timestamp,
-                             uint64_t hash_lsb,
-                             uint64_t hash_msb,
-                             uint32_t key_0,
-                             uint32_t key_1,
-                             uint32_t key_2,
-                             uint32_t key_3,
-                             Signature *ret) {
+static frpc::RpcRetCode sign(SigningArgs args, Signature* ret) {
 #ifdef VERBOSE_RPCS
-    std::cout << "sign is called with " << hash_lsb << ", " << hash_msb << ": <"
-              << key_0 << " " << key_1 << " " << key_2 << " " << key_3 << ">" << std::endl;
+    std::cout << "sign is called with " << args.hash_lsb << ", " << args.hash_msb << ": <"
+              << args.key_0 << " " << args.key_1 << " " << args.key_2 << " "
+              << args.key_3 << ">" << std::endl;
 #endif
-    ret->result = timestamp;
+    ret->result = args.timestamp;
     return frpc::RpcRetCode::Success;
 }
 
-static frpc::RpcRetCode xor_(uint64_t timestamp,
-                             uint64_t a,
-                             uint64_t b,
-                             uint64_t c,
-                             uint64_t d,
-                             uint64_t e,
-                             uint32_t f,
-                             NumericalResult* ret) {
+static frpc::RpcRetCode xor_(XorArgs args, NumericalResult* ret) {
 #ifdef VERBOSE_RPCS
-    std::cout << "xor_ is called with " << a << " " << b << " " << c << " "
-                                        << d << " " << e << " " << f << std::endl;
+    std::cout << "xor_ is called with " << args.a << " " << args.b << " "
+              << args.c << " " << args.d << " " << args.e << " "
+              << args.f << std::endl;
 #endif
-    ret->ret_val = timestamp;
+    ret->ret_val = args.timestamp;
+    return frpc::RpcRetCode::Success;
+}
+
+static frpc::RpcRetCode getUserData(UserName args, UserData* ret) {
+#ifdef VERBOSE_RPCS
+    std::cout << "getUserData is called with " << args.first_name << " "
+              << args.given_name << " " << std::endl;
+#endif
+
+    ret->timestamp = args.timestamp;
+    sprintf(ret->data, "some data");
+
     return frpc::RpcRetCode::Success;
 }

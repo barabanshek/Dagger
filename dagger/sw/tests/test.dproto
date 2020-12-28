@@ -10,7 +10,7 @@ message Arg2 {
 }
 
 message Arg3 {
-	int8 a;
+	int16 a;
 	int16 b;
 	int32 c;
 	int64 d;
@@ -27,9 +27,19 @@ message Ret2 {
     int64 ret_val_1;
 }
 
+message StringArg {
+	char[20] str;
+}
+
+message StringRet {
+	int8 f_id;
+	char[20] str;
+}
+
 service MyService {
 	rpc loopback1(Arg1) returns (Ret1);
 	rpc loopback2(Arg2) returns (Ret1);
 	rpc loopback3(Arg3) returns (Ret1);
 	rpc loopback4(Arg3) returns (Ret2);
+	rpc loopback5(StringArg) returns (StringRet);
 }

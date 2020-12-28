@@ -25,7 +25,7 @@ TEST_F(ClientServerTest, SingleLoopback1CallTest) {
     ASSERT_EQ(res, 0);
 
     // Make a call
-    c->loopback1(12);
+    c->loopback1({12});
 
     // Wait
     size_t t_out_cnt = 0;
@@ -47,7 +47,7 @@ TEST_F(ClientServerTest, MultipleLoopback1CallTest) {
 
     SetUp(num_of_threads);
 
-    constexpr size_t num_of_it = 100;
+    constexpr size_t num_of_it = 1000;
     constexpr size_t num_of_wait_us = 100;
 
     auto c = client_pool->pop();
@@ -64,7 +64,7 @@ TEST_F(ClientServerTest, MultipleLoopback1CallTest) {
     // Make calls
     std::unordered_set<int> expected;
     for(int i=0; i<num_of_it; ++i) {
-        c->loopback1(i);
+        c->loopback1({i});
         expected.insert(i + ClientServerPair::loopback1_const);
         usleep(num_of_wait_us);
     }
@@ -112,7 +112,7 @@ TEST_F(ClientServerTest, SingleLoopBack2CallTest) {
     ASSERT_EQ(res, 0);
 
     // Make a call
-    c->loopback2(1, 2, 3, 4);
+    c->loopback2({1, 2, 3, 4});
     uint64_t expected = 1 + 2 + 3 + 4;
 
     // Wait
@@ -134,7 +134,7 @@ TEST_F(ClientServerTest, MultipleLoopback2CallTest) {
 
     SetUp(num_of_threads);
 
-    constexpr size_t num_of_it = 100;
+    constexpr size_t num_of_it = 1000;
     constexpr size_t num_of_wait_us = 100;
 
     auto c = client_pool->pop();
@@ -151,7 +151,7 @@ TEST_F(ClientServerTest, MultipleLoopback2CallTest) {
     // Make calls
     std::unordered_set<int> expected;
     for(int i=0; i<num_of_it; ++i) {
-        c->loopback2(i, 10, i+1, i+2);
+        c->loopback2({i, 10, i+1, i+2});
         expected.insert(i + 10 + i+1 + i+2);
         usleep(num_of_wait_us);
     }
@@ -182,12 +182,67 @@ TEST_F(ClientServerTest, MultipleLoopback2CallTest) {
     EXPECT_EQ(expected.size(), 0);
 }
 
+TEST_F(ClientServerTest, MultipleLoopback5CallTest) {
+    constexpr size_t num_of_threads = 1;
+
+    SetUp(num_of_threads);
+
+    constexpr size_t num_of_it = 1000;
+    constexpr size_t num_of_wait_us = 100;
+
+    auto c = client_pool->pop();
+    ASSERT_NE(c, nullptr);
+
+    auto cq = c->get_completion_queue();
+    ASSERT_NE(cq, nullptr);
+
+    // Open connection
+    frpc::IPv4 server_addr("192.168.0.1", 3136);
+    int res = c->connect(server_addr, 0);
+    ASSERT_EQ(res, 0);
+
+    // Make calls
+    std::unordered_set<std::string> expected;
+    for(int i=0; i<num_of_it; ++i) {
+        StringArg arg;
+        sprintf(arg.str, "Hi there, i=%d", i);
+        c->loopback5(arg);
+        expected.insert(arg.str);
+        usleep(num_of_wait_us);
+    }
+
+    // Wait
+    size_t t_out_cnt = 0;
+    while(cq->get_number_of_completed_requests() < num_of_it &&
+          t_out_cnt < ClientServerPair::timeout) {
+        sleep(1);
+        ++t_out_cnt;
+    }
+    ASSERT_EQ(cq->get_number_of_completed_requests(), num_of_it);
+
+    // Check result
+    size_t num_of_errors = 0;
+    for(int i=0; i<num_of_it; ++i) {
+        StringRet returned = *reinterpret_cast<StringRet*>(cq->pop_response().argv);
+        EXPECT_EQ(returned.f_id, 4);
+
+        auto it = expected.find(returned.str);
+        if (it == expected.end()) {
+            ++num_of_errors;
+        } else {
+            expected.erase(it);
+        }
+    }
+    EXPECT_EQ(num_of_errors, 0);
+    EXPECT_EQ(expected.size(), 0);
+}
+
 TEST_F(ClientServerTest, MixedCallTest) {
     constexpr size_t num_of_threads = 1;
 
     SetUp(num_of_threads);
 
-    constexpr size_t num_of_it = 100;
+    constexpr size_t num_of_it = 1000;
     constexpr size_t num_of_wait_us = 100;
 
     auto c = client_pool->pop();
@@ -210,25 +265,25 @@ TEST_F(ClientServerTest, MixedCallTest) {
     for(int i=0; i<num_of_it; ++i) {
         switch (i%4) {
             case 0: {
-                c->loopback1(i);
+                c->loopback1({i});
                 expected_0.insert(i + ClientServerPair::loopback1_const);
                 break;
             }
 
             case 1: {
-                c->loopback2(i, 10, i+1, i+2);
+                c->loopback2({i, 10, i+1, i+2});
                 expected_1.insert(i + 10 + i+1 + i+2);
                 break;
             }
 
             case 2: {
-                c->loopback3(i+1, i+2, i+3, 2);
+                c->loopback3({i+1, i+2, i+3, 2});
                 expected_2.insert((i+1)*(i+2) + (i+3)*2);
                 break;
             }
 
             case 3: {
-                c->loopback4(i+1, i+2, i+3, 5);
+                c->loopback4({i+1, i+2, i+3, 5});
                 expected_3.insert(std::make_pair((i+1)*(i+2) + (i+3)*5,
                                                         (i+1)*(i+3) + (i+2)*5));
                 break;
