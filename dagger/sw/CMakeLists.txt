@@ -3,7 +3,7 @@ project(F-RPC)
 
 set(CMAKE_CXX_COMPILER g++)
 
-add_definitions(-std=c++11 -O0 -g -march=native)
+add_definitions(-std=c++11 -O3 -march=native)
 add_definitions(-Wall -Wextra -Wabi -Wsign-conversion -Wformat -Wformat-security)
 # TODO: make it compilable with -Werror
 #add_definitions(-Werror)
@@ -110,4 +110,3 @@ add_subdirectory(microbenchmarks)
 # Build end-to-end applications
 #
 add_subdirectory(apps)
-

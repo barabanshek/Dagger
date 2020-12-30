@@ -80,6 +80,9 @@ module ccip_transmitter
 	.rand_num_valid (rng_valid),           //         .valid
 	.resetn         (~reset)                //    reset.reset_n
 	);
+
+    
+
     request_queue #(
             .DATA_WIDTH($bits(RpcIf)),
             .LSIZE(LMAX_NUM_OF_FLOWS + LTX_FIFO_DEPTH)
@@ -157,7 +160,7 @@ module ccip_transmitter
         // Delay rpc_flow_id to align with rq look-up
         rpc_flow_id_in_1d <= rpc_flow_id_in;
         rpc_flow_id_in_2d <= rpc_flow_id_in_1d;
-
+        
         rpc_flow_id_in_rand <= rng_data[LMAX_NUM_OF_FLOWS-1:0];
 
         // Put slot_id to corresponding flow FIFO
