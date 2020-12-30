@@ -12,15 +12,7 @@
 `include "platform_if.vh"
 `include "nic_defs.vh"
 `include "request_queue.sv"
-<<<<<<< HEAD
-<<<<<<< HEAD
 `include "rng_module.v"
-=======
-`include "quartus_ip_cores/rng_module/altera_rand_gen_160/synth/rng_module.v"
->>>>>>> First Commit
-=======
-`include "rng_module.v"
->>>>>>> ccip transmitter change
 
 module ccip_transmitter
     #(
@@ -141,7 +133,7 @@ module ccip_transmitter
     endgenerate
 
     // Push logic
-    FlowId rpc_flow_id_in_1d;
+    FlowId rpc_flow_id_in_1d, rpc_flow_id_in_2d, rpc_flow_id_in_rand;
 
     integer i2, i3;
     always @(posedge clk) begin
@@ -163,14 +155,24 @@ module ccip_transmitter
         end
 
         // Delay rpc_flow_id to align with rq look-up
-        rpc_flow_id_in_1d <= rng_data[LMAX_NUM_OF_FLOWS-1:0];
+        rpc_flow_id_in_1d <= rpc_flow_id_in;
+        rpc_flow_id_in_2d <= rpc_flow_id_in_1d;
+
+        rpc_flow_id_in_rand <= rng_data[LMAX_NUM_OF_FLOWS-1:0];
 
         // Put slot_id to corresponding flow FIFO
         if (rq_push_done) begin
             $display("NIC%d: CCI-P transmitter, writing request to flow fifo= %d, rq_slot_id= %d",
                                         NIC_ID, rpc_flow_id_in_1d, rq_slot_id);
-            ff_push_data[rpc_flow_id_in_1d] <= rq_slot_id;
-            ff_push_en[rpc_flow_id_in_1d] <= 1'b1;
+            
+            if (rpc_in.rpc_data.hdr.ctl.req_type == rpcReq) begin
+                ff_push_data[rpc_flow_id_in_rand] <= rq_slot_id;
+                ff_push_en[rpc_flow_id_in_rand] <= 1'b1;
+            end
+            else begin
+                ff_push_data[rpc_flow_id_in_2d] <= rq_slot_id;
+                ff_push_en[rpc_flow_id_in_2d] <= 1'b1;
+            end
         end
 
         if (reset) begin

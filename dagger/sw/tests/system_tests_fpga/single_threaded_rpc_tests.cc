@@ -9,7 +9,7 @@
 class ClientServerTest: public ClientServerPair {};
 
 TEST_F(ClientServerTest, SingleLoopback1CallTest) {
-    constexpr size_t num_of_threads = 1;
+    constexpr size_t num_of_threads = 16;
 
     SetUp(num_of_threads);
 
@@ -43,7 +43,7 @@ TEST_F(ClientServerTest, SingleLoopback1CallTest) {
 }
 
 TEST_F(ClientServerTest, MultipleLoopback1CallTest) {
-    constexpr size_t num_of_threads = 1;
+    constexpr size_t num_of_threads = 16;
 
     SetUp(num_of_threads);
 
@@ -96,7 +96,7 @@ TEST_F(ClientServerTest, MultipleLoopback1CallTest) {
 }
 
 TEST_F(ClientServerTest, SingleLoopBack2CallTest) {
-    constexpr size_t num_of_threads = 1;
+    constexpr size_t num_of_threads = 16;
 
     SetUp(num_of_threads);
 
@@ -130,7 +130,7 @@ TEST_F(ClientServerTest, SingleLoopBack2CallTest) {
 }
 
 TEST_F(ClientServerTest, MultipleLoopback2CallTest) {
-    constexpr size_t num_of_threads = 1;
+    constexpr size_t num_of_threads = 16;
 
     SetUp(num_of_threads);
 
@@ -183,7 +183,7 @@ TEST_F(ClientServerTest, MultipleLoopback2CallTest) {
 }
 
 TEST_F(ClientServerTest, MixedCallTest) {
-    constexpr size_t num_of_threads = 1;
+    constexpr size_t num_of_threads = 16;
 
     SetUp(num_of_threads);
 

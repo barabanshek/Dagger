@@ -10,7 +10,7 @@
 class ClientServerTestMultithreaded: public ClientServerPair {};
 
 TEST_F(ClientServerTestMultithreaded, SingleSameCallSingleThreadTest) {
-    constexpr size_t num_of_threads = 4;
+    constexpr size_t num_of_threads = 16;
     SetUp(num_of_threads);
 
     // Run multiple clients
@@ -74,7 +74,7 @@ TEST_F(ClientServerTestMultithreaded, SingleSameCallSingleThreadTest) {
 }
 
 TEST_F(ClientServerTestMultithreaded, SingleDifferentCallsSingleThreadTest) {
-    constexpr size_t num_of_threads = 6;
+    constexpr size_t num_of_threads = 16;
     SetUp(num_of_threads);
 
     // Run multiple clients
@@ -153,7 +153,7 @@ TEST_F(ClientServerTestMultithreaded, SingleDifferentCallsSingleThreadTest) {
 }
 
 TEST_F(ClientServerTestMultithreaded, MultipleDifferentCallsSingleThreadTest) {
-    constexpr size_t num_of_threads = 4;
+    constexpr size_t num_of_threads = 16;
     SetUp(num_of_threads);
 
     constexpr size_t num_of_it = 100;
@@ -310,7 +310,7 @@ static void test_thread(frpc::RpcClient* client,
 }
 
 TEST_F(ClientServerTestMultithreaded, MultipleDifferentCallsMultipleThreadTest) {
-    constexpr size_t num_of_threads = 4;
+    constexpr size_t num_of_threads = 16;
     SetUp(num_of_threads);
 
     constexpr size_t num_of_it = 100;
