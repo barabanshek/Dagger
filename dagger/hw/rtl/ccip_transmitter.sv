@@ -50,6 +50,16 @@ module ccip_transmitter
         output logic pdrop_tx_flows_out
     );
 
+    logic [LMAX_NUM_OF_FLOWS:0] number_of_flows_plus_one;
+    lpm_add_sub lpm_add_sub_ (
+        .dataa({1'd0, number_of_flows}),
+        .datab(5'd1),
+        .result(number_of_flows_plus_one)
+    );
+    defparam
+        lpm_add_sub_.lpm_direction = "ADD", 
+        lpm_add_sub_.lpm_width = 5;
+
     // Parameters
     localparam LTX_FIFO_DEPTH = 3;
     localparam MAX_TX_FLOWS = 2**LMAX_NUM_OF_FLOWS;
@@ -81,16 +91,18 @@ module ccip_transmitter
 	.resetn         (~reset)                //    reset.reset_n
 	);
 
-    logic [LMAX_NUM_OF_FLOWS-1:0] quotient, remainder;
+    logic [LMAX_NUM_OF_FLOWS:0] quotient, remainder;
     lpm_divide lpm_divide_ (
-        .numer(rng_data[LMAX_NUM_OF_FLOWS-1:0]),
-        .denom(number_of_flows),
+        .numer(rng_data[LMAX_NUM_OF_FLOWS:0]),
+        .denom(number_of_flows_plus_one),
         .quotient(quotient),
         .remain(remainder)
     );
     defparam 
-        lpm_divide_.lpm_widthn = LMAX_NUM_OF_FLOWS,
-        lpm_divide_.lpm_widthd = LMAX_NUM_OF_FLOWS;
+        lpm_divide_.lpm_widthn = 5,
+        lpm_divide_.lpm_widthd = 5;
+
+    
 
     request_queue #(
             .DATA_WIDTH($bits(RpcIf)),
@@ -170,7 +182,7 @@ module ccip_transmitter
         rpc_flow_id_in_1d <= rpc_flow_id_in;
         rpc_flow_id_in_2d <= rpc_flow_id_in_1d;
 
-        rpc_flow_id_in_rand <= remainder;
+        rpc_flow_id_in_rand <= remainder[LMAX_NUM_OF_FLOWS - 1:0];
 
         // Put slot_id to corresponding flow FIFO
         if (rq_push_done) begin
@@ -178,8 +190,8 @@ module ccip_transmitter
                                         NIC_ID, rpc_flow_id_in_1d, rq_slot_id);
             
             if (rpc_in.rpc_data.hdr.ctl.req_type == rpcReq) begin
-                ff_push_data[rpc_flow_id_in_rand] <= rq_slot_id;
-                ff_push_en[rpc_flow_id_in_rand] <= 1'b1;
+                    ff_push_data[rpc_flow_id_in_rand] <= rq_slot_id;
+                    ff_push_en[rpc_flow_id_in_rand] <= 1'b1;
             end
             else begin
                 ff_push_data[rpc_flow_id_in_2d] <= rq_slot_id;
