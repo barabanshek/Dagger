@@ -77,39 +77,26 @@ static rel_time_t realtime(const time_t exptime);
 // Export before run
 // export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/homes/nikita/dagger/sw/build/apps/memcached
 
-static int process_SET_from_dagger(struct SetRequest arg, struct SetResponse* ret) {
-    //printf("Dagger: new request\n");
-
-    char command_key[16];
-    sprintf(command_key, "%" PRIu64, arg.key);
-
-    char command_val[16];
-    sprintf(command_val, "%" PRIu64 "\r\n", arg.value);
+static int process_set(struct SetRequest arg, struct SetResponse* ret) {
+    char* key = arg.key;
+    char* value = arg.value;
 
     // Allocate item
     item *it;
-    it = item_alloc(command_key, strlen(command_key), 0, realtime(60), strlen(command_val));
+    it = item_alloc(key, strlen(key), 0, realtime(60), strlen(value));
     if (it == 0) {
-        printf("Dagger: failed to allocate memcached item\n");
-        assert(false);
-        return 1;
-    }
+        // Return fail
+        printf("Failed to allocate memcached item\n");
+        ret->timestamp = arg.timestamp;
+        sprintf(ret->value, "ERR\r");
 
-    uint64_t req_cas_id=0;
-    ITEM_set_cas(it, req_cas_id);
+        return 0;
+    }
 
     // Copy data
-    memcpy(ITEM_data(it), command_val, strlen(command_val));
-
-    // Check is chunked
-    if ((it->it_flags & ITEM_CHUNKED) != 0) {
-        printf("Dagger: chunked items used, unsupported!\n");
-        return 1;
-    }
-    if (strncmp(ITEM_data(it) + it->nbytes - 2, "\r\n", 2) != 0) {
-        printf("Dagger: BAD data chunk\n");
-        return 1;
-    }
+    uint64_t req_cas_id=0;
+    ITEM_set_cas(it, req_cas_id);
+    memcpy(ITEM_data(it), value, strlen(value));
 
     // Link item in
     uint32_t hv;
@@ -118,30 +105,33 @@ static int process_SET_from_dagger(struct SetRequest arg, struct SetResponse* re
     do_item_link(it, hv);
     item_unlock(hv);
 
+    // Return success
     ret->timestamp = arg.timestamp;
+    sprintf(ret->value, "OK\r");
 
     return 0;
 }
 
-static int process_GET_from_dagger(struct GetRequest arg, struct GetResponse* ret) {
-    char command_key[16];
-    sprintf(command_key, "%" PRIu64, arg.key);
-    size_t nkey = strlen(command_key);
+static int process_get(struct GetRequest arg, struct GetResponse* ret) {
+    char* key = arg.key;
+    size_t nkey = strlen(key);
 
+    // Look-up
     uint32_t hv;
-    hv = hash(command_key, nkey);
+    hv = hash(key, nkey);
     item_lock(hv);
-    item *it = assoc_find(command_key, nkey, hv);
+    item *it = assoc_find(key, nkey, hv);
     if (it != NULL) {
         refcount_incr(it);
     }
     item_unlock(hv);
 
+    // Return
     if (it != NULL) {
         char* val = ITEM_data(it);
-        ret->value = atoi(val);
+        sprintf(ret->value, val);
     } else {
-        ret->value = 0;
+        ret->value[0] = '\0';
     }
 
     ret->timestamp = arg.timestamp;
@@ -10390,8 +10380,8 @@ int main (int argc, char **argv) {
         if (r != 0)
             return r;
 
-        r = memcached_wrapper_register_new_listening_thread(&process_SET_from_dagger,
-                                                            &process_GET_from_dagger);
+        r = memcached_wrapper_register_new_listening_thread(&process_set,
+                                                            &process_get);
         if (r != 0)
             return r;
     }

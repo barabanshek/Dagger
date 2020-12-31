@@ -141,13 +141,36 @@ static int run_set_benchmark(frpc::RpcClient* rpc_client,
                          const char* dst_file_name,
                          size_t set_get_fraction,
                          size_t set_get_req_delay) {
+    // Warm-up
+    std::cout << "----------------- doing warm-up -----------------" << std::endl;
+    static const size_t warm_up_iterations = 1000000;
+
+    for(int i=0; i<warm_up_iterations; ++i) {
+        // Set <key, value> <i, i+10>
+        SetRequest req;
+        req.timestamp = frpc::utils::rdtsc();
+        sprintf(req.key, "key=%d", starting_key + i);
+        sprintf(req.value, "val=%d", starting_key + i);
+        rpc_client->set(req);
+
+       // Blocking delay to control rps rate
+       for (int delay=0; delay<req_delay; ++delay) {
+           asm("");
+       }
+    }
+
+    auto cq = rpc_client->get_completion_queue();
+    cq->clear_latency_records();
+
     // Make an RPC call (SET)
     std::cout << "----------------- doing SET -----------------" << std::endl;
     for(int i=0; i<num_iterations; ++i) {
         // Set <key, value> <i, i+10>
-        rpc_client->set({frpc::utils::rdtsc(),
-                        starting_key + i,
-                        starting_key + i + 10});
+        SetRequest req;
+        req.timestamp = frpc::utils::rdtsc();
+        sprintf(req.key, "key=%d", starting_key + i);
+        sprintf(req.value, "val=%d", starting_key + i);
+        rpc_client->set(req);
 
        // Blocking delay to control rps rate
        for (int delay=0; delay<req_delay; ++delay) {
@@ -159,7 +182,6 @@ static int run_set_benchmark(frpc::RpcClient* rpc_client,
     sleep(5);
 
     // Print Latencies
-    auto cq = rpc_client->get_completion_queue();
     auto latency_records = cq->get_latency_records();
     print_latency(latency_records, thread_id, cycles_in_ns);
 
@@ -174,7 +196,7 @@ static int run_set_benchmark(frpc::RpcClient* rpc_client,
     size_t i = 0;
     std::string line;
     if (dst_file.is_open()) {
-        while ( getline (dst_file,line) ) {
+        while ( getline (dst_file,line) && i < num_iterations ) {
             get_dstrs[i++] = atoi(line.c_str());
         }
     } else {
@@ -190,11 +212,21 @@ static int run_set_benchmark(frpc::RpcClient* rpc_client,
 
     for(int i=0; i<num_iterations; ++i) {
         if (i%set_get_fraction != 0) {
-            rpc_client->get({frpc::utils::rdtsc(), starting_key + get_dstrs[i]});
+            uint64_t d_val = get_dstrs[i];
+            if (d_val > num_iterations) {
+                continue;
+            }
+
+            GetRequest req;
+            req.timestamp = frpc::utils::rdtsc();
+            sprintf(req.key, "key=%d", starting_key + d_val);
+            rpc_client->get(req);
         } else {
-            rpc_client->set({frpc::utils::rdtsc(),
-                            num_iterations + starting_key + i,
-                            num_iterations + starting_key + i + 10});
+            SetRequest req;
+            req.timestamp = frpc::utils::rdtsc();
+            sprintf(req.key, "new_key=%d", starting_key + i);
+            sprintf(req.value, "new_val=%d", starting_key + i);
+            rpc_client->set(req);
         }
 
         // Blocking delay to control rps rate
@@ -207,12 +239,12 @@ static int run_set_benchmark(frpc::RpcClient* rpc_client,
     sleep(5);
 
     // Get data
-    //size_t cq_size = cq->get_number_of_completed_requests();
-    //std::cout << "Thread #" << thread_id
-    //          << ": CQ size= " << cq_size << std::endl;
-    //for (int i=0; i<cq_size; ++i) {
-    //    std::cout << cq->pop_response().ret_val << std::endl;
-    //}
+    size_t cq_size = cq->get_number_of_completed_requests();
+    std::cout << "Thread #" << thread_id
+              << ": CQ size= " << cq_size << std::endl;
+    for (int i=0; i<100; ++i) {
+        std::cout << reinterpret_cast<GetResponse*>(cq->pop_response().argv)->value << std::endl;
+    }
 
     // Print Latencies
     latency_records = cq->get_latency_records();
