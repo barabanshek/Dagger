@@ -1,0 +1,25 @@
+message SetRequest {
+	int32 timestamp;
+	char[16] key;
+    char[32] value;
+}
+
+message SetResponse {
+	int32 timestamp;
+    char[8] value;
+}
+
+message GetRequest {
+    int32 timestamp;
+    char[16] key;
+}
+
+message GetResponse {
+    int32 timestamp;
+    char[32] value;
+}
+
+service KeyValueStore {
+	rpc set(SetRequest) returns (SetResponse);
+    rpc get(GetRequest) returns (GetResponse);
+}
