@@ -12,15 +12,15 @@
 #define NIC_ADDR 0x00000
 
 // RPC functions
-static frpc::RpcRetCode loopback(LoopBackArgs args, NumericalResult* ret);
+static RpcRetCode loopback(CallHandler handler, LoopBackArgs args, NumericalResult* ret);
 
-static frpc::RpcRetCode add(AddArgs args, NumericalResult* ret);
+static RpcRetCode add(CallHandler handler, AddArgs args, NumericalResult* ret);
 
-static frpc::RpcRetCode sign(SigningArgs args, Signature* ret);
+static RpcRetCode sign(CallHandler handler, SigningArgs args, Signature* ret);
 
-static frpc::RpcRetCode xor_(XorArgs args, NumericalResult* ret);
+static RpcRetCode xor_(CallHandler handler, XorArgs args, NumericalResult* ret);
 
-static frpc::RpcRetCode getUserData(UserName args, UserData* ret);
+static RpcRetCode getUserData(CallHandler handler, UserName args, UserData* ret);
 
 // <max number of threads, run duration>
 int main(int argc, char* argv[]) {
@@ -34,8 +34,13 @@ int main(int argc, char* argv[]) {
     if (res != 0)
         return res;
 
-    // Start server with perf enabled
-    res = server.start_nic(true);
+    // Start server
+    res = server.start_nic();
+    if (res != 0)
+        return res;
+
+    // Enable perf
+    res = server.run_perf_thread({true, true, true}, nullptr);
     if (res != 0)
         return res;
 
@@ -90,50 +95,54 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-static frpc::RpcRetCode loopback(LoopBackArgs args, NumericalResult* ret) {
+static RpcRetCode loopback(CallHandler handler, LoopBackArgs args, NumericalResult* ret) {
 #ifdef VERBOSE_RPCS
-    std::cout << "loopback is called with " << args.data << std::endl;
+    std::cout << "loopback is called on thread " << handler.thread_id << " with "
+                                                 << args.data << std::endl;
 #endif
     ret->ret_val = args.timestamp;
-    return frpc::RpcRetCode::Success;
+    return RpcRetCode::Success;
 }
 
-static frpc::RpcRetCode add(AddArgs args, NumericalResult* ret) {
+static RpcRetCode add(CallHandler handler, AddArgs args, NumericalResult* ret) {
 #ifdef VERBOSE_RPCS
-    std::cout << "add is called with " << args.a << ", " << args.b << std::endl;
+    std::cout << "add is called on thread " << handler.thread_id << " with "
+                                            << args.a << ", " << args.b << std::endl;
 #endif
     ret->ret_val = args.timestamp;
-    return frpc::RpcRetCode::Success;
+    return RpcRetCode::Success;
 }
 
-static frpc::RpcRetCode sign(SigningArgs args, Signature* ret) {
+static RpcRetCode sign(CallHandler handler, SigningArgs args, Signature* ret) {
 #ifdef VERBOSE_RPCS
-    std::cout << "sign is called with " << args.hash_lsb << ", " << args.hash_msb << ": <"
+    std::cout << "sign is called on thread " << handler.thread_id << " with "
+              << args.hash_lsb << ", " << args.hash_msb << ": <"
               << args.key_0 << " " << args.key_1 << " " << args.key_2 << " "
               << args.key_3 << ">" << std::endl;
 #endif
     ret->result = args.timestamp;
-    return frpc::RpcRetCode::Success;
+    return RpcRetCode::Success;
 }
 
-static frpc::RpcRetCode xor_(XorArgs args, NumericalResult* ret) {
+static RpcRetCode xor_(CallHandler handler, XorArgs args, NumericalResult* ret) {
 #ifdef VERBOSE_RPCS
-    std::cout << "xor_ is called with " << args.a << " " << args.b << " "
+    std::cout << "xor_ is called on thread " << handler.thread_id << " with "
+              << args.a << " " << args.b << " "
               << args.c << " " << args.d << " " << args.e << " "
               << args.f << std::endl;
 #endif
     ret->ret_val = args.timestamp;
-    return frpc::RpcRetCode::Success;
+    return RpcRetCode::Success;
 }
 
-static frpc::RpcRetCode getUserData(UserName args, UserData* ret) {
+static RpcRetCode getUserData(CallHandler handler, UserName args, UserData* ret) {
 #ifdef VERBOSE_RPCS
-    std::cout << "getUserData is called with " << args.first_name << " "
-              << args.given_name << " " << std::endl;
+    std::cout << "getUserData is called on thread " << handler.thread_id << " with "
+              << args.first_name << " " << args.given_name << " " << std::endl;
 #endif
 
     ret->timestamp = args.timestamp;
     sprintf(ret->data, "some data");
 
-    return frpc::RpcRetCode::Success;
+    return RpcRetCode::Success;
 }

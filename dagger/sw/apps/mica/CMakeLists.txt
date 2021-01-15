@@ -22,7 +22,7 @@ link_directories(${CMAKE_CURRENT_BINARY_DIR}/../..)
 # Build mica server
 # common source files
 set(MICA_SOURCES ${MICA_SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/mica/hash.c)
-set(MICA_SOURCES ${MICA_SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/mica/city.c)
+#set(MICA_SOURCES ${MICA_SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/mica/city.c)
 set(MICA_SOURCES ${MICA_SOURCES} ${CMAKE_CURRENT_SOURCE_DIR}/mica/shm.c)
 
 # common libraries

@@ -1,15 +1,17 @@
 #ifndef _RPC_CALL_H_
 #define _RPC_CALL_H_
 
-#include <cstdint>
+#include <stdint.h>
 
-namespace frpc {
+// Return codes of user-defined remote functions
+enum RpcRetCode {
+    Success,
+    Fail
+};
 
-    enum class RpcRetCode {
-        Success,
-        Fail
-    };
-
-}  // namespace frpc
+// RPC hander being passed to user-defined remote functions as firt argument
+struct CallHandler {
+	uint16_t thread_id;	// thread_id the RPC call is binded to
+};
 
 #endif

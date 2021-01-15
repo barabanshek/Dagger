@@ -64,8 +64,8 @@ void CompletionQueue::_PullListen() {
         // }
         // and it should be written with the current time stamp on the client when
         // issuing the request.
-        uint64_t issuing_timestamp = *reinterpret_cast<uint64_t*>(resp_pckt->argv);
-        timestamps_.push_back(frpc::utils::rdtsc() - issuing_timestamp);
+        uint32_t issuing_timestamp = *reinterpret_cast<uint32_t*>(resp_pckt->argv);
+        timestamps_.push_back(static_cast<uint32_t>(frpc::utils::rdtsc()) - issuing_timestamp);
 #endif
 
         // Append to queue
@@ -92,8 +92,12 @@ RpcPckt CompletionQueue::pop_response() {
     return res;
 }
 
+void CompletionQueue::clear_queue() {
+    cq_.clear();
+}
+
 #ifdef PROFILE_LATENCY
-const std::vector<uint64_t>& CompletionQueue::get_latency_records() const {
+const std::vector<uint32_t>& CompletionQueue::get_latency_records() const {
     return timestamps_;
 }
 

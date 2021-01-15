@@ -15,6 +15,7 @@
 #include <assert.h>
 #include <unistd.h>
 
+#include "rpc_call.h"
 #include "rpc_client.h"
 #include "rpc_client_pool.h"
 #include "rpc_server_callback.h"
@@ -60,8 +61,8 @@ int main() {
 //
 #define SERVER_NIC_ADDR 0x20000
 
-static frpc::RpcRetCode loopback(LoopBackArgs args, NumericalResult* ret);
-static frpc::RpcRetCode add(AddArgs args, NumericalResult* ret);
+static RpcRetCode loopback(CallHandler handler, LoopBackArgs args, NumericalResult* ret);
+static RpcRetCode add(CallHandler handler, AddArgs args, NumericalResult* ret);
 
 static int run_server(std::promise<bool>& init_pr, std::future<bool>& cmpl_ft) {
     frpc::RpcThreadedServer server(SERVER_NIC_ADDR, NUMBER_OF_THREADS);
@@ -71,8 +72,8 @@ static int run_server(std::promise<bool>& init_pr, std::future<bool>& cmpl_ft) {
     if (res != 0)
         return res;
 
-    // Start NIC with perf enabled
-    res = server.start_nic(true);
+    // Start NIC
+    res = server.start_nic();
     if (res != 0)
         return res;
 
@@ -134,17 +135,17 @@ static int run_server(std::promise<bool>& init_pr, std::future<bool>& cmpl_ft) {
 }
 
 // RPC function #0
-static frpc::RpcRetCode loopback(LoopBackArgs args, NumericalResult* ret) {
+static RpcRetCode loopback(CallHandler handler, LoopBackArgs args, NumericalResult* ret) {
     std::cout << "loopback is called with data= " << args.data << std::endl;
     ret->data = args.data + 1;
-    return frpc::RpcRetCode::Success;
+    return RpcRetCode::Success;
 }
 
 // RPC function #1
-static frpc::RpcRetCode add(AddArgs args, NumericalResult* ret) {
+static RpcRetCode add(CallHandler handler, AddArgs args, NumericalResult* ret) {
     std::cout << "add is called with a= " << args.a << " b= " << args.b << std::endl;
     ret->data = args.a + args.b;
-    return frpc::RpcRetCode::Success;
+    return RpcRetCode::Success;
 }
 
 
@@ -200,7 +201,7 @@ static int run_client() {
         return res;
 
     // Start NIC
-    res = rpc_client_pool.start_nic(true);
+    res = rpc_client_pool.start_nic();
     if (res != 0)
         return res;
 

@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <thread>
+#include <vector>
 #include <unistd.h>
 
 #include "logger.h"
@@ -102,7 +103,7 @@ int NicCCIP::initialize_nic() {
     return 0;
 }
 
-int NicCCIP::start_nic(bool perf) {
+int NicCCIP::start_nic() {
     assert(connected_ == true);
     assert(initialized_ == true);
     assert(started_ == false);
@@ -146,13 +147,18 @@ int NicCCIP::start_nic(bool perf) {
     assert(status.running == 1);
     assert(status.error == 0);
 
-    // Start perf thread if required
-    if (perf) {
-        collect_perf_ = true;
-        perf_thread_ = std::thread{&NicCCIP::get_perf, this};
-    }
-
     started_ = true;
+    return 0;
+}
+
+int NicCCIP::run_perf_thread(NicPerfMask perf_mask,
+                    void(*callback)(const std::vector<uint64_t>&)) {
+    FRPC_INFO("Running perf thread on the nic\n");
+    collect_perf_ = true;
+    perf_thread_ = std::thread{&NicCCIP::nic_perf_loop,
+                               this,
+                               perf_mask,
+                               callback};
     return 0;
 }
 
@@ -517,7 +523,7 @@ int NicCCIP::get_nic_hw_status(NicHwStatus& status) const {
 
 std::string NicCCIP::dump_nic_hw_status(const NicHwStatus& status) const {
     std::string ret;
-    ret += "*** Nic hw status dump ***\n";
+    ret += " Nic hw status dump >> \n";
     ret += "  nic_id= "           + std::to_string(status.nic_id)           + "\n";
     ret += "  ready= "            + std::to_string(status.ready)            + "\n";
     ret += "  running= "          + std::to_string(status.running)          + "\n";
@@ -533,56 +539,81 @@ std::string NicCCIP::dump_nic_hw_status(const NicHwStatus& status) const {
 void NicCCIP::get_perf() const {
     assert(connected_ == true);
 
-    while(collect_perf_) {
-        // Get perf
-        uint64_t perf_cnt = 0;
-        fpga_result res = fpgaReadMMIO64(accel_handle_,
-                                         0,
-                                         base_nic_addr_ + iRegCcipRps,
-                                         &perf_cnt);
+    uint64_t perf_cnt = 0;
+    fpga_result res = fpgaReadMMIO64(accel_handle_,
+                                     0,
+                                     base_nic_addr_ + iRegCcipRps,
+                                     &perf_cnt);
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Nic configuration error, failed to read performance counter"
+                    "nic returned: %d\n", res);
+    }
+    FRPC_INFO("Nic #%x returned performance counter(outgoing RPS) = %d\n", base_nic_addr_, perf_cnt);
+}
+
+void NicCCIP::get_status() const {
+    assert(connected_ == true);
+
+    NicHwStatus status;
+    int ret = get_nic_hw_status(status);
+    if (ret != 0) {
+        FRPC_ERROR("NIC configuration error, failed to get status, "
+                    "NIC returned %d\n", ret);
+    }
+    FRPC_INFO("%s\n", dump_nic_hw_status(status).c_str());
+}
+
+void NicCCIP::get_packet_counters(void(*callback)(const std::vector<uint64_t>&)) const {
+    assert(connected_ == true);
+
+    std::string counters_str;
+    std::vector<uint64_t> counters;
+    counters_str += "Nic hw counters dump >> \n";
+    for (uint8_t cnt_id=0; cnt_id<iNumOfPckCnt; ++cnt_id) {
+        fpga_result res = fpgaWriteMMIO64(accel_handle_,
+                                          0,
+                                          base_nic_addr_ + iRegGetPckCnt,
+                                          cnt_id);
         if (res != FPGA_OK) {
-            FRPC_ERROR("Nic configuration error, failed to read performance counter"
+            FRPC_ERROR("Nic configuration error, failed to read packet counters"
                         "nic returned: %d\n", res);
         }
-        FRPC_INFO("Nic #%x returned performance counter(ccip rps)= %d\n", base_nic_addr_, perf_cnt);
 
-        // Get status
-        NicHwStatus status;
-        int ret = get_nic_hw_status(status);
-        if (ret != 0) {
-            FRPC_ERROR("NIC configuration error, failed to get status, "
-                        "NIC returned %d\n", ret);
+        // Wait until fpgaWrite propagates and counter is read
+        usleep(1000);
+        uint64_t pck_cnt = 0;
+        res = fpgaReadMMIO64(accel_handle_,
+                             0,
+                             base_nic_addr_ + iRegPckCnt,
+                             &pck_cnt);
+        if (res != FPGA_OK) {
+            FRPC_ERROR("Nic configuration error, failed to read packet counters"
+                        "nic returned: %d\n", res);
         }
-        FRPC_INFO("%s\n", dump_nic_hw_status(status).c_str());
+        counters.push_back(pck_cnt);
+        counters_str += "  counter[" + std::to_string(cnt_id) + "] = " +
+                                       std::to_string(pck_cnt) + "\n";
+    }
+    FRPC_INFO("%s\n", counters_str.c_str());
 
-        // Get packet counters
-        std::string counters_str;
-        counters_str += "*** Nic hw counters dump ***\n";
-        for (uint8_t cnt_id=0; cnt_id<iNumOfPckCnt; ++cnt_id) {
-            fpga_result res = fpgaWriteMMIO64(accel_handle_,
-                                              0,
-                                              base_nic_addr_ + iRegGetPckCnt,
-                                              cnt_id);
-            if (res != FPGA_OK) {
-                FRPC_ERROR("Nic configuration error, failed to read packet counters"
-                            "nic returned: %d\n", res);
-            }
+    // Call the processing callback if required
+    if (callback != nullptr) {
+        callback(counters);
+    }
+}
 
-            // Wait until fpgaWrite propagates and counter is read
-            usleep(1000);
-            uint64_t pck_cnt = 0;
-            res = fpgaReadMMIO64(accel_handle_,
-                                 0,
-                                 base_nic_addr_ + iRegPckCnt,
-                                 &pck_cnt);
-            if (res != FPGA_OK) {
-                FRPC_ERROR("Nic configuration error, failed to read packet counters"
-                            "nic returned: %d\n", res);
-            }
-            counters_str += "  counter[" + std::to_string(cnt_id) + "] = " +
-                                           std::to_string(pck_cnt) + "\n";
+void NicCCIP::nic_perf_loop(NicPerfMask perf_mask,
+                                     void(*callback)(const std::vector<uint64_t>&)) const {
+    while(collect_perf_) {
+        if (perf_mask.performance) {
+            get_perf();
         }
-        FRPC_INFO("%s\n", counters_str.c_str());
+        if (perf_mask.status) {
+            get_status();
+        }
+        if (perf_mask.packet_counters) {
+            get_packet_counters(callback);
+        }
 
         sleep(NIC_PERF_DELAY_S);
     }

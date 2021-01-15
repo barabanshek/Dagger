@@ -67,8 +67,13 @@ int main(int argc, char* argv[]) {
     if (res != 0)
         return res;
 
-    // Start NIC with perf enabled
-    res = rpc_client_pool.start_nic(true);
+    // Start NIC
+    res = rpc_client_pool.start_nic();
+    if (res != 0)
+        return res;
+
+    // Enable perf
+    res = rpc_client_pool.run_perf_thread({true, true, true}, nullptr);
     if (res != 0)
         return res;
 

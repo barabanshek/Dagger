@@ -26,7 +26,7 @@ public:
                    bool master_nic);
     virtual ~NicPollingCCIP();
 
-    virtual int start(bool perf=false) final;
+    virtual int start() final;
     virtual int stop() final;
 
     virtual int configure_data_plane() final;

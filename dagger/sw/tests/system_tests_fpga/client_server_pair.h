@@ -41,7 +41,7 @@ protected:
         int res = server->init_nic();
         ASSERT_EQ(res, 0);
 
-        res = server->start_nic(with_stat);
+        res = server->start_nic();
         ASSERT_EQ(res, 0);
 
         fn_ptr.push_back(reinterpret_cast<const void*>(&ClientServerPair::loopback1));
@@ -67,7 +67,7 @@ protected:
         res = client_pool->init_nic();
         ASSERT_EQ(res, 0);
 
-        res = client_pool->start_nic(with_stat);
+        res = client_pool->start_nic();
         ASSERT_EQ(res, 0);
     }
 
@@ -91,40 +91,40 @@ protected:
     }
 
     // RPC functions
-    static frpc::RpcRetCode loopback1(Arg1 arg, Ret1* ret) {
+    static RpcRetCode loopback1(CallHandler handler, Arg1 arg, Ret1* ret) {
         ret->f_id = 0;
         ret->ret_val = arg.a + loopback1_const;
 
-        return frpc::RpcRetCode::Success;
+        return RpcRetCode::Success;
     }
 
-    static frpc::RpcRetCode loopback2(Arg2 arg, Ret1* ret) {
+    static RpcRetCode loopback2(CallHandler handler, Arg2 arg, Ret1* ret) {
         ret->f_id = 1;
         ret->ret_val = arg.a + arg.b + arg.c + arg.d;
 
-        return frpc::RpcRetCode::Success;
+        return RpcRetCode::Success;
     }
 
-    static frpc::RpcRetCode loopback3(Arg3 arg, Ret1* ret) {
+    static RpcRetCode loopback3(CallHandler handler, Arg3 arg, Ret1* ret) {
         ret->f_id = 2;
         ret->ret_val = (arg.a)*(arg.b) + (arg.c)*(arg.d);
 
-        return frpc::RpcRetCode::Success;
+        return RpcRetCode::Success;
     }
 
-    static frpc::RpcRetCode loopback4(Arg3 arg, Ret2* ret) {
+    static RpcRetCode loopback4(CallHandler handler, Arg3 arg, Ret2* ret) {
         ret->f_id = 3;
         ret->ret_val = arg.a*arg.b + arg.c*arg.d;
         ret->ret_val_1 = arg.a*arg.c + arg.b*arg.d;
 
-        return frpc::RpcRetCode::Success;
+        return RpcRetCode::Success;
     }
 
-    static frpc::RpcRetCode loopback5(StringArg arg, StringRet* ret) {
+    static RpcRetCode loopback5(CallHandler handler, StringArg arg, StringRet* ret) {
         ret->f_id = 4;
         sprintf(ret->str, arg.str);
 
-        return frpc::RpcRetCode::Success;
+        return RpcRetCode::Success;
     }
 
     size_t num_of_threads;

@@ -10,17 +10,27 @@
 #endif
 
 #include <stdint.h>
-
+#include "rpc_call.h"
 #include "rpc_types.h"
 
 EXTERNC int memcached_wrapper_init_and_start_server();
 
 EXTERNC int memcached_wrapper_open_connection(const char* client_ip,
-											  uint16_t client_port,
-	                                      	  uint32_t c_id);
+                                              uint16_t client_port,
+                                              uint32_t c_id);
 
-EXTERNC int memcached_wrapper_register_new_listening_thread(int (*set)(struct SetRequest, struct SetResponse*),
-															int (*get)(struct GetRequest, struct GetResponse*));
+EXTERNC int memcached_wrapper_register_functions(
+                                int (*set)(struct CallHandler,
+                                           struct SetRequest,
+                                           struct SetResponse*),
+                                int (*get)(struct CallHandler,
+                                           struct GetRequest,
+                                           struct GetResponse*),
+                                int (*populate)(struct CallHandler,
+                                                struct PopulateRequest,
+                                                struct PopulateResponse*));
+
+EXTERNC int memcached_wrapper_run_new_listening_thread();
 
 #undef EXTERNC
 

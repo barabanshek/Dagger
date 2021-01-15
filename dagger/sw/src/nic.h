@@ -4,6 +4,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <vector>
+
 #include "connection_manager.h"
 
 namespace frpc {
@@ -16,6 +18,12 @@ namespace frpc {
 ///                  -> NicMmioCCIP
 ///                  -> NicDmaCCIP
 ///
+struct NicPerfMask {
+    bool performance;
+    bool status;
+    bool packet_counters;
+};
+
 class Nic {
 public:
     Nic() {}
@@ -25,7 +33,7 @@ public:
     virtual int connect_to_nic() = 0;
     virtual int initialize_nic() = 0;
     virtual int configure_data_plane() = 0;
-    virtual int start(bool perf=false) = 0;
+    virtual int start() = 0;
     virtual int stop() = 0;
     virtual int check_hw_errors() const = 0;
     virtual int open_connection(ConnectionId& c_id,
@@ -41,6 +49,8 @@ public:
     virtual const char* get_tx_buff_end() const = 0;
     virtual const char* get_rx_buff_end() const = 0;
     virtual size_t get_mtu_size_bytes() const = 0;
+    virtual int run_perf_thread(NicPerfMask perf_mask,
+                        void(*callback)(const std::vector<uint64_t>&)) = 0;
 
 };
 

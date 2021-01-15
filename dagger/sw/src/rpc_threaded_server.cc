@@ -66,8 +66,8 @@ int RpcThreadedServer::init_nic() {
     return 0;
 }
 
-int RpcThreadedServer::start_nic(bool perf) {
-    int res = nic_->start(perf);
+int RpcThreadedServer::start_nic() {
+    int res = nic_->start();
     if (res != 0) {
         FRPC_ERROR("Failed to start NIC\n");
         return res;
@@ -95,7 +95,7 @@ int RpcThreadedServer::check_hw_errors() const {
 }
 
 int RpcThreadedServer::run_new_listening_thread(
-                            const RpcServerCallBack_Base* rpc_callback) {
+                            const RpcServerCallBack_Base* rpc_callback, int pin_cpu) {
     std::unique_lock<std::mutex> lck(mtx_);
 
     if (thread_cnt_ < max_num_of_threads_) {
@@ -104,7 +104,13 @@ int RpcThreadedServer::run_new_listening_thread(
                                             thread_cnt_,
                                             thread_cnt_,
                                             rpc_callback)));
-        threads_.back().get()->start_listening();
+
+        int r = threads_.back().get()->start_listening(pin_cpu);
+        if (r != 0) {
+            threads_.pop_back();
+            return 1;
+        }
+
         ++thread_cnt_;
         return 0;
     } else {
@@ -131,6 +137,11 @@ int RpcThreadedServer::connect(const IPv4& client_addr,
 
 int RpcThreadedServer::disconnect(ConnectionId c_id) {
     return nic_->close_connection(c_id);
+}
+
+int RpcThreadedServer::run_perf_thread(NicPerfMask perf_mask,
+                        void(*callback)(const std::vector<uint64_t>&)) {
+    return nic_->run_perf_thread(perf_mask, callback);
 }
 
 }  // namespace frpc

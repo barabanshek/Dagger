@@ -101,8 +101,8 @@ public:
         return 0;
     }
 
-    int start_nic(bool perf=false) {
-        int res = nic_->start(perf);
+    int start_nic() {
+        int res = nic_->start();
         if (res != 0) {
             FRPC_ERROR("Failed to start NIC\n");
             return res;
@@ -127,6 +127,12 @@ public:
 
     int check_hw_errors() const {
         return nic_->check_hw_errors();
+    }
+
+    // Run perf thread on the nic
+    int run_perf_thread(NicPerfMask perf_mask,
+                        void(*callback)(const std::vector<uint64_t>&)) {
+        return nic_->run_perf_thread(perf_mask, callback);
     }
 
     // Pop the next rpc clent; this method is thread-safe
