@@ -156,9 +156,9 @@ int NicDmaCCIP::notify_nic_of_new_dma(size_t flow, size_t bucket) const {
     return 0;
 }
 
-int NicDmaCCIP::start(bool perf) {
+int NicDmaCCIP::start() {
     assert(dp_configured_ == true);
-    return start_nic(perf);
+    return start_nic();
 }
 
 int NicDmaCCIP::stop() {

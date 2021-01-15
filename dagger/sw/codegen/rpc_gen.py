@@ -234,7 +234,8 @@ public:
 		RpcServerCallBack_Base(rpc_fn_ptr) {}
 	~RpcServerCallBack() {};
 
-	virtual void operator()(const RpcPckt* rpc_in, TxQueue& tx_queue) const final {
+	virtual void operator()(const CallHandler handler,
+	                        const RpcPckt* rpc_in, TxQueue& tx_queue) const final {
 		uint8_t ret_buff[cfg::sys::cl_size_bytes];
 		size_t ret_size;
 		RpcRetCode ret_code;
@@ -318,11 +319,13 @@ public:
 					  self.__f_call(
 						  self.__closure(
 						  self.__dereference(
-						  self.__reinterpret_cast('RpcRetCode(*)(' + arg_name + ', '
+						  self.__reinterpret_cast('RpcRetCode(*)(' + 'CallHandler' + ', '
+						  										   + arg_name + ', '
 						  	                                       + self.__make_ptr(ret_name) + ')',
 							                      'rpc_fn_ptr_[' + str(rpc_id) + ']')
 						  )),
 
+						  'handler' + ', ' +
 						  self.__dereference(
 						  self.__reinterpret_cast(
 						  	self.__make_const(self.__make_ptr(arg_name)),

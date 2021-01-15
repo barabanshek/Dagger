@@ -1,12 +1,12 @@
 message SetRequest {
-	int32 timestamp;
-	char[16] key;
+    int32 timestamp;
+    char[16] key;
     char[32] value;
 }
 
 message SetResponse {
-	int32 timestamp;
-    char[8] value;
+    int32 timestamp;
+    char[8] status;
 }
 
 message GetRequest {
@@ -19,7 +19,16 @@ message GetResponse {
     char[32] value;
 }
 
+message PopulateRequest {
+    char[48] dataset;
+}
+
+message PopulateResponse {
+    char[48] status;
+}
+
 service KeyValueStore {
-	rpc set(SetRequest) returns (SetResponse);
+    rpc set(SetRequest) returns (SetResponse);
     rpc get(GetRequest) returns (GetResponse);
+    rpc populate(PopulateRequest) returns (PopulateResponse);
 }

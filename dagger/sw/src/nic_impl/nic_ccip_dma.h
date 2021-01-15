@@ -27,7 +27,7 @@ public:
     NicDmaCCIP(uint64_t base_rf_addr, size_t num_of_flows, bool master_nic);
     virtual ~NicDmaCCIP();
 
-    virtual int start(bool perf=false) final;
+    virtual int start() final;
     virtual int stop() final;
 
     virtual int configure_data_plane() final;

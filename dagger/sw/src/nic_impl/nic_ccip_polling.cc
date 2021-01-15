@@ -153,9 +153,9 @@ int NicPollingCCIP::configure_data_plane() {
     return 0;
 }
 
-int NicPollingCCIP::start(bool perf) {
+int NicPollingCCIP::start() {
   assert(dp_configured_ == true);
-  return start_nic(perf);
+  return start_nic();
 }
 
 int NicPollingCCIP::stop() {

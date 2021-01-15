@@ -17,12 +17,12 @@ public:
     ~RpcThreadedServer();
 
     int init_nic();
-    int start_nic(bool perf=false);
+    int start_nic();
     int stop_nic();
 
     int check_hw_errors() const;
 
-    int run_new_listening_thread(const RpcServerCallBack_Base* rpc_callback);
+    int run_new_listening_thread(const RpcServerCallBack_Base* rpc_callback, int pin_cpu = -1);
 
     int stop_all_listening_threads();
 
@@ -31,6 +31,10 @@ public:
                 ConnectionId c_id,
                 ConnectionFlowId c_flow_id);
     int disconnect(ConnectionId c_id);
+
+    // Run perf thread on the nic
+    int run_perf_thread(NicPerfMask perf_mask,
+                        void(*callback)(const std::vector<uint64_t>&));
 
 private:
     size_t max_num_of_threads_;

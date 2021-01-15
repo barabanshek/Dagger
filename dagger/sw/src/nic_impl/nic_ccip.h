@@ -79,10 +79,12 @@ public:
                                const IPv4& dest_addr,
                                ConnectionFlowId c_flow_id) const final;
     virtual int close_connection(ConnectionId c_id) const final;
+    virtual int run_perf_thread(NicPerfMask perf_mask,
+                        void(*callback)(const std::vector<uint64_t>&)) final;
 
     // CCI-P implementation dependent functionality
     virtual int configure_data_plane() = 0;
-    virtual int start(bool perf=false) = 0;
+    virtual int start() = 0;
     virtual int stop() = 0;
     virtual int notify_nic_of_new_dma(size_t flow, size_t bucket) const = 0;
     virtual char* get_tx_flow_buffer(size_t flow) const = 0;
@@ -94,7 +96,7 @@ protected:
     volatile void* alloc_buffer(fpga_handle accel_handle, ssize_t size,
                                 uint64_t *wsid, uint64_t *io_addr) const;
 
-    int start_nic(bool perf=false);
+    int start_nic();
     int stop_nic();
 
 private:
@@ -157,8 +159,17 @@ private:
                             ConnectionFlowId c_flow_id) const;
     int remove_connection(ConnectionId c_id) const;
 
+    // Loop to profile nic
+    void nic_perf_loop(NicPerfMask perf_mask,
+                            void(*callback)(const std::vector<uint64_t>&)) const;
     // Performance counters
     void get_perf() const;
+    // NIC status
+    void get_status() const;
+    // Packet counters
+    // This method accepts a callback fn which can be used to run user-specific
+    // analytics over packet counters
+    void get_packet_counters(void(*callback)(const std::vector<uint64_t>&)) const;
 
 protected:
     uint64_t base_nic_addr_;

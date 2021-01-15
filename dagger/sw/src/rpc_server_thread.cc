@@ -59,9 +59,24 @@ int RpcServerThread::remove_connection(ConnectionId c_id) {
     return nic_->close_connection(c_id);
 }
 
-void RpcServerThread::start_listening() {
+int RpcServerThread::start_listening(int pin_cpu) {
     stop_signal_ = 0;
     thread_ = std::thread(&RpcServerThread::_PullListen, this);
+
+    // Pin thread to a certain CPU core
+    if (pin_cpu != -1) {
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+        CPU_SET(pin_cpu, &cpuset);
+        int rc = pthread_setaffinity_np(thread_.native_handle(),
+                                        sizeof(cpu_set_t), &cpuset);
+        if (rc != 0) {
+            FRPC_ERROR("Failed to pin thread %d to CPU %d\n", thread_id_, pin_cpu);
+            return 1;
+        }
+    }
+
+    return 0;
 }
 
 void RpcServerThread::stop_listening() {
@@ -71,8 +86,7 @@ void RpcServerThread::stop_listening() {
 
 // Pull-based listening
 void RpcServerThread::_PullListen() {
-    FRPC_INFO("Thread %d is listening now...\n", thread_id_);
-
+    FRPC_INFO("Thread %d is listening now on CPU %d\n", thread_id_, sched_getcpu());
     //if (rx_buff_ >= nic_->get_rx_buff_end()) {
     //    FRPC_ERROR("Nic rx buffer overflow \n");
     //    assert(false);
@@ -107,7 +121,7 @@ void RpcServerThread::_PullListen() {
         if (stop_signal_) continue;
 
         for(int i=0; i<batch_size; ++i) {
-            server_callback_->operator()(req_pckt_1 + i, tx_queue_);
+            server_callback_->operator()({thread_id_}, req_pckt_1 + i, tx_queue_);
         }
     }
 

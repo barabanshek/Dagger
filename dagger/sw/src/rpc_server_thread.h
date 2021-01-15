@@ -9,6 +9,7 @@
 #include "connection_manager.h"
 #include "nic.h"
 #include "rpc_header.h"
+#include "rpc_call.h"
 #include "rx_queue.h"
 #include "tx_queue.h"
 
@@ -21,7 +22,8 @@ public:
         rpc_fn_ptr_(rpc_fn_ptr) {}
     virtual ~RpcServerCallBack_Base() {}
 
-    virtual void operator()(const RpcPckt* rpc_in, TxQueue& tx_queue) const =0;
+    virtual void operator()(const CallHandler handler,
+                            const RpcPckt* rpc_in, TxQueue& tx_queue) const =0;
 
 protected:
     const std::vector<const void*>& rpc_fn_ptr_;
@@ -39,7 +41,7 @@ public:
     int register_connection(ConnectionId c_id, const IPv4& server_addr);
     int remove_connection(ConnectionId c_id);
 
-    void start_listening();
+    int start_listening(int pin_cpu);
     void stop_listening();
 
 private:

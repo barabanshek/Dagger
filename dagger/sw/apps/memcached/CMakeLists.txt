@@ -20,6 +20,7 @@ target_link_libraries(dagger-memcached ${FPGA_LIBS} ${LIBRARIES} -shared)
 # Build memcached server
 SET(MEMCACHED_MAKE_CMD CPPFLAGS="-I${CMAKE_CURRENT_SOURCE_DIR}/cpp"
 	                   CPPFLAGS+="-I${CMAKE_CURRENT_BINARY_DIR}"
+                       CPPFLAGS+="-I${CMAKE_CURRENT_SOURCE_DIR}/../../src"
 	                   LDFLAGS="-L${CMAKE_CURRENT_BINARY_DIR}"
 	                   LIBS="-ldagger-memcached"
 	                   LIBS+="-lhugetlbfs"

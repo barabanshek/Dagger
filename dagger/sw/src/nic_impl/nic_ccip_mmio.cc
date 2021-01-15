@@ -129,9 +129,9 @@ int NicMmioCCIP::configure_data_plane() {
     return 0;
 }
 
-int NicMmioCCIP::start(bool perf) {
+int NicMmioCCIP::start() {
     assert(dp_configured_ == true);
-    return start_nic(perf);;
+    return start_nic();
 }
 
 int NicMmioCCIP::stop() {

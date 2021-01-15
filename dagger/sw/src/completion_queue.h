@@ -28,8 +28,10 @@ public:
 
     RpcPckt pop_response();
 
+    void clear_queue();
+
 #ifdef PROFILE_LATENCY
-    const std::vector<uint64_t>& get_latency_records() const;
+    const std::vector<uint32_t>& get_latency_records() const;
     void clear_latency_records();
 #endif
 
@@ -51,7 +53,7 @@ private:
 
 #ifdef PROFILE_LATENCY
     // Timestamps
-    std::vector<uint64_t> timestamps_;
+    std::vector<uint32_t> timestamps_;
 #endif
 
     // Sync

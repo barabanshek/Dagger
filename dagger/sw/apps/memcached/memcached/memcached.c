@@ -73,24 +73,20 @@ static rel_time_t realtime(const time_t exptime);
 // Dagger RPC layer
 #include "memcached_cpp_wrapper.h"
 #include "rpc_types.h"
+#include "rpc_call.h"
 
 // Export before run
 // export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/homes/nikita/dagger/sw/build/apps/memcached
 
-static int process_set(struct SetRequest arg, struct SetResponse* ret) {
-    char* key = arg.key;
-    char* value = arg.value;
+static int set(char* key, char* value) {
+    //
+    //printf("set <%s, %s>\n", key, value);
 
     // Allocate item
     item *it;
     it = item_alloc(key, strlen(key), 0, realtime(60), strlen(value));
     if (it == 0) {
-        // Return fail
-        printf("Failed to allocate memcached item\n");
-        ret->timestamp = arg.timestamp;
-        sprintf(ret->value, "ERR\r");
-
-        return 0;
+        return 1;
     }
 
     // Copy data
@@ -105,16 +101,38 @@ static int process_set(struct SetRequest arg, struct SetResponse* ret) {
     do_item_link(it, hv);
     item_unlock(hv);
 
+    return 0;
+}
+
+static int process_set(struct CallHandler handler,
+                              struct SetRequest arg, struct SetResponse* ret) {
+    char* key = arg.key;
+    char* value = arg.value;
+
+    int res = set(key, value);
+    if (res != 0) {
+        // Return fail
+        printf("Failed to allocate memcached item\n");
+        ret->timestamp = arg.timestamp;
+        sprintf(ret->status, "ERR\r");
+
+        return 0;
+    }
+
     // Return success
     ret->timestamp = arg.timestamp;
-    sprintf(ret->value, "OK\r");
+    sprintf(ret->status, "OK\r");
 
     return 0;
 }
 
-static int process_get(struct GetRequest arg, struct GetResponse* ret) {
+static int process_get(struct CallHandler handler,
+                              struct GetRequest arg, struct GetResponse* ret) {
     char* key = arg.key;
     size_t nkey = strlen(key);
+
+    //
+    //printf("get <%s>\n", key);
 
     // Look-up
     uint32_t hv;
@@ -139,6 +157,72 @@ static int process_get(struct GetRequest arg, struct GetResponse* ret) {
     return 0;
 }
 
+static int process_populate(struct CallHandler handler,
+                                   struct PopulateRequest arg, struct PopulateResponse* ret) {
+    const char* dataset_filename = arg.dataset;
+    printf("loading the dataset %s\n", dataset_filename);
+
+    FILE* fp;
+    char* line = NULL;
+    size_t len = 0;
+    ssize_t read;
+
+    fp = fopen(dataset_filename, "r");
+    if (fp == NULL) {
+        sprintf(ret->status, "Failed to open dataset file\r");
+        return 0;
+    }
+
+    // get sizes
+    if (getline(&line, &len, fp) == -1) {
+        sprintf(ret->status, "First line is not found\r");
+        return 0;
+    }
+    size_t key_size = atoi(line);
+
+    if (getline(&line, &len, fp) == -1) {
+        sprintf(ret->status, "Second line is not found\r");
+        return 0;
+    }
+    size_t value_size = atoi(line);
+
+    if (getline(&line, &len, fp) == -1) {
+        sprintf(ret->status, "Third line is not found\r");
+        return 0;
+    }
+    size_t number_of_samples = atoi(line);
+
+    printf("  key size: %zu\n", key_size);
+    printf("  value size: %zu\n", value_size);
+    printf("  number of samples: %zu\n", number_of_samples);
+
+    size_t i = 0;
+    while ((read = getline(&line, &len, fp)) != -1) {
+        char key[key_size+1];
+        char value[value_size+1];
+
+        memcpy(key, line, key_size);
+        key[key_size] = '\0';
+
+        memcpy(value, line + key_size + 1, value_size);
+        value[value_size] = '\0';
+
+        if (set(key, value) != 0) {
+            sprintf(ret->status, "Failed to set <key, pair>\r");
+            return 0;
+        }
+
+        ++i;
+    }
+
+    if(i != number_of_samples) {
+        sprintf(ret->status, "dataset corrupted\r");
+        return 0;
+    }
+
+    sprintf(ret->status, "%zu values loaded\r", i);
+    return 0;
+}
 
 enum try_read_result {
     READ_DATA_RECEIVED,
@@ -10374,14 +10458,22 @@ int main (int argc, char **argv) {
     if (r != 0)
         return r;
 
+    /* register RPC functions */
+    r = memcached_wrapper_register_functions(&process_set,
+                                             &process_get,
+                                             &process_populate);
+    if (r != 0)
+        return r;
+
     int ti;
     for (ti=0; ti<settings.num_threads; ++ti) {
+        /* open connections */
         r = memcached_wrapper_open_connection("192.168.0.2", 3136, ti);
         if (r != 0)
             return r;
 
-        r = memcached_wrapper_register_new_listening_thread(&process_set,
-                                                            &process_get);
+        /* run listening threads */
+        r = memcached_wrapper_run_new_listening_thread();
         if (r != 0)
             return r;
     }
