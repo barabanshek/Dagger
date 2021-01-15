@@ -27,7 +27,7 @@ module top_level_module (
     // * client-side NIC
     // * server-side NIC
     localparam NUM_SUB_AFUS    = 2;
-    localparam NUM_PIPE_STAGES = 5;
+    localparam NUM_PIPE_STAGES = 2;
 
 
     // Define clock and reset for design

@@ -715,7 +715,7 @@ module nic
     logic [$bits(iRegCcipRps)-1:0] rps_cnt;
     logic [$bits(iRegCcipRps)-1:0] ccip_rps_rate;
     logic from_ccip_valid_reg;
-    
+
     always @(posedge ccip_clk) begin
         if (reset) begin
             from_ccip_valid_reg <= 1'b0;
