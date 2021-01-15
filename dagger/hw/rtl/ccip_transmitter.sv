@@ -50,7 +50,7 @@ module ccip_transmitter
     );
 
     // Parameters
-    localparam LTX_FIFO_DEPTH = 3;
+    localparam LTX_FIFO_DEPTH = 7;
     localparam MAX_TX_FLOWS = 2**LMAX_NUM_OF_FLOWS;
     localparam RQ_LNUM_OF_SLOTS = LMAX_NUM_OF_FLOWS + LTX_FIFO_DEPTH;
 
@@ -102,7 +102,7 @@ module ccip_transmitter
     generate
     for(gi=0; gi<MAX_TX_FLOWS; gi=gi+1) begin: gen_flow_fifo
         async_fifo_channel #(
-                .DATA_WIDTH($bits(RpcIf)),
+                .DATA_WIDTH($bits(ReqQueueSlotId)),
                 .LOG_DEPTH(LTX_FIFO_DEPTH)
             )
         flow_fifo (

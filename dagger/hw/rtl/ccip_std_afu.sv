@@ -87,7 +87,7 @@ module ccip_std_afu (
     // Top-level
     top_level_module top_level (
         .pClk(pClkDiv2),
-        .pClkDiv2(pClkDiv4),
+        .pClkDiv2(pClkDiv2),
         .pReset(reset_pass),
         .pck_cp2af_sRx(afu_rx),
         .pck_af2cp_sTx(afu_tx)
