@@ -14,16 +14,94 @@
 `include "request_queue.sv"
 `include "rng_module.v"
 
-module tab_hash(clk, reset, valid, ready, done, processing, key, hash);
-    input clk, reset, ready, done;
-    input [63:0] key;
-    output reg valid, processing;
-    output [31:0] hash;
+module ccip_transmitter
+    #(
+        // NIC ID
+        parameter NIC_ID = 0,
+        // log # of NIC flows
+        parameter LMAX_NUM_OF_FLOWS = 1
 
-    reg [3:0] state, next_state;
-    reg [31:0] hash_reg, next_hash;
+    )
+    (
+        input logic clk,
+        input logic reset,
+
+        // Control
+        input logic[LMAX_NUM_OF_FLOWS-1:0]  number_of_flows,
+        input t_ccip_clAddr                 tx_base_addr,
+        input logic[LMAX_CCIP_BATCH-1:0]  l_tx_batch_size,
+        input logic                         start,
+
+        // Status
+        input logic  initialize,
+        output logic initialized,
+        output logic error,
+
+        // CPU interface
+        input  logic           sRx_c1TxAlmFull,
+        output t_if_ccip_c1_Tx sTx_c1,
+
+        output logic                       ccip_tx_ready,
+        input RpcIf                        rpc_in,
+        input logic                        rpc_in_valid,
+        input logic[LMAX_NUM_OF_FLOWS-1:0] rpc_flow_id_in,
+
+        // Statistics
+        output logic pdrop_tx_flows_out
+    );
+
+    // logic [LMAX_NUM_OF_FLOWS:0] number_of_flows_plus_one;
+    // lpm_add_sub lpm_add_sub_ (
+    //     .dataa({1'd0, number_of_flows}),
+    //     .datab(5'd1),
+    //     .result(number_of_flows_plus_one)
+    // );
+    // defparam
+    //     lpm_add_sub_.lpm_direction = "ADD", 
+    //     lpm_add_sub_.lpm_width = 5;
+
+    // Parameters
+    localparam LTX_FIFO_DEPTH = 3;
+    localparam MAX_TX_FLOWS = 2**LMAX_NUM_OF_FLOWS;
+    localparam RQ_LNUM_OF_SLOTS = LMAX_NUM_OF_FLOWS + LTX_FIFO_DEPTH;
+
+    // Types
+    typedef logic[RQ_LNUM_OF_SLOTS-1:0] ReqQueueSlotId;
+    typedef logic[LMAX_NUM_OF_FLOWS-1:0] FlowId;
+    typedef enum logic { TxIdle, TxTransmit } TxState;
+    typedef logic[LMAX_CCIP_BATCH:0] TxBatch;
+
+    // Request queue
+    logic rq_push_en;
+    RpcIf rq_push_data, rq_pop_data;
+    ReqQueueSlotId rq_slot_id;
+    logic rq_push_done;
+    logic rq_pop_en;
+    ReqQueueSlotId rq_pop_slot_id;
+
+    // logic rng_enable, rng_ready, rng_valid;
+    // logic [31:0] rng_data;
     
-    assign hash = hash_reg;
+    // rng_module u0 (
+	// .start          (1'b1),          //     call.enable
+	// .clock          (clk),                 //    clock.clk
+	// .rand_num_data  (rng_data),  	       // rand_num.data
+	// .rand_num_ready (rng_ready),           //         .ready
+	// .rand_num_valid (rng_valid),           //         .valid
+	// .resetn         (~reset)                //    reset.reset_n
+	// );
+
+    // logic [LMAX_NUM_OF_FLOWS:0] quotient, remainder;
+    // lpm_divide lpm_divide_ (
+    //     .numer(rng_data[LMAX_NUM_OF_FLOWS:0]),
+    //     .denom(number_of_flows_plus_one),
+    //     .quotient(quotient),
+    //     .remain(remainder)
+    // );
+    // defparam 
+    //     lpm_divide_.lpm_widthn = 5,
+    //     lpm_divide_.lpm_widthd = 5;
+
     logic [31:0] sbox [0:255] = 
     {
         32'hF53E1837, 32'h5F14C86B, 32'h9EE3964C, 32'hFA796D53,
@@ -92,176 +170,6 @@ module tab_hash(clk, reset, valid, ready, done, processing, key, hash);
         32'h3C034CBA, 32'hACDA62FC, 32'h11923B8B, 32'h45EF170A
     };
 
-    always @(*) begin
-        case(state) 
-            4'd0: begin
-                valid <= 1'd0;
-                processing <= 1'd0;
-                next_hash <= 32'd4294967291;
-                if(ready) next_state <= 4'd1;
-                else next_state <= 4'd0;
-            end
-            4'd1: begin
-                valid <= 1'd0;
-                processing <= 1'd1;
-                next_hash <= hash ^ sbox[key[63:56]];
-                next_state <= 4'd2; 
-            end
-            4'd2: begin
-                valid <= 1'd0;
-                processing <= 1'd1;
-                next_hash <= hash ^ sbox[key[55:48]];
-                next_state <= 4'd3; 
-            end
-            4'd3: begin
-                valid <= 1'd0;
-                processing <= 1'd1;
-                next_hash <= hash ^ sbox[key[47:40]];
-                next_state <= 4'd4; 
-            end
-            4'd4: begin
-                valid <= 1'd0;
-                processing <= 1'd1;
-                next_hash <= hash ^ sbox[key[39:32]];
-                next_state <= 4'd5; 
-            end
-            4'd5: begin
-                valid <= 1'd0;
-                processing <= 1'd1;
-                next_hash <= hash ^ sbox[key[31:24]];
-                next_state <= 4'd6; 
-            end
-            4'd6: begin
-                valid <= 1'd0;
-                processing <= 1'd1;
-                next_hash <= hash ^ sbox[key[23:16]];
-                next_state <= 4'd7; 
-            end
-            4'd7: begin
-                valid <= 1'd0;
-                processing <= 1'd1;
-                next_hash <= hash ^ sbox[key[15:8]];
-                next_state <= 4'd8; 
-            end
-            4'd8: begin
-                valid <= 1'd0;
-                processing <= 1'd1;
-                next_hash <= hash ^ sbox[key[7:0]];
-                next_state <= 4'd9; 
-            end
-            4'd9: begin
-                valid <= 1'd1;
-                processing <= 1'd1;
-                next_hash <= hash;
-                if (done) next_state <= 4'd0;
-                else next_state <= 4'd9; 
-            end
-            
-        endcase 
-    end
-
-    always @(posedge clk) begin
-        if(reset) begin
-            state <= 4'd0;
-            hash_reg <= 32'd4294967291;
-        end
-        else begin
-            state <= next_state;
-            hash_reg <= next_hash;
-        end
-    end
-endmodule
-    
-module ccip_transmitter
-    #(
-        // NIC ID
-        parameter NIC_ID = 0,
-        // log # of NIC flows
-        parameter LMAX_NUM_OF_FLOWS = 1
-
-    )
-    (
-        input logic clk,
-        input logic reset,
-
-        // Control
-        input logic[LMAX_NUM_OF_FLOWS-1:0]  number_of_flows,
-        input t_ccip_clAddr                 tx_base_addr,
-        input logic[LMAX_CCIP_BATCH-1:0]  l_tx_batch_size,
-        input logic                         start,
-
-        // Status
-        input logic  initialize,
-        output logic initialized,
-        output logic error,
-
-        // CPU interface
-        input  logic           sRx_c1TxAlmFull,
-        output t_if_ccip_c1_Tx sTx_c1,
-
-        output logic                       ccip_tx_ready,
-        input RpcIf                        rpc_in,
-        input logic                        rpc_in_valid,
-        input logic[LMAX_NUM_OF_FLOWS-1:0] rpc_flow_id_in,
-
-        // Statistics
-        output logic pdrop_tx_flows_out
-    );
-
-    logic [LMAX_NUM_OF_FLOWS:0] number_of_flows_plus_one;
-    lpm_add_sub lpm_add_sub_ (
-        .dataa({1'd0, number_of_flows}),
-        .datab(5'd1),
-        .result(number_of_flows_plus_one)
-    );
-    defparam
-        lpm_add_sub_.lpm_direction = "ADD", 
-        lpm_add_sub_.lpm_width = 5;
-
-    // Parameters
-    localparam LTX_FIFO_DEPTH = 3;
-    localparam MAX_TX_FLOWS = 2**LMAX_NUM_OF_FLOWS;
-    localparam RQ_LNUM_OF_SLOTS = LMAX_NUM_OF_FLOWS + LTX_FIFO_DEPTH;
-
-    // Types
-    typedef logic[RQ_LNUM_OF_SLOTS-1:0] ReqQueueSlotId;
-    typedef logic[LMAX_NUM_OF_FLOWS-1:0] FlowId;
-    typedef enum logic { TxIdle, TxTransmit } TxState;
-    typedef logic[LMAX_CCIP_BATCH:0] TxBatch;
-
-    // Request queue
-    logic rq_push_en;
-    RpcIf rq_push_data, rq_pop_data;
-    ReqQueueSlotId rq_slot_id;
-    logic rq_push_done;
-    logic rq_pop_en;
-    ReqQueueSlotId rq_pop_slot_id;
-
-    logic rng_enable, rng_ready, rng_valid;
-    logic [31:0] rng_data;
-    
-    rng_module u0 (
-	.start          (1'b1),          //     call.enable
-	.clock          (clk),                 //    clock.clk
-	.rand_num_data  (rng_data),  	       // rand_num.data
-	.rand_num_ready (rng_ready),           //         .ready
-	.rand_num_valid (rng_valid),           //         .valid
-	.resetn         (~reset)                //    reset.reset_n
-	);
-
-    logic [LMAX_NUM_OF_FLOWS:0] quotient, remainder;
-    lpm_divide lpm_divide_ (
-        .numer(rng_data[LMAX_NUM_OF_FLOWS:0]),
-        .denom(number_of_flows_plus_one),
-        .quotient(quotient),
-        .remain(remainder)
-    );
-    defparam 
-        lpm_divide_.lpm_widthn = 32,
-        lpm_divide_.lpm_widthd = 32;
-
-    
-
     request_queue #(
             .DATA_WIDTH($bits(RpcIf)),
             .LSIZE(LMAX_NUM_OF_FLOWS + LTX_FIFO_DEPTH)
@@ -314,44 +222,18 @@ module ccip_transmitter
     end
     endgenerate
 
-    logic valid[9];
-    logic ready[9];
-    logic done[9];
-    logic processing[9];
-    logic [63:0] key[9];
-    logic [31:0] hash[9];
-    logic ReqQueueSlotId rq_slot[9];
-    genvar gj;
-    generate 
-    for(gj=0; gj<9; gj=gj+1) begin: hash_load_balancers
-        tab_hash load_balancer(
-            .clk(clk),
-            .reset(reset),
-            .valid(valid[gi]),
-            .ready(ready[gi]),
-            .done(done[gi]),
-            .processing(.processing[gi]),
-            .key(key[gi]),
-            .hash(hash[gi])
-        );
-    end
-    endgenerate
-
     // Push logic
     FlowId rpc_flow_id_in_1d, rpc_flow_id_in_2d, rpc_flow_id_in_rand;
-
-    integer i2, i3, i4, i5, i6, i7;
+    logic [31:0] hash_1d, hash_2d;
+    integer i2, i3;
     always @(posedge clk) begin
         // Defaults
         rq_push_en <= 1'b0;
-        rng_ready <= 1'b0;
+        //rng_ready <= 1'b0;
         for(i3=0; i3<MAX_TX_FLOWS; i3=i3+1) begin
             ff_push_en[i3] <= 1'b0;
         end
 
-        for(i5=0; i5<9; i5=i5+1) begin
-            ready[i5] <= 1'd0;
-        end
         // Put request to request queue
         rq_push_data <= rpc_in;
 
@@ -359,53 +241,40 @@ module ccip_transmitter
             $display("NIC%d: CCI-P transmitter, rpc_in requesed for flow= %d",
                                         NIC_ID, rpc_flow_id_in);
             rq_push_en   <= 1'b1;
-            rng_ready <= 1'b1;
+            //rng_ready <= 1'b1;
         end
 
         // Delay rpc_flow_id to align with rq look-up
         rpc_flow_id_in_1d <= rpc_flow_id_in;
         rpc_flow_id_in_2d <= rpc_flow_id_in_1d;
 
-        rpc_flow_id_in_rand <= remainder[LMAX_NUM_OF_FLOWS - 1:0];
-
+        //rpc_flow_id_in_rand <= remainder[LMAX_NUM_OF_FLOWS - 1:0];
+        hash_1d <= sbox[rpc_in.rpc_data.argv[11:4]] ^ sbox[rpc_in.rpc_data.argv[19:12]] ^ sbox[rpc_in.rpc_data.argv[27:20]] ^ sbox[rpc_in.rpc_data.argv[35:28]] ^ sbox[rpc_in.rpc_data.argv[43:36]] ^ sbox[rpc_in.rpc_data.argv[51:44]] ^ sbox[rpc_in.rpc_data.argv[59:52]] ^ sbox[rpc_in.rpc_data.argv[67:60]];
+        hash_2d <= hash_1d;
         // Put slot_id to corresponding flow FIFO
         if (rq_push_done) begin
-            $display("NIC%d: CCI-P transmitter, writing request to flow fifo= %d, rq_slot_id= %d",
-                                        NIC_ID, rpc_flow_id_in_1d, rq_slot_id);
+            
             
             if (rpc_in.rpc_data.hdr.ctl.req_type == rpcReq) begin
-                    // ff_push_data[rpc_flow_id_in_rand] <= rq_slot_id;
-                    // ff_push_en[rpc_flow_id_in_rand] <= 1'b1;
-                //priority encoder to select hash calculator
-                if(processing[0] == 1'd0) begin
-                    key[0] 
-                end
-                    
+                $display("NIC%d: CCI-P transmitter, writing request to flow fifo= %d, rq_slot_id= %d",
+                                        NIC_ID, hash_2d[LMAX_NUM_OF_FLOWS - 1:0], rq_slot_id);
+                    ff_push_data[hash_2d[LMAX_NUM_OF_FLOWS - 1:0]] <= rq_slot_id;
+                    ff_push_en[hash_2d[LMAX_NUM_OF_FLOWS - 1:0]] <= 1'b1;
             end
             else begin
+                $display("NIC%d: CCI-P transmitter, writing request to flow fifo= %d, rq_slot_id= %d",
+                                        NIC_ID, rpc_flow_id_in_2d, rq_slot_id);
                 ff_push_data[rpc_flow_id_in_2d] <= rq_slot_id;
                 ff_push_en[rpc_flow_id_in_2d] <= 1'b1;
             end
         end
 
         if (reset) begin
-            rng_ready <= 1'b0;
+            //rng_ready <= 1'b0;
             rq_push_en <= 1'b0;
 
             for(i2=0; i2<MAX_TX_FLOWS; i2=i2+1) begin
                 ff_push_en[i2] <= 1'b0;
-            end
-
-            for(i4=0; i4<9; i4=i4+1) begin
-                ready[i4] <= 1'd0;
-            end
-
-            for(i6=0; i6<9; i6=i6+1) begin
-                key[i6] <= 64'd0;
-            end
-
-            for(i7=0; i7<9; i7=i7+1) begin
-                rq_
             end
         end
     end
