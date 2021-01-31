@@ -50,15 +50,15 @@ module ccip_transmitter
         output logic pdrop_tx_flows_out
     );
 
-    // logic [LMAX_NUM_OF_FLOWS:0] number_of_flows_plus_one;
-    // lpm_add_sub lpm_add_sub_ (
-    //     .dataa({1'd0, number_of_flows}),
-    //     .datab(5'd1),
-    //     .result(number_of_flows_plus_one)
-    // );
-    // defparam
-    //     lpm_add_sub_.lpm_direction = "ADD", 
-    //     lpm_add_sub_.lpm_width = 5;
+    logic [31:0] number_of_flows_plus_one;
+    lpm_add_sub lpm_add_sub_ (
+        .dataa({28'd0, number_of_flows}),
+        .datab(32'd1),
+        .result(number_of_flows_plus_one)
+    );
+    defparam
+        lpm_add_sub_.lpm_direction = "ADD", 
+        lpm_add_sub_.lpm_width = 32;
 
     // Parameters
     localparam LTX_FIFO_DEPTH = 3;
@@ -91,16 +91,17 @@ module ccip_transmitter
 	// .resetn         (~reset)                //    reset.reset_n
 	// );
 
-    // logic [LMAX_NUM_OF_FLOWS:0] quotient, remainder;
-    // lpm_divide lpm_divide_ (
-    //     .numer(rng_data[LMAX_NUM_OF_FLOWS:0]),
-    //     .denom(number_of_flows_plus_one),
-    //     .quotient(quotient),
-    //     .remain(remainder)
-    // );
-    // defparam 
-    //     lpm_divide_.lpm_widthn = 5,
-    //     lpm_divide_.lpm_widthd = 5;
+    logic [31:0] hash_1d, hash_2d;
+    logic [31:0] quotient, remainder;
+    lpm_divide lpm_divide_ (
+        .numer(hash_2d),
+        .denom(number_of_flows_plus_one),
+        .quotient(quotient),
+        .remain(remainder)
+    );
+    defparam 
+        lpm_divide_.lpm_widthn = 32,
+        lpm_divide_.lpm_widthd = 32;
 
     logic [31:0] sbox [0:255] = 
     {
@@ -224,7 +225,7 @@ module ccip_transmitter
 
     // Push logic
     FlowId rpc_flow_id_in_1d, rpc_flow_id_in_2d, rpc_flow_id_in_rand;
-    logic [31:0] hash_1d, hash_2d;
+    
     integer i2, i3;
     always @(posedge clk) begin
         // Defaults
@@ -257,12 +258,12 @@ module ccip_transmitter
             
             if (rpc_in.rpc_data.hdr.ctl.req_type == rpcReq) begin
                 $display("NIC%d: CCI-P transmitter, writing request to flow fifo= %d, rq_slot_id= %d",
-                                        NIC_ID, hash_2d[LMAX_NUM_OF_FLOWS - 1:0], rq_slot_id);
-                    ff_push_data[hash_2d[LMAX_NUM_OF_FLOWS - 1:0]] <= rq_slot_id;
-                    ff_push_en[hash_2d[LMAX_NUM_OF_FLOWS - 1:0]] <= 1'b1;
+                                        NIC_ID, remainder[LMAX_NUM_OF_FLOWS - 1:0], rq_slot_id);
+                    ff_push_data[remainder[LMAX_NUM_OF_FLOWS - 1:0]] <= rq_slot_id;
+                    ff_push_en[remainder[LMAX_NUM_OF_FLOWS - 1:0]] <= 1'b1;
             end
             else begin
-                $display("NIC%d: CCI-P transmitter, writing request to flow fifo= %d, rq_slot_id= %d",
+                $display("NIC%d: CCI-P transmitter, writing response to flow fifo= %d, rq_slot_id= %d",
                                         NIC_ID, rpc_flow_id_in_2d, rq_slot_id);
                 ff_push_data[rpc_flow_id_in_2d] <= rq_slot_id;
                 ff_push_en[rpc_flow_id_in_2d] <= 1'b1;
