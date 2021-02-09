@@ -13,7 +13,7 @@ namespace frpc {
 class RpcThreadedServer {
 public:
     RpcThreadedServer() = default;
-    RpcThreadedServer(uint64_t base_nic_addr, size_t max_num_of_threads);
+    RpcThreadedServer(uint64_t base_nic_addr, size_t max_num_of_threads, size_t worker_threads = 0);
     ~RpcThreadedServer();
 
     int init_nic();
@@ -38,6 +38,8 @@ public:
 
 private:
     size_t max_num_of_threads_;
+    size_t worker_threads_;
+
     uint64_t base_nic_addr_;
 
     // The NIC is shared by all threads in the pool

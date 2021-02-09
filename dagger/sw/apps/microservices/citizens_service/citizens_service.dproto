@@ -1,0 +1,16 @@
+message CitizenData {
+	int32 timestamp;
+	int32 trace_id;
+	char[16] first_name;
+	char[16] last_name;
+}
+
+message LegalStatus {
+	int32 timestamp;
+	int32 trace_id;
+	char[8] status;
+}
+
+service CitizenService {
+	rpc legal_check(CitizenData) returns (LegalStatus);
+}

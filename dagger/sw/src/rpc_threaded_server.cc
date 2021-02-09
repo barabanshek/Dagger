@@ -7,8 +7,9 @@
 
 namespace frpc {
 
-RpcThreadedServer::RpcThreadedServer(uint64_t base_nic_addr, size_t max_num_of_threads):
+RpcThreadedServer::RpcThreadedServer(uint64_t base_nic_addr, size_t max_num_of_threads, size_t worker_threads):
         max_num_of_threads_(max_num_of_threads),
+        worker_threads_(worker_threads),
         base_nic_addr_(base_nic_addr),
         thread_cnt_(0),
         nic_is_started_(false) {
@@ -103,7 +104,8 @@ int RpcThreadedServer::run_new_listening_thread(
                         new RpcServerThread(nic_.get(),
                                             thread_cnt_,
                                             thread_cnt_,
-                                            rpc_callback)));
+                                            rpc_callback,
+                                            worker_threads_)));
 
         int r = threads_.back().get()->start_listening(pin_cpu);
         if (r != 0) {

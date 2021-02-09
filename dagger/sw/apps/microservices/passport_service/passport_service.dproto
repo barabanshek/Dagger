@@ -1,0 +1,53 @@
+message FlightData {
+	int32 timestamp;
+	int32 trace_id;
+	int8 flight_number;
+}
+
+message FlightStatus {
+	int32 timestamp;
+	int32 trace_id;
+	char[8] status;
+	int8 seat_number;
+}
+
+message PassengerData {
+	int32 timestamp;
+	int32 trace_id;
+	char[16] first_name;
+	char[16] last_name;
+}
+
+message BaggageStatus {
+	int32 timestamp;
+	int32 trace_id;
+	char[8] status;
+}
+
+message PassportStatus {
+	int32 timestamp;
+	int32 trace_id;
+	char[8] status;
+}
+
+message RegPassengerData {
+	int32 timestamp;
+	int32 trace_id;
+	char[16] first_name;
+	char[16] last_name;
+	int8 flight_number;
+	int8 seat_number;
+}
+
+message RegStatus {
+	int32 timestamp;
+	int32 trace_id;
+	char[8] status;
+}
+
+service PassportService {
+	rpc check_flight(FlightData) returns (FlightStatus);
+	rpc check_baggage(PassengerData) returns (BaggageStatus);
+	rpc check_passport(PassengerData) returns (PassportStatus);
+	rpc register_passenger(RegPassengerData) returns (RegStatus);
+}

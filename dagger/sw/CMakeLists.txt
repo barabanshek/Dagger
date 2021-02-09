@@ -94,7 +94,7 @@ target_link_libraries(dagger ${FPGA_LIBS} ${LIBRARIES} -shared)
 #
 # Build tests
 #
-add_subdirectory(tests)
+#add_subdirectory(tests)
 
 #
 # Build ASE samples
@@ -104,7 +104,7 @@ add_subdirectory(ase_samples)
 #
 # Build microbenchmarks
 #
-add_subdirectory(microbenchmarks)
+#add_subdirectory(microbenchmarks)
 
 #
 # Build end-to-end applications

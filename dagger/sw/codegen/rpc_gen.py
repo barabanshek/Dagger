@@ -61,15 +61,15 @@ class RPCGenerator:
 		# Generate
 		for s_name, s_functions in iservices.items():
 			# Type header
-			with open(self.__src_file_path + '/' + TYPE_HDR_FILENAME, 'w+') as type_hdr_f:
-				type_hdr_f.write(self.__gen_type_hdr(imessages))
+			with open(self.__src_file_path + '/' + s_name + "_" + TYPE_HDR_FILENAME, 'w+') as type_hdr_f:
+				type_hdr_f.write(self.__gen_type_hdr(s_name, imessages))
 
 			# Service
-			with open(self.__src_file_path + '/' + SERVER_FILENAME, 'w+') as server_f:
+			with open(self.__src_file_path + '/' + s_name + "_" + SERVER_FILENAME, 'w+') as server_f:
 				server_f.write(self.__gen_service(imessages, s_name, s_functions))
 
 			# Client
-			with open(self.__src_file_path + '/' + CLIENT_FILENAME, 'w+') as client_f:
+			with open(self.__src_file_path + '/' + s_name + "_" + CLIENT_FILENAME, 'w+') as client_f:
 				client_f.write(self.__gen_client(imessages, s_name, s_functions))
 
 
@@ -203,6 +203,8 @@ class RPCGenerator:
 
 		c_codegen = CodeGen()
 
+		rpc_type_incl = s_name + "_rpc_types.h";
+
 		# Generate skeleton
 		skeleton_header = \
 """
@@ -221,7 +223,7 @@ class RPCGenerator:
 #include "rx_queue.h"
 #include "utils.h"
 
-#include "rpc_types.h"
+#include \"""" + rpc_type_incl + """\"
 
 #include <cstring>
 #include <immintrin.h>
@@ -348,6 +350,8 @@ public:
 
 		c_codegen = CodeGen()
 
+		rpc_type_incl = s_name + "_rpc_types.h";
+
 		# Generate skeleton header
 		skeleton_header = \
 """
@@ -363,7 +367,7 @@ public:
 #include "rpc_client_nonblocking_base.h"
 #include "utils.h"
 
-#include "rpc_types.h"
+#include \"""" + rpc_type_incl + """\"
 
 #include <immintrin.h>
 
@@ -461,13 +465,11 @@ public:
 		c_codegen.append_snippet(skeleton_footer)
 		return c_codegen.get_code()
 
-	def __gen_type_hdr(self, imessages):
+	def __gen_type_hdr(self, s_name, imessages):
 		skeleton_header = \
-"""
-#ifndef _RPC_TYPES_H_
-#define _RPC_TYPES_H_
+"#ifndef " + s_name + "_RPC_TYPES_H_" + '\n' + \
+"#define " + s_name + "_RPC_TYPES_H_" + '\n\n'
 
-"""
 		body = ""
 		for (name, arg_list) in imessages.items():
 			body = body + self.__c_struct(name, arg_list)
@@ -475,7 +477,7 @@ public:
 
 		skeleton_footer = \
 """
-#endif	// _RPC_TYPES_H_
+#endif
 """
 
 		return skeleton_header + body + skeleton_footer

@@ -2,6 +2,9 @@
 #define _RPC_SERVER_THREAD_H_
 
 #include <atomic>
+#include <condition_variable>
+#include <mutex>
+#include <queue>
 #include <thread>
 #include <vector>
 #include <utility>
@@ -32,10 +35,14 @@ protected:
 
 class RpcServerThread {
 public:
+    // Run request processing in dispatch threads when worker_threads = 0,
+    // run in worker threads otherwise; worker_threads specifies the size
+    // of the worker thread pool
     RpcServerThread(const Nic* nic,
                     size_t nic_flow_id,
                     uint16_t thread_id,
-                    const RpcServerCallBack_Base* callback);
+                    const RpcServerCallBack_Base* callback,
+                    size_t worker_threads = 0);
     virtual ~RpcServerThread();
 
     int register_connection(ConnectionId c_id, const IPv4& server_addr);
@@ -45,7 +52,11 @@ public:
     void stop_listening();
 
 private:
+    // Dispath thread
     void _PullListen();
+
+    // Worker thread
+    void _Worker(size_t worker_id);
 
 private:
     uint16_t thread_id_;
@@ -61,9 +72,18 @@ private:
     // RPC callback object
     const RpcServerCallBack_Base* server_callback_;
 
-    // Thread
+    // Dispatch thread
     std::thread thread_;
     std::atomic<bool> stop_signal_;
+
+    // Worker threads
+    bool run_worker_threads_;
+    size_t num_worker_threads_;
+    size_t worker_job_queue_size_;
+    std::vector<std::thread> worker_thread_pool_;
+    std::mutex worker_thread_pool_lck_;
+    std::condition_variable worker_thread_pool_cv_;
+    std::queue<RpcPckt> worker_job_queue_;
 
 #ifdef NIC_CCIP_DMA
     uint32_t current_batch_ptr;

@@ -50,7 +50,7 @@ module ccip_transmitter
     );
 
     // Parameters
-    localparam LTX_FIFO_DEPTH = 7;
+    localparam LTX_FIFO_DEPTH = 3;
     localparam MAX_TX_FLOWS = 2**LMAX_NUM_OF_FLOWS;
     localparam RQ_LNUM_OF_SLOTS = LMAX_NUM_OF_FLOWS + LTX_FIFO_DEPTH;
 

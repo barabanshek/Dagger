@@ -6,6 +6,7 @@
 
 #include <bitset>
 #include <cassert>
+#include <mutex>
 
 namespace frpc {
 
@@ -14,8 +15,11 @@ namespace frpc {
 class alignas(4096) TxQueue {
 public:
     TxQueue();
-    TxQueue(char* tx_flow_buff, size_t bucket_size_bytes, size_t l_depth);
+    TxQueue(char* tx_flow_buff, size_t bucket_size_bytes, size_t l_depth, bool thread_safe = false);
     TxQueue(const TxQueue&) = delete;
+
+    // We need the custom copy-assign operator here: we don't want to copy lck_
+    TxQueue& operator=(const TxQueue& tx_queue);
 
     virtual ~TxQueue();
 
@@ -24,6 +28,10 @@ public:
     inline char* get_write_ptr(uint8_t& change_bit) __attribute__((always_inline)) {
         assert(tx_q_ != nullptr);
         assert(change_bit_set_ != nullptr);
+
+        if (thread_safe_) {
+            lck_.lock();
+        }
 
         change_bit = change_bit_set_[tx_q_head_];
 
@@ -37,6 +45,10 @@ public:
             tx_q_head_ = 0;
         }
         //} while (free_bit_[tx_q_head_] != 1);
+
+        if (thread_safe_) {
+            lck_.unlock();
+        }
 
         return ptr;
     }
@@ -61,6 +73,10 @@ private:
 
     // Completion queue
     char* cq_;
+
+    // Lock (required if multiple workers share the same TX queue)
+    bool thread_safe_;
+    std::mutex lck_;
 };
 
 }  // namespace frpc

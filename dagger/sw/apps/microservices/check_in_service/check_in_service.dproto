@@ -1,0 +1,18 @@
+message RegistrationPassengerData {
+	int32 timestamp;
+	int32 trace_id;
+	char[16] first_name;
+	char[16] last_name;
+	int8 flight_number;
+}
+
+message RegistrationStatus {
+	int32 timestamp;
+	int32 trace_id;
+	char[8] status;
+	int8 seat_number;
+}
+
+service CheckInService {
+	rpc register_passenger(RegistrationPassengerData) returns (RegistrationStatus);
+}

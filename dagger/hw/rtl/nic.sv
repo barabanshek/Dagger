@@ -165,11 +165,6 @@ module nic
         sTx.c2.mmioRdValid <= is_csr_read;
         sTx.c2.hdr.tid     <= mmio_req_hdr.tid;
 
-        // Save rpc connection status
-        if (rpc_conn_setup_status.valid) begin
-            iRegConnStatus <= rpc_conn_setup_status;
-        end
-
         // Addresses are of 32-bit objects in MMIO space.  Addresses
         // of 64-bit objects are thus multiples of 2.
         case (mmio_req_hdr.address)
@@ -232,6 +227,11 @@ module nic
 
             default: sTx.c2.data <= t_ccip_mmioData'(0);
         endcase
+
+        // Save rpc connection status
+        if (rpc_conn_setup_status.valid) begin
+            iRegConnStatus <= rpc_conn_setup_status;
+        end
 
         if (reset) begin
             sTx.c2.mmioRdValid <= 1'b0;
