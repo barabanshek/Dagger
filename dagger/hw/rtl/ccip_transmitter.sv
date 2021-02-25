@@ -50,15 +50,15 @@ module ccip_transmitter
         output logic pdrop_tx_flows_out
     );
 
-    logic [31:0] number_of_flows_plus_one;
+    logic [LMAX_NUM_OF_FLOWS:0] number_of_flows_plus_one;
     lpm_add_sub lpm_add_sub_ (
-        .dataa({28'd0, number_of_flows}),
-        .datab(32'd1),
+        .dataa({1'd0, number_of_flows}),
+        .datab(5'd1),
         .result(number_of_flows_plus_one)
     );
     defparam
         lpm_add_sub_.lpm_direction = "ADD", 
-        lpm_add_sub_.lpm_width = 32;
+        lpm_add_sub_.lpm_width = 5;
 
     // Parameters
     localparam LTX_FIFO_DEPTH = 3;
@@ -79,8 +79,8 @@ module ccip_transmitter
     logic rq_pop_en;
     ReqQueueSlotId rq_pop_slot_id;
 
-    // logic rng_enable, rng_ready, rng_valid;
-    // logic [31:0] rng_data;
+    logic rng_enable, rng_ready, rng_valid;
+    logic [31:0] rng_data;
     
     // rng_module u0 (
 	// .start          (1'b1),          //     call.enable
@@ -91,17 +91,73 @@ module ccip_transmitter
 	// .resetn         (~reset)                //    reset.reset_n
 	// );
 
-    logic [31:0] hash_1d, hash_2d;
-    logic [31:0] quotient, remainder;
+    FlowId rpc_flow_id_in_1d, rpc_flow_id_in_2d, rpc_hash_flow;
+    logic [31:0] hash_1d;
+
+    logic [LMAX_NUM_OF_FLOWS:0] quotient, remainder;
     lpm_divide lpm_divide_ (
-        .numer(hash_2d),
+        .numer(hash_1d[LMAX_NUM_OF_FLOWS:0]),
         .denom(number_of_flows_plus_one),
         .quotient(quotient),
         .remain(remainder)
     );
     defparam 
-        lpm_divide_.lpm_widthn = 32,
-        lpm_divide_.lpm_widthd = 32;
+        lpm_divide_.lpm_widthn = 5,
+        lpm_divide_.lpm_widthd = 5;
+
+    
+
+    request_queue #(
+            .DATA_WIDTH($bits(RpcIf)),
+            .LSIZE(LMAX_NUM_OF_FLOWS + LTX_FIFO_DEPTH)
+        ) request_queue_ (
+            .clk(clk),
+            .reset(reset),
+
+            .push_en_in(rq_push_en),
+            .push_data_in(rq_push_data),
+            .push_slot_id_out(rq_slot_id),
+            .push_done_out(rq_push_done),
+
+            .pop_en_in(rq_pop_en),
+            .pop_slot_id_in(rq_pop_slot_id),
+            .pop_data_out(rq_pop_data),
+
+            .initialize(initialize),
+            .initialized(initialized),
+            .error(error)
+        );
+
+    // Flow FIFOs
+    logic ff_push_en[MAX_TX_FLOWS];
+    ReqQueueSlotId ff_push_data[MAX_TX_FLOWS];
+    logic ff_pop_en[MAX_TX_FLOWS];
+    logic ff_pop_valid[MAX_TX_FLOWS];
+    ReqQueueSlotId ff_pop_data[MAX_TX_FLOWS];
+    logic [LTX_FIFO_DEPTH-1:0] ff_dw[MAX_TX_FLOWS];
+    logic ff_ovf[MAX_TX_FLOWS];
+
+    genvar gi;
+    generate
+    for(gi=0; gi<MAX_TX_FLOWS; gi=gi+1) begin: gen_flow_fifo
+        async_fifo_channel #(
+                .DATA_WIDTH($bits(RpcIf)),
+                .LOG_DEPTH(LTX_FIFO_DEPTH)
+            )
+        flow_fifo (
+                .clear(reset),
+                .clk_1(clk),
+                .push_en(ff_push_en[gi]),
+                .push_data(ff_push_data[gi]),
+                .clk_2(clk),
+                .pop_enable(ff_pop_en[gi]),
+                .pop_valid(ff_pop_valid[gi]),
+                .pop_data(ff_pop_data[gi]),
+                .pop_dw(ff_dw[gi]),
+                .error(ff_ovf[gi])
+            );
+    end
+    endgenerate
 
     logic [31:0] sbox [0:255] = 
     {
@@ -171,61 +227,9 @@ module ccip_transmitter
         32'h3C034CBA, 32'hACDA62FC, 32'h11923B8B, 32'h45EF170A
     };
 
-    request_queue #(
-            .DATA_WIDTH($bits(RpcIf)),
-            .LSIZE(LMAX_NUM_OF_FLOWS + LTX_FIFO_DEPTH)
-        ) request_queue_ (
-            .clk(clk),
-            .reset(reset),
-
-            .push_en_in(rq_push_en),
-            .push_data_in(rq_push_data),
-            .push_slot_id_out(rq_slot_id),
-            .push_done_out(rq_push_done),
-
-            .pop_en_in(rq_pop_en),
-            .pop_slot_id_in(rq_pop_slot_id),
-            .pop_data_out(rq_pop_data),
-
-            .initialize(initialize),
-            .initialized(initialized),
-            .error(error)
-        );
-
-    // Flow FIFOs
-    logic ff_push_en[MAX_TX_FLOWS];
-    ReqQueueSlotId ff_push_data[MAX_TX_FLOWS];
-    logic ff_pop_en[MAX_TX_FLOWS];
-    logic ff_pop_valid[MAX_TX_FLOWS];
-    ReqQueueSlotId ff_pop_data[MAX_TX_FLOWS];
-    logic [LTX_FIFO_DEPTH-1:0] ff_dw[MAX_TX_FLOWS];
-    logic ff_ovf[MAX_TX_FLOWS];
-
-    genvar gi;
-    generate
-    for(gi=0; gi<MAX_TX_FLOWS; gi=gi+1) begin: gen_flow_fifo
-        async_fifo_channel #(
-                .DATA_WIDTH($bits(RpcIf)),
-                .LOG_DEPTH(LTX_FIFO_DEPTH)
-            )
-        flow_fifo (
-                .clear(reset),
-                .clk_1(clk),
-                .push_en(ff_push_en[gi]),
-                .push_data(ff_push_data[gi]),
-                .clk_2(clk),
-                .pop_enable(ff_pop_en[gi]),
-                .pop_valid(ff_pop_valid[gi]),
-                .pop_data(ff_pop_data[gi]),
-                .pop_dw(ff_dw[gi]),
-                .error(ff_ovf[gi])
-            );
-    end
-    endgenerate
-
     // Push logic
-    FlowId rpc_flow_id_in_1d, rpc_flow_id_in_2d, rpc_flow_id_in_rand;
     
+
     integer i2, i3;
     always @(posedge clk) begin
         // Defaults
@@ -249,22 +253,19 @@ module ccip_transmitter
         rpc_flow_id_in_1d <= rpc_flow_id_in;
         rpc_flow_id_in_2d <= rpc_flow_id_in_1d;
 
-        //rpc_flow_id_in_rand <= remainder[LMAX_NUM_OF_FLOWS - 1:0];
         hash_1d <= sbox[rpc_in.rpc_data.argv[11:4]] ^ sbox[rpc_in.rpc_data.argv[19:12]] ^ sbox[rpc_in.rpc_data.argv[27:20]] ^ sbox[rpc_in.rpc_data.argv[35:28]] ^ sbox[rpc_in.rpc_data.argv[43:36]] ^ sbox[rpc_in.rpc_data.argv[51:44]] ^ sbox[rpc_in.rpc_data.argv[59:52]] ^ sbox[rpc_in.rpc_data.argv[67:60]];
-        hash_2d <= hash_1d;
+        rpc_hash_flow <= remainder[LMAX_NUM_OF_FLOWS - 1:0];
+
         // Put slot_id to corresponding flow FIFO
         if (rq_push_done) begin
-            
+            $display("NIC%d: CCI-P transmitter, writing request to flow fifo= %d, rq_slot_id= %d",
+                                        NIC_ID, rpc_flow_id_in_1d, rq_slot_id);
             
             if (rpc_in.rpc_data.hdr.ctl.req_type == rpcReq) begin
-                $display("NIC%d: CCI-P transmitter, writing request to flow fifo= %d, rq_slot_id= %d",
-                                        NIC_ID, remainder[LMAX_NUM_OF_FLOWS - 1:0], rq_slot_id);
-                    ff_push_data[remainder[LMAX_NUM_OF_FLOWS - 1:0]] <= rq_slot_id;
-                    ff_push_en[remainder[LMAX_NUM_OF_FLOWS - 1:0]] <= 1'b1;
+                    ff_push_data[rpc_hash_flow] <= rq_slot_id;
+                    ff_push_en[rpc_hash_flow] <= 1'b1;
             end
             else begin
-                $display("NIC%d: CCI-P transmitter, writing response to flow fifo= %d, rq_slot_id= %d",
-                                        NIC_ID, rpc_flow_id_in_2d, rq_slot_id);
                 ff_push_data[rpc_flow_id_in_2d] <= rq_slot_id;
                 ff_push_en[rpc_flow_id_in_2d] <= 1'b1;
             end
