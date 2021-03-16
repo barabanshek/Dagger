@@ -165,7 +165,7 @@ static RpcRetCode check_baggage(CallHandler handler, PassengerData req, BaggageS
 }
 
 static constexpr size_t t_delay = 3000;
-static constexpr size_t t_out = 100000;
+static constexpr size_t t_out = 1000;
 
 static RpcRetCode check_passport(CallHandler handler, PassengerData req, PassportStatus* resp) {
 #ifdef _SERVICE_VERBOSE_

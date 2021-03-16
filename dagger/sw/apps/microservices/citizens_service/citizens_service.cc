@@ -113,8 +113,8 @@ static RpcRetCode legal_check(CallHandler handler, CitizenData req, LegalStatus*
 #endif
 
     // Dummy delay
-    constexpr size_t delay_var = 5000;
-    constexpr size_t delay_mean = 500;
+    constexpr size_t delay_var = 1000;
+    constexpr size_t delay_mean = 2000;
     size_t dummy_delay = delay_mean + rnd_gen.next_u32() % delay_var;
     for (size_t delay=0; delay<dummy_delay; ++delay) {
         asm("");

@@ -85,6 +85,8 @@ private:
     std::condition_variable worker_thread_pool_cv_;
     std::queue<RpcPckt> worker_job_queue_;
 
+    size_t max;
+
 #ifdef NIC_CCIP_DMA
     uint32_t current_batch_ptr;
     size_t batch_counter;

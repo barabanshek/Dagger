@@ -120,7 +120,7 @@ static int run_workload_thread(frpc::RpcClient* rpc_client,
                   << " registering passenger <" << req.first_name << ", " << req.last_name
                   << ">, fligh #" << static_cast<int>(req.flight_number) << std::endl;
 #else
-        if (i%1000 == 0) {
+        if (i%10000 == 0) {
             std::cout << "#" << req.trace_id << " Frontend>"
                       << " registering passenger <" << req.first_name << ", " << req.last_name
                       << ">, fligh #" << static_cast<int>(req.flight_number) << std::endl;

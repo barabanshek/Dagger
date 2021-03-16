@@ -195,7 +195,7 @@ int main(int argc, char* argv[]) {
 // Handle register_passenger requests
 //
 static constexpr size_t t_delay = 3000;
-static constexpr size_t t_out = 20000;
+static constexpr size_t t_out = 1000;
 
 static RpcRetCode register_passenger(CallHandler handler, RegistrationPassengerData req, RegistrationStatus* resp) {
 #ifdef _SERVICE_VERBOSE_

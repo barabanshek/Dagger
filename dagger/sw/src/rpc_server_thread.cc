@@ -25,7 +25,8 @@ RpcServerThread::RpcServerThread(const Nic* nic,
         nic_(nic),
         nic_flow_id_(nic_flow_id),
         server_callback_(callback),
-        num_worker_threads_(worker_threads) {
+        num_worker_threads_(worker_threads),
+        max(0) {
 #ifdef NIC_CCIP_MMIO
     if (cfg::nic::l_tx_queue_size != 0) {
         FRPC_ERROR("In MMIO mode, only one entry in the tx queue is allowed\n");
@@ -113,6 +114,7 @@ int RpcServerThread::start_listening(int pin_cpu) {
 void RpcServerThread::stop_listening() {
     stop_signal_ = 1;
     thread_.join();
+    std::cout << "RESULT::::::::::::::: maxworker_job_queue_= " << max << std::endl;
 }
 
 // Pull-based listening
@@ -179,13 +181,17 @@ void RpcServerThread::_PullListen() {
 
 void RpcServerThread::_Worker(size_t worker_id) {
     RpcPckt job;
-    while (true) {
+    while (!stop_signal_) {
         {
             std::unique_lock<std::mutex> lck(worker_thread_pool_lck_);
 
             // Wait until job comes
             while(worker_job_queue_.empty()) {
                 worker_thread_pool_cv_.wait(lck);
+            }
+
+            if (worker_job_queue_.size() > max) {
+                max = worker_job_queue_.size();
             }
 
             job = worker_job_queue_.front();
