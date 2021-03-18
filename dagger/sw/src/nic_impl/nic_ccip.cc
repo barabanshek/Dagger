@@ -15,7 +15,7 @@ namespace frpc {
 
 // Timeouts
 #define NIC_INIT_DELAY_S 1
-#define NIC_INIT_TIMEOUT 5 // in # of iteration of NIC_INIT_DELAY_S
+#define NIC_INIT_TIMEOUT 15 // in # of iteration of NIC_INIT_DELAY_S
 #define NIC_PERF_DELAY_S 2
 
 
@@ -498,6 +498,17 @@ int NicCCIP::remove_connection(ConnectionId c_id) const {
 
     }
 
+}
+
+void NicCCIP::set_lb(int lb) const {
+    // setUpOpen
+    int res = fpgaWriteMMIO64(accel_handle_,
+                         0,
+                         base_nic_addr_ + iRegLb,
+                         *reinterpret_cast<uint64_t*>(&lb));
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Nic configuration error, failed to configure LB %d\n", res);
+    }
 }
 
 int NicCCIP::get_nic_hw_status(NicHwStatus& status) const {

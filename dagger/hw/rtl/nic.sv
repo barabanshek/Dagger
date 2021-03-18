@@ -130,6 +130,9 @@ module nic
                         = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 30);
     localparam t_ccip_mmioAddr addrConnStatus
                         = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 32);
+    localparam t_ccip_mmioAddr addrLB
+                        = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 34);
+
 
 
     // Registers
@@ -150,6 +153,7 @@ module nic
     ConnSetupFrame                 iRegConnSetupFrame;
     logic                          iRegConnSetupFrame_en;
     ConnSetupStatus                iRegConnStatus;
+    logic                          iLB;
 
     // CSR read logic
     logic is_csr_read;
@@ -164,11 +168,6 @@ module nic
         // Always respond with something
         sTx.c2.mmioRdValid <= is_csr_read;
         sTx.c2.hdr.tid     <= mmio_req_hdr.tid;
-
-        // Save rpc connection status
-        if (rpc_conn_setup_status.valid) begin
-            iRegConnStatus <= rpc_conn_setup_status;
-        end
 
         // Addresses are of 32-bit objects in MMIO space.  Addresses
         // of 64-bit objects are thus multiples of 2.
@@ -233,6 +232,11 @@ module nic
             default: sTx.c2.data <= t_ccip_mmioData'(0);
         endcase
 
+        // Save rpc connection status
+        if (rpc_conn_setup_status.valid) begin
+            iRegConnStatus <= rpc_conn_setup_status;
+        end
+
         if (reset) begin
             sTx.c2.mmioRdValid <= 1'b0;
         end
@@ -285,6 +289,10 @@ module nic
     logic is_conn_setup_frame_write;
     assign is_conn_setup_frame_write = is_csr_write &&
                                         (mmio_req_hdr.address == addrConnSetup);
+
+    logic is_lb_write;
+    assign is_lb_write = is_csr_write &&
+                                        (mmio_req_hdr.address == addrLB);
 
     always_ff @(posedge ccip_clk) begin
         // Default values
@@ -345,6 +353,10 @@ module nic
             $display("NIC%d: iRegConnSetupFrame received: %08h", NIC_ID, sRx.c0.data);
             iRegConnSetupFrame <= sRx.c0.data[$bits(ConnSetupFrame)-1:0];
             iRegConnSetupFrame_en <= 1'b1;
+        end
+
+        if (is_lb_write) begin
+            iLB <= sRx.c0.data[$bits(iLB)-1:0];
         end
 
         if (reset) begin
@@ -529,6 +541,8 @@ module nic
         .rpc_out(from_ccip.rpc_data),
         .rpc_out_valid(from_ccip_valid),
         .rpc_flow_id_out(from_ccip.flow_id),
+
+        .lb_select(iLB),
 
         .ccip_tx_ready(ccip_tx_ready),
         .rpc_in(to_ccip.rpc_data),

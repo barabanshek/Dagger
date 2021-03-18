@@ -52,6 +52,8 @@ public:
     virtual int run_perf_thread(NicPerfMask perf_mask,
                         void(*callback)(const std::vector<uint64_t>&)) = 0;
 
+    virtual void set_lb(int lb) const = 0;
+
 };
 
 }  // namespace frpc

@@ -62,6 +62,8 @@ module ccip_queue_polling
         output t_if_ccip_c0_Tx sTx_c0,
         output t_if_ccip_c1_Tx sTx_c1,
 
+        input logic lb_select,
+
         // RPC interface
         output RpcPckt                      rpc_out,
         output logic                        rpc_out_valid,
@@ -335,6 +337,8 @@ module ccip_queue_polling
 
             .sRx_c1TxAlmFull(sRx_c1TxAlmFull),
             .sTx_c1(sTx_c1),
+
+            .lb_select(lb_select),
 
             .ccip_tx_ready(ccip_tx_ready),
             .rpc_in(rpc_in),

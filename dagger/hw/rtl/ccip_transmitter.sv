@@ -36,6 +36,8 @@ module ccip_transmitter
         output logic initialized,
         output logic error,
 
+        input logic lb_select,
+
         // CPU interface
         input  logic           sRx_c1TxAlmFull,
         output t_if_ccip_c1_Tx sTx_c1,
@@ -50,7 +52,7 @@ module ccip_transmitter
     );
 
     // Parameters
-    localparam LTX_FIFO_DEPTH = 7;
+    localparam LTX_FIFO_DEPTH = 3;
     localparam MAX_TX_FLOWS = 2**LMAX_NUM_OF_FLOWS;
     localparam RQ_LNUM_OF_SLOTS = LMAX_NUM_OF_FLOWS + LTX_FIFO_DEPTH;
 
@@ -123,6 +125,8 @@ module ccip_transmitter
     // Push logic
     FlowId rpc_flow_id_in_1d, rpc_flow_id_in_2d;
 
+    logic [15:0] lb_flow_cnt;
+
     integer i2, i3;
     always @(posedge clk) begin
         // Defaults
@@ -148,8 +152,18 @@ module ccip_transmitter
         if (rq_push_done) begin
             $display("NIC%d: CCI-P transmitter, writing request to flow fifo= %d, rq_slot_id= %d",
                                         NIC_ID, rpc_flow_id_in_2d, rq_slot_id);
-            ff_push_data[rpc_flow_id_in_2d] <= rq_slot_id;
-            ff_push_en[rpc_flow_id_in_2d] <= 1'b1;
+            if (lb_select && rpc_in.rpc_data.hdr.ctl.req_type == rpcReq) begin
+                ff_push_data[lb_flow_cnt] <= rq_slot_id;
+                ff_push_en[lb_flow_cnt] <= 1'b1;
+                if (lb_flow_cnt == number_of_flows) begin
+                    lb_flow_cnt <= {($bits(lb_flow_cnt)){1'b0}};
+                end else begin
+                    lb_flow_cnt <= lb_flow_cnt + 1;
+                end
+            end else begin
+                ff_push_data[rpc_flow_id_in_2d] <= rq_slot_id;
+                ff_push_en[rpc_flow_id_in_2d] <= 1'b1;
+            end
         end
 
         if (reset) begin
@@ -158,6 +172,8 @@ module ccip_transmitter
             for(i2=0; i2<MAX_TX_FLOWS; i2=i2+1) begin
                 ff_push_en[i2] <= 1'b0;
             end
+
+            lb_flow_cnt <= {($bits(lb_flow_cnt)){1'b0}};
         end
     end
 

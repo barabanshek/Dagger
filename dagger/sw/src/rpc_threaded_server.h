@@ -36,6 +36,8 @@ public:
     int run_perf_thread(NicPerfMask perf_mask,
                         void(*callback)(const std::vector<uint64_t>&));
 
+    void set_lb(int lb);
+
 private:
     size_t max_num_of_threads_;
     uint64_t base_nic_addr_;

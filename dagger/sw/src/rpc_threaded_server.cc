@@ -144,4 +144,8 @@ int RpcThreadedServer::run_perf_thread(NicPerfMask perf_mask,
     return nic_->run_perf_thread(perf_mask, callback);
 }
 
+void RpcThreadedServer::set_lb(int lb) {
+    nic_->set_lb(lb);
+}
+
 }  // namespace frpc

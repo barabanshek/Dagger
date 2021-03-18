@@ -50,6 +50,7 @@ public:
     static constexpr uint8_t iRegPollingRate = 112;  // hw: 28, W
     static constexpr uint8_t iRegConnSetupFrame = 120; // hw: 30, W
     static constexpr uint8_t iRegConnStatus     = 128;  // hw: 32, R
+    static constexpr uint8_t iRegLb     = 136;  // hw: 34, W
     static constexpr uint16_t iMMIOSpaceStart   = 256;  // hw: 64, -
 
     // Hardware register map constants
@@ -81,6 +82,8 @@ public:
     virtual int close_connection(ConnectionId c_id) const final;
     virtual int run_perf_thread(NicPerfMask perf_mask,
                         void(*callback)(const std::vector<uint64_t>&)) final;
+
+    virtual void set_lb(int lb) const final;
 
     // CCI-P implementation dependent functionality
     virtual int configure_data_plane() = 0;
