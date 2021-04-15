@@ -211,7 +211,7 @@ module udp_ip_tb();
             if (recv_queue_pop_data.payload != gen_payload(12)) begin
                 $display("MSIM> ERROR: incorrect payload received");
                 ++num_errors;
-            end 
+            end
 
             if (recv_queue_pop_data.addr_tpl.source_ip != '{8'h01, 8'h02, 8'h03, 8'h04} |
                     recv_queue_pop_data.addr_tpl.dest_ip != '{8'h00, 8'hff, 8'hcc, 8'h00} |

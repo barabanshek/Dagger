@@ -89,26 +89,26 @@ module ethernet_mac (
     (
         .pClk                   (clk),
         .pck_cp2af_softReset_T0 (reset),
-        .pck_cp2af_pwrState_T0  (pck_cp2af_pwrState), 
-        .pck_cp2af_error_T0     (pck_cp2af_error),    
-        .pck_cp2af_sRx_T0       (sRx),      
-        .pck_af2cp_sTx_T0       (pck_af2cp_sTx_T0), 
-        
+        .pck_cp2af_pwrState_T0  (pck_cp2af_pwrState),
+        .pck_cp2af_error_T0     (pck_cp2af_error),
+        .pck_cp2af_sRx_T0       (sRx),
+        .pck_af2cp_sTx_T0       (pck_af2cp_sTx_T0),
+
         .pck_cp2af_softReset_T1 (pck_cp2af_softReset_T1),
-        .pck_cp2af_pwrState_T1  (pck_cp2af_pwrState_T1), 
-        .pck_cp2af_error_T1     (pck_cp2af_error_T1),    
-        .pck_cp2af_sRx_T1       (pck_cp2af_sRx_T1),      
-        .pck_af2cp_sTx_T1       (sTx)    
+        .pck_cp2af_pwrState_T1  (pck_cp2af_pwrState_T1),
+        .pck_cp2af_error_T1     (pck_cp2af_error_T1),
+        .pck_cp2af_sRx_T1       (pck_cp2af_sRx_T1),
+        .pck_af2cp_sTx_T1       (sTx)
     );
 
 
     //------------------------------------------------------------------------------
-    // extracting/setting signals on CCIP interface structure 
+    // extracting/setting signals on CCIP interface structure
     //------------------------------------------------------------------------------
     t_ccip_c0_ReqMmioHdr    cp2csr_MmioHdr;
     logic                   cp2csr_MmioWrEn;
     logic                   cp2csr_MmioRdEn;
-    t_ccip_mmioData         cp2csr_MmioDin; 
+    t_ccip_mmioData         cp2csr_MmioDin;
     t_ccip_c2_RspMmioHdr    csr2cp_MmioHdr;
     t_ccip_mmioData         csr2cp_MmioDout;
     logic                   csr2cp_MmioDout_v;
@@ -129,7 +129,7 @@ module ethernet_mac (
 
 
     //------------------------------------------------------------------------------
-    // CSR registers 
+    // CSR registers
     //------------------------------------------------------------------------------
     wire [15:0] csr_addr_4B = cp2csr_MmioHdr.address;
     wire [14:0] csr_addr_8B = cp2csr_MmioHdr.address[15:1];
@@ -156,7 +156,7 @@ module ethernet_mac (
     logic [255:0] eth_tx_data;
     logic eth_tx_valid;
     logic eth_tx_sop;
-    logic eth_tx_eop;  
+    logic eth_tx_eop;
     logic [4:0] eth_tx_empty;
     logic eth_tx_error;
 
@@ -260,7 +260,7 @@ module ethernet_mac (
                     AFU_INIT     [6:3]: afu_init    <= cp2csr_MmioDin;
                     ETH_CTRL_ADDR[6:3]: ctrl_addr   <= cp2csr_MmioDin[31:0];
                     ETH_WR_DATA  [6:3]: wr_data     <= cp2csr_MmioDin[31:0];
-                    AFU_SCRATCH  [6:3]: afu_scratch <= cp2csr_MmioDin;           
+                    AFU_SCRATCH  [6:3]: afu_scratch <= cp2csr_MmioDin;
                     default: ;
                 endcase
         end
@@ -269,7 +269,7 @@ module ethernet_mac (
     always @(posedge clk)
     begin
         case (csr_addr_8B[3:0])
-            AFU_DFH      [6:3]: csr_rd_data <= 'h1000000000000001;  
+            AFU_DFH      [6:3]: csr_rd_data <= 'h1000000000000001;
             AFU_ID_L     [6:3]: csr_rd_data <= 'hB3C151A1B62ED6C2;
             AFU_ID_H     [6:3]: csr_rd_data <= 'h26B40788034B4389;
             AFU_INIT     [6:3]: begin
@@ -286,7 +286,7 @@ module ethernet_mac (
 
 
     //------------------------------------------------------------------------------
-    // build the response signals for CCIP interface 
+    // build the response signals for CCIP interface
     //------------------------------------------------------------------------------
     logic           csr_ren_T1;
     t_ccip_tid      csr_tid_T1;
@@ -305,7 +305,7 @@ module ethernet_mac (
             // Pipe Stage T2
             csr2cp_MmioDout_v <= csr_ren_T1;
         end
-    end    
+    end
 
     always @(posedge clk)
     begin

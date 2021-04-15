@@ -60,7 +60,7 @@ module top_level_network_module (
 
 
     // =============================================================
-    // Install CCI-P MUX    
+    // Install CCI-P MUX
     // =============================================================
     t_if_ccip_Rx    pck_afu_RxPort        [NUM_SUB_AFUS-1:0];
     t_if_ccip_Tx    pck_afu_TxPort        [NUM_SUB_AFUS-1:0];
@@ -77,7 +77,7 @@ module top_level_network_module (
                         .afu_SoftReset(ccip_mux2pe_reset),
                         .afu_PwrState(),
                         .afu_Error(),
-                        .afu_RxPort(pck_afu_RxPort), 
+                        .afu_RxPort(pck_afu_RxPort),
                         .afu_TxPort(pck_afu_TxPort)
         );
 
