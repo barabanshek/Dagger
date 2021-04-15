@@ -42,9 +42,35 @@ module nic
     input  t_if_ccip_Rx sRx,
     output t_if_ccip_Tx sTx,
 
-    // Network interface
+`ifdef PHY_NETWORK
+    // L1 network interface (used for physical networking)
+    // TX Avalon-ST interface
+    input              tx_clk_in,
+    input              tx_reset_in,
+    input              tx_ready_in,
+    output reg [255:0] tx_data_out,
+    output reg         tx_valid_out,
+    output reg         tx_sop_out,
+    output reg         tx_eop_out,
+    output reg [4:0]   tx_empty_out,
+    output reg         tx_error_out,
+
+    // RX Avalon-ST interface
+    input           rx_clk_in,
+    input           rx_reset_in,
+    input   [255:0] rx_data_in,
+    input           rx_valid_in,
+    input           rx_sop_in,
+    input           rx_eop_in,
+    input     [4:0] rx_empty_in,
+    input     [5:0] rx_error_in,
+    output reg      rx_ready_out
+`else
+    // L4 network interface (used for L4 loopback)
+    output logic network_clk_out,
     output NetworkIf network_tx_out,
     input NetworkIf network_rx_in
+`endif
 
     );
 
@@ -83,7 +109,7 @@ module nic
     assign rpc_clk = clk_div_2;
 
     logic network_clk;
-    assign network_clk = clk_div_2;
+    assign network_clk = rpc_clk;
 
 
     // =============================================================
@@ -580,6 +606,8 @@ module nic
     RpcIf to_rpc;
     logic to_rpc_valid;
 
+    NetworkIf network_tx, network_rx;
+
     async_fifo_channel #(
             .DATA_WIDTH($bits(RpcIf)),
             .LOG_DEPTH(RPC_IO_FIFO_LDEPTH)
@@ -667,23 +695,64 @@ module nic
             .rpc_valid_out(from_rpc_valid),
             .rpc_out(from_rpc),
 
-            .network_tx_out(network_tx_out),
-            .network_rx_in(network_rx_in)
+            .network_tx_out(network_tx),
+            .network_rx_in(network_rx)
         );
 
 
     // =============================================================
     // Networking layer
     // =============================================================
-    // Dump network packets (as $display so far)
+    // Dump network packets (as $display)
     always @(posedge network_clk) begin
-        if (network_tx_out.valid) begin
-            $display("NIC%d: network TX packet requested %p", NIC_ID, network_tx_out);
+        if (network_tx.valid) begin
+            $display("NIC%d: network TX packet requested %p", NIC_ID, network_tx);
         end
-        if (network_rx_in.valid) begin
-            $display("NIC%d: network RX packet requested %p", NIC_ID, network_rx_in);
+        if (network_rx.valid) begin
+            $display("NIC%d: network RX packet requested %p", NIC_ID, network_rx);
         end
     end
+
+`ifdef PHY_NETWORK
+    // UDP/IP
+    udp_ip udp_ (
+            .clk(network_clk),
+            .reset(reset),
+            .network_tx_in(network_tx),
+            .network_rx_out(network_rx),
+
+            .tx_clk_in (tx_clk_in),
+            .tx_reset_in (tx_reset_in),
+            .tx_ready_in (tx_ready_in),
+            .tx_data_out (tx_data_out),
+            .tx_valid_out (tx_valid_out),
+            .tx_sop_out (tx_sop_out),
+            .tx_eop_out (tx_eop_out),
+            .tx_empty_out (tx_empty_out),
+            .tx_error_out (tx_error_out),
+
+            .rx_clk_in (rx_clk_in),
+            .rx_reset_in (rx_reset_in),
+            .rx_data_in (rx_data_in),
+            .rx_valid_in (rx_valid_in),
+            .rx_sop_in (rx_sop_in),
+            .rx_eop_in (rx_eop_in),
+            .rx_empty_in (rx_empty_in),
+            .rx_error_in (rx_error_in),
+            .rx_ready_out (rx_ready_out),
+
+            .pckt_drop_cnt_in(),
+            .pckt_drop_cnt_valid_in(),
+            .pckt_drop_cnt_out(),
+
+            .error()
+        );
+`else
+    // L4 I/O
+    assign network_clk_out = network_clk;
+    assign network_tx_out = network_tx;
+    assign network_rx = network_rx_in;
+`endif
 
 
     // =============================================================
@@ -770,12 +839,13 @@ module nic
             .t_pdrop_tx_flows(pdrop_tx_flows),
 
             .clk_1(network_clk),
-            .t_outcoming_network_packets(network_tx_out.valid),
-            .t_incoming_network_packets(network_rx_in.valid),
+            .t_outcoming_network_packets(network_tx.valid),
+            .t_incoming_network_packets(network_rx.valid),
 
             .clk_io(ccip_clk),
             .counter_id_in(iRegGetPckCnt),
             .counter_value_out(iRegPckCnt)
         );
+
 
 endmodule

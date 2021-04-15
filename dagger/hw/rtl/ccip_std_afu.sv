@@ -38,10 +38,13 @@
 //
 //
 // ***************************************************************************
-
-
-`include "top_level.sv"
 `include "ccip_async_shim.sv"
+
+`ifdef PHY_NETWORK
+`include "top_level_network.sv"
+`else
+`include "top_level_loopback.sv"
+`endif
 
 module ccip_std_afu (
     // CCI-P Clocks and Resets
@@ -54,10 +57,28 @@ module ccip_std_afu (
     input           logic [1:0]       pck_cp2af_pwrState,       // CCI-P AFU Power State
     input           logic             pck_cp2af_error,          // CCI-P Protocol Error Detected
 
-    // Interface structures
+    // Host and Network interfaces
+`ifdef PLATFORM_PAC_A10
+    // Host interface
     input           t_if_ccip_Rx      pck_cp2af_sRx,        // CCI-P Rx Port
-    output          t_if_ccip_Tx      pck_af2cp_sTx         // CCI-P Tx Port
+    output          t_if_ccip_Tx      pck_af2cp_sTx,        // CCI-P Tx Port
+
+    // Raw HSSI interface
+    pr_hssi_if.to_fiu   hssi
+`else
+    // Host interface
+    input           t_if_ccip_Rx      pck_cp2af_sRx,       // CCI-P Rx Port
+    output          t_if_ccip_Tx      pck_af2cp_sTx        // CCI-P Tx Port
+`endif
+
     );
+
+    // Check platform specification and type of networking
+    `ifdef PHY_NETWORK
+        `ifndef PLATFORM_PAC_A10
+            $error("Physical networking is only supported when building for the PAC-A10 patform")
+        `endif
+    `endif
 
     // Define default clock
     `define SYS_CLOCK_200
@@ -65,6 +86,7 @@ module ccip_std_afu (
 
 `ifdef SYS_CLOCK_200
     // Run system with medium frequency: 200 and 100MHz
+    $info("Building system with medium frequencies");
 
     t_if_ccip_Tx afu_tx;
     t_if_ccip_Rx afu_rx;
@@ -85,24 +107,61 @@ module ccip_std_afu (
     );
 
     // Top-level
-    top_level_module top_level (
+`ifdef PHY_NETWORK
+    $info("Building system with physical networking support");
+
+    top_level_network_module top_level (
         .pClk(pClkDiv2),
         .pClkDiv2(pClkDiv2),
         .pReset(reset_pass),
+
+        .pck_cp2af_sRx(afu_rx),
+        .pck_af2cp_sTx(afu_tx),
+
+        .hssi(hssi)
+    );
+`else
+    $info("Building system with loopback networking support");
+
+    top_level_loopback_module top_level (
+        .pClk(pClkDiv2),
+        .pClkDiv2(pClkDiv2),
+        .pReset(reset_pass),
+
         .pck_cp2af_sRx(afu_rx),
         .pck_af2cp_sTx(afu_tx)
     );
+`endif
 
 `elsif SYS_CLOCK_400
     // Run system with high frequency: 400 and 200MHz
+    $info("Building system with high frequencies");
 
-    top_level_module top_level (
+`ifdef PHY_NETWORK
+    $info("Building system with physical networking support");
+
+    top_level_network_module top_level (
         .pClk(pClk),
         .pClkDiv2(pClkDiv2),
         .pReset(pck_cp2af_softReset),
-        .pck_cp2af_sRx(pck_cp2af_sRx),
-        .pck_af2cp_sTx(pck_af2cp_sTx)
+
+        .pck_cp2af_sRx(afu_rx),
+        .pck_af2cp_sTx(afu_tx),
+
+        .hssi(hssi)
     );
+`else
+    $info("Building system with loopback networking support");
+
+    top_level_loopback_module top_level (
+        .pClk(pClk),
+        .pClkDiv2(pClkDiv2),
+        .pReset(pck_cp2af_softReset),
+
+        .pck_cp2af_sRx(afu_rx),
+        .pck_af2cp_sTx(afu_tx)
+    );
+`endif
 
 `else
     $error("** Illegal Configuration ** the system clock is not defined");

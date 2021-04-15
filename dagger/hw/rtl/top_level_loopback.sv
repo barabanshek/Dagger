@@ -1,8 +1,9 @@
 // Author: Cornell University
 //
-// Module Name :    top_level_module
+// Module Name :    top_level_loopback_module
 // Project :        F-NIC
 // Description :    Top-level module for the design
+//                    - using loopback
 //                    - instantiates two NICs
 //
 
@@ -12,15 +13,15 @@
 
 //`include "nic_defs.vh"
 
-module top_level_module (
+module top_level_loopback_module (
     // CCI-P Clocks and Resets
     input           logic             pClk,          // 200MHz
     input           logic             pClkDiv2,      // 100MHz
     input           logic             pReset,
 
-    // Interface structures
-    input           t_if_ccip_Rx      pck_cp2af_sRx,        // CCI-P Rx Port, 200MHz
-    output          t_if_ccip_Tx      pck_af2cp_sTx         // CCI-P Tx Port, 200MHz
+    // Host interface
+    input           t_if_ccip_Rx      pck_cp2af_sRx,       // CCI-P Rx Port
+    output          t_if_ccip_Tx      pck_af2cp_sTx        // CCI-P Tx Port
     );
 
     // We need two NICs:
@@ -141,6 +142,7 @@ module top_level_module (
         );
 
 
+
     // =============================================================
     // Emulate ToR network as a loop-back connection with latency
     //   - current latency = 1 cycle
@@ -160,5 +162,6 @@ module top_level_module (
             network_Rx_line_1.valid <= 1'b0;
         end
     end
+
 
 endmodule

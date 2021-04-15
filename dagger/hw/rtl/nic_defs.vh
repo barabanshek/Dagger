@@ -24,7 +24,7 @@ typedef struct packed {
     RpcPckt rpc_data;
 } RpcIf;
 
-// Network interface
+// RPC Network interface (to transport)
 //----------------------------------------------------------------------
 localparam TRANSPORT_DATA_WIDTH = 512;
 
@@ -43,5 +43,24 @@ typedef struct packed {
     logic valid;
 } NetworkIf;
 
+// RPC Transport network interface (to PHY/MAC)
+//----------------------------------------------------------------------
+//localparam MAC_PHY_DATA_WIDTH = 256;
+//
+//typedef struct packed {
+//    logic                          tx_clk_in;
+//    logic                          tx_reset_in;
+//    logic                          tx_ready_in;
+//    logic [MAC_PHY_DATA_WIDTH-1:0] tx_data_out;
+//    logic                          tx_valid_out;
+//    logic                          tx_sop_out;
+//    logic                          tx_eop_out;
+//    logic   [4:0]                  tx_empty_out;
+//    logic                          tx_error_out;
+//} AvalonNetworkIf_Tx;
+//
+//typedef struct packed {
+//	
+//} AvalonNetworkIf_Rx;
 
 `endif //  NIC_DEFS_VH_

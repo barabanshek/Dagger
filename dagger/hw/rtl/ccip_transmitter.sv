@@ -255,13 +255,13 @@ module ccip_transmitter
 
         // Transmit over CCI-P
         // Data
-        sTx_c1.hdr                    <= t_ccip_c1_ReqMemHdr'(0);
-        sTx_c1.hdr.cl_len             <= tx_cl_len;
-        sTx_c1.hdr.vc_sel             <= eVC_VH0;
-        sTx_c1.hdr.req_type           <= eREQ_WRLINE_I;
-        sTx_c1.hdr.address            <= tx_base_addr + tx_out_flow_shift + tx_out_batch_cnt;
-        sTx_c1.hdr.sop                <= tx_out_batch_cnt == 0;
-        sTx_c1.data[$bits(RpcIf)-1:0] <= rq_pop_data;   // TODO: fix here!
+        sTx_c1.hdr                      <= t_ccip_c1_ReqMemHdr'(0);
+        sTx_c1.hdr.cl_len               <= tx_cl_len;
+        sTx_c1.hdr.vc_sel               <= eVC_VH0;
+        sTx_c1.hdr.req_type             <= eREQ_WRLINE_I;
+        sTx_c1.hdr.address              <= tx_base_addr + tx_out_flow_shift + tx_out_batch_cnt;
+        sTx_c1.hdr.sop                  <= tx_out_batch_cnt == 0;
+        sTx_c1.data[$bits(RpcPckt)-1:0] <= rq_pop_data.rpc_data;
 
         // Control
         sTx_c1.valid <= 1'b0;

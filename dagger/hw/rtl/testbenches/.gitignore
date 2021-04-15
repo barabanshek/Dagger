@@ -1,0 +1,5 @@
+*.ini
+*.opt
+*.wlf
+transcript
+work/

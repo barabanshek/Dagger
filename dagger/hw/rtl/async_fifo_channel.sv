@@ -9,6 +9,7 @@ module async_fifo_channel
     #(
         parameter DATA_WIDTH = 32,
         parameter LOG_DEPTH = 5,
+        parameter CLOCK_ARE_SYNCHRONIZED = "TRUE",
         parameter DELAY_PIPE = 0
     )
     (
@@ -67,7 +68,7 @@ module async_fifo_channel
         dcfifo_.lpm_widthu  = LOG_DEPTH,
         dcfifo_.overflow_checking  = "ON",
         dcfifo_.rdsync_delaypipe  = DELAY_PIPE,
-        dcfifo_.clocks_are_synchronized = "TRUE",
+        dcfifo_.clocks_are_synchronized = CLOCK_ARE_SYNCHRONIZED,
         dcfifo_.read_aclr_synch  = "ON",
         dcfifo_.underflow_checking  = "ON",
         dcfifo_.use_eab  = "ON",
