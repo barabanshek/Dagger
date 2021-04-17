@@ -8,7 +8,7 @@
 `ifndef GEN_DEFS_VH_
 `define GEN_DEFS_VH_
 
-// MAC address structure, internal representation
+// Physical (MAC) address structure
 //----------------------------------------------------------------------
 typedef struct packed {
 	logic [7:0] b0;
@@ -17,9 +17,9 @@ typedef struct packed {
 	logic [7:0] b3;
 	logic [7:0] b4;
 	logic [7:0] b5;
-} MAC;
+} PhyAddr;
 
-// IPv4 address structure, internal representation
+// IPv4 address structure
 //----------------------------------------------------------------------
 typedef struct packed {
     logic [7:0] b0;

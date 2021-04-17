@@ -28,15 +28,15 @@ module ethernet_mac (
 
     // Networking interface
     // TX Avalon-ST interface
-    output              tx_clk_out      ,// Avalon-ST TX clk
-    output              tx_reset_out    ,// Avalon-ST TX reset
-    output              tx_ready_out    ,// Avalon-ST TX ready
-    input reg [255:0] tx_data_in    ,// Avalon-ST TX data
-    input reg         tx_valid_in    ,// Avalon-ST TX data valid
-    input reg         tx_sop_in      ,// Avalon-ST TX start-of-packet
-    input reg         tx_eop_in     ,// Avalon-ST TX end-of-packet
-    input reg [4:0]   tx_empty_in    ,// Avalon-ST TX empty
-    input reg         tx_error_in    ,// Avalon-ST TX error
+    output             tx_clk_out      ,// Avalon-ST TX clk
+    output             tx_reset_out    ,// Avalon-ST TX reset
+    output             tx_ready_out    ,// Avalon-ST TX ready
+    input logic [255:0] tx_data_in    ,// Avalon-ST TX data
+    input logic         tx_valid_in    ,// Avalon-ST TX data valid
+    input logic         tx_sop_in      ,// Avalon-ST TX start-of-packet
+    input logic         tx_eop_in     ,// Avalon-ST TX end-of-packet
+    input logic [4:0]   tx_empty_in    ,// Avalon-ST TX empty
+    input logic         tx_error_in    ,// Avalon-ST TX error
 
     // RX Avalon-ST interface
     output           rx_clk_out      ,// Avalon-ST RX clk
@@ -47,7 +47,7 @@ module ethernet_mac (
     output           rx_eop_out      ,// Avalon-ST RX end-of-packet
     output     [4:0] rx_empty_out    ,// Avalon-ST RX empty
     output     [5:0] rx_error_out    ,// Avalon-ST RX error
-    input reg      rx_ready_in,     // Avalon-ST RX ready
+    input logic      rx_ready_in,     // Avalon-ST RX ready
 
     // Raw HSSI interface
     pr_hssi_if.to_fiu   hssi
@@ -57,9 +57,9 @@ module ethernet_mac (
     //------------------------------------------------------------------------------
     // Internal signals
     //------------------------------------------------------------------------------
-    reg         init_done_r;
-    reg  [63:0] afu_scratch;
-    reg  [63:0] afu_init;
+    logic         init_done_r;
+    logic  [63:0] afu_scratch;
+    logic  [63:0] afu_init;
 
 
     //------------------------------------------------------------------------------

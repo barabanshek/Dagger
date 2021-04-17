@@ -12,6 +12,10 @@
 
 module udp_ip
     (
+        // Addresses
+        input PhyAddr host_phy_addr,
+        input IPv4 host_ipv4_addr,
+
         // App interface
         input logic reset,
         input logic clk,
@@ -20,26 +24,26 @@ module udp_ip
 
         // Networking MAC/PHY interface
         // TX Avalon-ST interface
-        input              tx_clk_in,
-        input              tx_reset_in,
-        input              tx_ready_in,
-        output reg [255:0] tx_data_out,
-        output reg         tx_valid_out,
-        output reg         tx_sop_out,
-        output reg         tx_eop_out,
-        output reg [4:0]   tx_empty_out,
-        output reg         tx_error_out,
+        input                tx_clk_in,
+        input                tx_reset_in,
+        input                tx_ready_in,
+        output logic [255:0] tx_data_out,
+        output logic         tx_valid_out,
+        output logic         tx_sop_out,
+        output logic         tx_eop_out,
+        output logic [4:0]   tx_empty_out,
+        output logic         tx_error_out,
 
         // RX Avalon-ST interface
-        input           rx_clk_in,
-        input           rx_reset_in,
-        input   [255:0] rx_data_in,
-        input           rx_valid_in,
-        input           rx_sop_in,
-        input           rx_eop_in,
-        input     [4:0] rx_empty_in,
-        input     [5:0] rx_error_in,
-        output reg      rx_ready_out,
+        input             rx_clk_in,
+        input             rx_reset_in,
+        input   [255:0]   rx_data_in,
+        input             rx_valid_in,
+        input             rx_sop_in,
+        input             rx_eop_in,
+        input     [4:0]   rx_empty_in,
+        input     [5:0]   rx_error_in,
+        output logic      rx_ready_out,
 
         // Drop counter interfaces
         input logic [3:0]   pckt_drop_cnt_in,
@@ -54,6 +58,8 @@ module udp_ip
     localparam RPC_PAYLOAD_SIZE_BYTES = 64;
 
     typedef logic[255:0] TxData_;
+
+    localparam BROADCAST_PHY_ADDR = 48'hFFFFFFFFFFFF;
 
     typedef struct packed {
         logic [15:0] src_port;
@@ -95,13 +101,6 @@ module udp_ip
 
 
     // =============================================================
-    // Local networking configuration
-    // =============================================================
-    PhyAddr host_mac = '{8'h00,8'h00,8'h00,8'h00,8'h00,8'h00};
-    logic [31:0] host_ip = 32'h00000001;
-
-
-    // =============================================================
     // TX path
     // =============================================================
     localparam LTX_FIFO_DEPTH = 5;
@@ -118,7 +117,7 @@ module udp_ip
             .CLOCK_ARE_SYNCHRONIZED("FALSE"),
             .DELAY_PIPE(4)
         ) tx_fifo (
-            .clear(tx_reset_in),
+            .clear(reset),
             .clk_1(clk),
 
             .push_en(network_tx_in.valid),
@@ -134,6 +133,14 @@ module udp_ip
             .error(tx_fifo_ovf)
         );
 
+    // Sync
+    PhyAddr host_phy_addr_sync_tx;
+    IPv4 host_ipv4_addr_sync_tx;
+    always_ff @(posedge tx_clk_in) begin
+        host_phy_addr_sync_tx <= host_phy_addr;
+        host_ipv4_addr_sync_tx <= host_ipv4_addr;
+    end
+
     // Check for tx_fifo overflow
     logic [31:0] tx_fifo_drop;
     always_ff @(posedge clk) begin
@@ -146,8 +153,8 @@ module udp_ip
     // Packet headers
     EthernetHdr tx_eth_hdr;
     always_comb begin
-        tx_eth_hdr = '{'{8'hFF,8'hFF,8'hFF,8'hFF,8'hFF,8'hFF},
-                       '{8'h00,8'h00,8'h00,8'h00,8'h00,8'h00},  // TODO: change host mac
+        tx_eth_hdr = '{BROADCAST_PHY_ADDR,
+                       host_phy_addr_sync_tx,
                        $bits(IPHdr)/8 + $bits(UDPHdr)/8 + RPC_PAYLOAD_SIZE_BYTES};
     end
 
@@ -164,7 +171,7 @@ module udp_ip
         tx_ip_hdr.time_to_live = 8'h0;
         tx_ip_hdr.protocol = 8'h11; // UDP
         tx_ip_hdr.header_checksum = 16'h0;
-        tx_ip_hdr.src_ip = tx_fifo_pop_data.addr_tpl.source_ip;
+        tx_ip_hdr.src_ip = host_ipv4_addr_sync_tx;
         tx_ip_hdr.dest_ip = tx_fifo_pop_data.addr_tpl.dest_ip;
     end
 
@@ -363,6 +370,14 @@ module udp_ip
     // =============================================================
     localparam LRX_FIFO_DEPTH = 5;
 
+    // Sync
+    PhyAddr host_phy_addr_sync_rx;
+    IPv4 host_ipv4_addr_sync_rx;
+    always_ff @(posedge rx_clk_in) begin
+        host_phy_addr_sync_rx <= host_phy_addr;
+        host_ipv4_addr_sync_rx <= host_ipv4_addr;
+    end
+
     // RX FSM
     typedef enum logic [2:0] { RxSop, RxData, RxData_1, RxEop } RxState;
 
@@ -460,10 +475,10 @@ module udp_ip
                         rx_payload[511:432] <= rx_data_in[79:0];
 
                         // Drop packet here if needed
-                        //if (~drop_packet)
+                        if (~drop_packet)
                             rx_valid <= 1'b1;
-                        //else
-                        //    drop_cnt <= drop_cnt + 1;
+                        else
+                            drop_cnt <= drop_cnt + 1;
                     end
                 end
             end
@@ -485,18 +500,20 @@ module udp_ip
             drop_packet <= 1'b0;
 
         end else begin
-            drop_packet <= 1'b0;
+            // Reset drop_packet
+            if (rx_state == RxSop)
+                drop_packet <= 1'b0;
 
             // Check for errors, drop packets if found
             if (udp_ip_hdr_valid) begin
                 // Check for the physical address errors
-                if (rx_eth_hdr.dest_mac != host_mac) begin
+                if (rx_eth_hdr.dest_mac != BROADCAST_PHY_ADDR && rx_eth_hdr.dest_mac != host_phy_addr_sync_rx) begin
                     dest_mac_error_cnt <= dest_mac_error_cnt + 1;
                     drop_packet <= 1'b1;
                 end
 
                 // Check for the IP address errors
-                if (rx_ip_hdr.dest_ip != host_ip) begin
+                if (rx_ip_hdr.dest_ip != host_ipv4_addr_sync_rx) begin
                     dest_ip_error_cnt <= dest_ip_error_cnt + 1;
                     drop_packet <= 1'b1;
                 end
@@ -538,7 +555,7 @@ module udp_ip
             .CLOCK_ARE_SYNCHRONIZED("FALSE"),
             .DELAY_PIPE(4)
         ) rx_fifo (
-            .clear(reset),
+            .clear(rx_reset_in),
             .clk_1(rx_clk_in),
 
             .push_en(network_rx_out_fifo.valid),
@@ -576,6 +593,18 @@ module udp_ip
     // =============================================================
     // Drop counter interface
     // =============================================================
+    logic [31:0] drop_cnt_sync, rx_fifo_drop_sync, tx_fifo_drop_sync, dest_mac_error_cnt_sync,
+                 dest_ip_error_cnt_sync, protocol_id_err_cnt_sync, ip_version_err_cnt_sync;
+    always_ff @(posedge clk) begin
+        drop_cnt_sync <= drop_cnt;
+        rx_fifo_drop_sync <= rx_fifo_drop;
+        tx_fifo_drop_sync <= tx_fifo_drop;
+        dest_mac_error_cnt_sync <= dest_mac_error_cnt;
+        dest_ip_error_cnt_sync <= dest_ip_error_cnt;
+        protocol_id_err_cnt_sync <= protocol_id_err_cnt;
+        ip_version_err_cnt_sync <= ip_version_err_cnt;
+    end
+
     always_ff @(posedge clk) begin
         if (reset)
             pckt_drop_cnt_out <= 32'b0;
@@ -583,25 +612,25 @@ module udp_ip
             if (pckt_drop_cnt_valid_in) begin
                 case (pckt_drop_cnt_in)
                     // Total number of drops
-                    0: pckt_drop_cnt_out <= drop_cnt;
+                    0: pckt_drop_cnt_out <= drop_cnt_sync;
 
                     // Drops due to rx fifo ovf
-                    1: pckt_drop_cnt_out <= rx_fifo_drop;
+                    1: pckt_drop_cnt_out <= rx_fifo_drop_sync;
 
                     // Drops due to tx fifo ovf
-                    2: pckt_drop_cnt_out <= tx_fifo_drop;
+                    2: pckt_drop_cnt_out <= tx_fifo_drop_sync;
 
                     // Drop due to dest_mac_error_cnt
-                    3: pckt_drop_cnt_out <= dest_mac_error_cnt;
+                    3: pckt_drop_cnt_out <= dest_mac_error_cnt_sync;
 
                     // Drops due to dest_ip_error_cnt
-                    4: pckt_drop_cnt_out <= dest_ip_error_cnt;
+                    4: pckt_drop_cnt_out <= dest_ip_error_cnt_sync;
 
                     // Drops due to protocol_id_err_cnt
-                    5: pckt_drop_cnt_out <= protocol_id_err_cnt;
+                    5: pckt_drop_cnt_out <= protocol_id_err_cnt_sync;
 
                     // Drops due to ip_version_err_cnt
-                    6: pckt_drop_cnt_out <= ip_version_err_cnt;
+                    6: pckt_drop_cnt_out <= ip_version_err_cnt_sync;
 
                     default: pckt_drop_cnt_out <= 32'b0;
                 endcase

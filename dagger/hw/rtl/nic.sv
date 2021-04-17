@@ -158,8 +158,14 @@ module nic
                         = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 32);
     localparam t_ccip_mmioAddr addrLB
                         = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 34);
-
-
+    localparam t_ccip_mmioAddr addrPhyNetAddr
+                        = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 36);
+    localparam t_ccip_mmioAddr addrIPv4NetAddr
+                        = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 38);
+    localparam t_ccip_mmioAddr addrNetDropCntRead
+                        = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 40);
+    localparam t_ccip_mmioAddr addrNetDropCnt
+                        = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 42);
 
     // Registers
     t_ccip_clAddr                  iRegMemTxAddr;
@@ -180,6 +186,11 @@ module nic
     logic                          iRegConnSetupFrame_en;
     ConnSetupStatus                iRegConnStatus;
     logic                          iLB;
+    PhyAddr                        iRegPhyNetAddr;
+    IPv4                           iRegIpv4NetAddr;
+    logic                          iRegReadNetDropCntValid;
+    logic[4:0]                     iRegReadNetDropCnt;
+    logic[31:0]                    iRegNetDropCnt;
 
     // CSR read logic
     logic is_csr_read;
@@ -255,6 +266,10 @@ module nic
                 iRegConnStatus <= {($bits(iRegConnStatus)){1'b0}};
             end
 
+            addrNetDropCnt: begin
+                sTx.c2.data[31:0] <= iRegNetDropCnt;
+            end
+
             default: sTx.c2.data <= t_ccip_mmioData'(0);
         endcase
 
@@ -320,10 +335,23 @@ module nic
     assign is_lb_write = is_csr_write &&
                                         (mmio_req_hdr.address == addrLB);
 
+    logic is_phy_net_addr_write;
+    assign is_phy_net_addr_write = is_csr_write &&
+                                        (mmio_req_hdr.address == addrPhyNetAddr);
+
+    logic is_ipv4_net_addr_write;
+    assign is_ipv4_net_addr_write = is_csr_write &&
+                                        (mmio_req_hdr.address == addrIPv4NetAddr);
+
+    logic is_net_drop_cnt_read;
+    assign is_net_drop_cnt_read = is_csr_write &&
+                                        (mmio_req_hdr.address == addrNetDropCntRead);
+
     always_ff @(posedge ccip_clk) begin
         // Default values
         iRegNicInit <= 1'b0;
         iRegConnSetupFrame_en <= 1'b0;
+        iRegReadNetDropCntValid <= 1'b0;
 
         if (is_mem_tx_addr_csr_write) begin
             $display("NIC%d: iRegMemTxAddr configured: %08h", NIC_ID, sRx.c0.data);
@@ -385,10 +413,32 @@ module nic
             iLB <= sRx.c0.data[$bits(iLB)-1:0];
         end
 
+        if (is_phy_net_addr_write) begin
+            iRegPhyNetAddr.b0 <= sRx.c0.data[7:0];
+            iRegPhyNetAddr.b1 <= sRx.c0.data[15:8];
+            iRegPhyNetAddr.b2 <= sRx.c0.data[23:16];
+            iRegPhyNetAddr.b3 <= sRx.c0.data[31:24];
+            iRegPhyNetAddr.b4 <= sRx.c0.data[39:32];
+            iRegPhyNetAddr.b5 <= sRx.c0.data[47:40];
+        end
+
+        if (is_ipv4_net_addr_write) begin
+            iRegIpv4NetAddr.b0 <= sRx.c0.data[7:0];
+            iRegIpv4NetAddr.b1 <= sRx.c0.data[15:8];
+            iRegIpv4NetAddr.b2 <= sRx.c0.data[23:16];
+            iRegIpv4NetAddr.b3 <= sRx.c0.data[31:24];
+        end
+
+        if (is_net_drop_cnt_read) begin
+            iRegReadNetDropCnt <= sRx.c0.data[3:0];
+            iRegReadNetDropCntValid <= 1'b1;
+        end
+
         if (reset) begin
             iRegNicStart <= 1'b0;
             iRegNicInit  <= 1'b0;
             iRegConnSetupFrame_en <= 1'b0;
+            iRegReadNetDropCntValid <= 1'b0;
         end
     end
 
@@ -716,6 +766,9 @@ module nic
 `ifdef PHY_NETWORK
     // UDP/IP
     udp_ip udp_ (
+            .host_phy_addr(iRegPhyNetAddr),
+            .host_ipv4_addr(iRegIpv4NetAddr),
+
             .clk(network_clk),
             .reset(reset),
             .network_tx_in(network_tx),
@@ -741,9 +794,9 @@ module nic
             .rx_error_in (rx_error_in),
             .rx_ready_out (rx_ready_out),
 
-            .pckt_drop_cnt_in(),
-            .pckt_drop_cnt_valid_in(),
-            .pckt_drop_cnt_out(),
+            .pckt_drop_cnt_in(iRegReadNetDropCnt),
+            .pckt_drop_cnt_valid_in(iRegReadNetDropCntValid),
+            .pckt_drop_cnt_out(iRegNetDropCnt),
 
             .error()
         );
