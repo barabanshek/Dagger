@@ -30,7 +30,9 @@ EXTERNC int memcached_wrapper_register_functions(
                                                 struct PopulateRequest,
                                                 struct PopulateResponse*));
 
-EXTERNC int memcached_wrapper_run_new_listening_thread();
+EXTERNC int memcached_wrapper_run_new_listening_thread(int pin_cpu);
+
+EXTERNC int memcached_wrapper_set_lb(int lb);
 
 #undef EXTERNC
 

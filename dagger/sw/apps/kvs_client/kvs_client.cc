@@ -130,7 +130,9 @@ static void shell_loop(const std::vector<frpc::RpcClient*>& rpc_clients) {
 
             SetRequest set_req;
             set_req.timestamp = static_cast<uint32_t>(frpc::utils::rdtsc());
+            memset(set_req.key, 0, 16);
             sprintf(set_req.key, key.c_str());
+            memset(set_req.value, 0, 32);
             sprintf(set_req.value, value.c_str());
             rpc_clients[client_id]->set(set_req);
 
@@ -166,6 +168,7 @@ static void shell_loop(const std::vector<frpc::RpcClient*>& rpc_clients) {
 
             GetRequest get_req;
             get_req.timestamp = static_cast<uint32_t>(frpc::utils::rdtsc());
+            memset(get_req.key, 0, 16);
             sprintf(get_req.key, key.c_str());
             rpc_clients[client_id]->get(get_req);
 

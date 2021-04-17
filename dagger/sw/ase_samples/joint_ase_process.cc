@@ -37,20 +37,20 @@ int main() {
     std::future<bool> cmpl_ft = cmpl_pr.get_future();
 
     // Start server
-    std::thread server_thread = std::thread(&run_server, std::ref(init_pr), std::ref(cmpl_ft));
+//    std::thread server_thread = std::thread(&run_server, std::ref(init_pr), std::ref(cmpl_ft));
 
     // Wait until server is set-up
-    init_ft.wait();
+//    init_ft.wait();
 
     // Start client
     std::thread client_thread = std::thread(&run_client);
 
     // Wait untill client thread is terminated
     client_thread.join();
-    cmpl_pr.set_value(true);
+//    cmpl_pr.set_value(true);
 
     // Wait until server thread is terminated
-    server_thread.join();
+//    server_thread.join();
 
     return 0;
 }
@@ -77,6 +77,8 @@ static int run_server(std::promise<bool>& init_pr, std::future<bool>& cmpl_ft) {
     if (res != 0)
         return res;
 
+    server.set_lb(1);
+
     // Register RPC functions
     std::vector<const void*> fn_ptr;
     fn_ptr.push_back(reinterpret_cast<const void*>(&loopback));
@@ -86,7 +88,7 @@ static int run_server(std::promise<bool>& init_pr, std::future<bool>& cmpl_ft) {
 
     // Open connections
     for (int i=0; i<NUMBER_OF_THREADS; ++i) {
-        frpc::IPv4 client_addr("192.168.0.2", 3136);
+        frpc::IPv4 client_addr("192.168.0.1", 3136);
         if (server.connect(client_addr, i, i) != 0) {
             std::cout << "Failed to open connection on server" << std::endl;
             exit(1);
@@ -136,14 +138,14 @@ static int run_server(std::promise<bool>& init_pr, std::future<bool>& cmpl_ft) {
 
 // RPC function #0
 static RpcRetCode loopback(CallHandler handler, LoopBackArgs args, NumericalResult* ret) {
-    std::cout << "loopback is called with data= " << args.data << std::endl;
+    std::cout << "loopback is called on thread " << handler.thread_id << " with data= " << args.data << std::endl;
     ret->data = args.data + 1;
     return RpcRetCode::Success;
 }
 
 // RPC function #1
 static RpcRetCode add(CallHandler handler, AddArgs args, NumericalResult* ret) {
-    std::cout << "add is called with a= " << args.a << " b= " << args.b << std::endl;
+    std::cout << "add is called on thread " << handler.thread_id << " with a= " << args.a << " b= " << args.b << std::endl;
     ret->data = args.a + args.b;
     return RpcRetCode::Success;
 }
@@ -152,11 +154,11 @@ static RpcRetCode add(CallHandler handler, AddArgs args, NumericalResult* ret) {
 //
 // Client part
 //
-#define CLIENT_NIC_ADDR 0x00000
+#define CLIENT_NIC_ADDR 0x20000
 
 static int client(frpc::RpcClient* rpc_client, size_t thread_id, size_t num_of_requests) {
     // Open connection
-    frpc::IPv4 server_addr("192.168.0.1", 3136);
+    frpc::IPv4 server_addr("192.168.0.2", 3136);
     if (rpc_client->connect(server_addr, thread_id) != 0) {
         std::cout << "Failed to open connection on client" << std::endl;
         exit(1);
@@ -207,7 +209,7 @@ static int run_client() {
 
     // Get client
     std::vector<std::thread> threads;
-    for (int i=0; i<NUMBER_OF_THREADS; ++i) {
+    for (int i=0; i<1/*NUMBER_OF_THREADS*/; ++i) {
         frpc::RpcClient* rpc_client = rpc_client_pool.pop();
         assert(rpc_client != nullptr);
 

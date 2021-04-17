@@ -121,6 +121,19 @@ void RpcServerThread::_PullListen() {
         if (stop_signal_) continue;
 
         for(int i=0; i<batch_size; ++i) {
+        //    std::cout << "DEBUG: recv packet: ********* "
+        //        << "\n hdr.ctl.req_type: " << (int)((req_pckt_1 + i)->hdr.ctl.req_type)
+        //        << "\n hdr.ctl.valid: " << (int)((req_pckt_1 + i)->hdr.ctl.valid)
+        //        << "\n hdr.argl: " << (int)((req_pckt_1 + i)->hdr.argl)
+        //        << "\n hdr.c_id: " << (int)((req_pckt_1 + i)->hdr.c_id)
+        //        << "\n hdr.rpc_id: " << (int)((req_pckt_1 + i)->hdr.rpc_id)
+        //        << "\n hdr.fn_id: " << (int)((req_pckt_1 + i)->hdr.fn_id)
+        //        << "\n argv: ";
+        //    for (int j=0; j<cfg::sys::cl_size_bytes - rpc_header_size_bytes; ++j) {
+        //        std::cout << (int)(((req_pckt_1 + i)->argv)[j]) << " ";
+        //    }
+        //    std::cout << "\n **************** " << std::endl;
+
             server_callback_->operator()({thread_id_}, req_pckt_1 + i, tx_queue_);
         }
     }

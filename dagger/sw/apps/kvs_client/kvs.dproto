@@ -6,7 +6,7 @@ message SetRequest {
 
 message SetResponse {
     int32 timestamp;
-    char[8] status;
+    int8 status;
 }
 
 message GetRequest {
@@ -16,6 +16,7 @@ message GetRequest {
 
 message GetResponse {
     int32 timestamp;
+    int8 status;
     char[32] value;
 }
 

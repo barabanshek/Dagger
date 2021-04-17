@@ -85,12 +85,16 @@ public:
 
 #endif
 
-        int res = nic_->connect_to_nic();
+        int res = nic_->connect_to_nic(0x18);
         if (res != 0)
             return res;
         FRPC_INFO("Connected to NIC\n");
 
-        res = nic_->initialize_nic();
+        // Host networking addresses
+        PhyAddr cl_phy_addr = {0x1A, 0x2B, 0x3C, 0x4D, 0x5E, 0x6D};
+        IPv4 cl_ipv4_addr("192.168.0.1", 0);
+
+        res = nic_->initialize_nic(cl_phy_addr, cl_ipv4_addr);
         if (res != 0)
             return res;
 

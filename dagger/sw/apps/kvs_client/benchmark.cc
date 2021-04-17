@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include <iostream>
 
+#include "../mica/mica/zipf.h"
+
 #include "utils.h"
 
 double rdtsc_in_ns() {
@@ -105,7 +107,7 @@ int benchmark(const std::vector<frpc::RpcClient*>& rpc_clients,
         return 1;
     }
 
-    std::cout << "benchmark > dataset loaded" << std::endl;
+    std::cout << "benchmark > dataset loaded, size= " << dataset.size() << std::endl;
     for(int i=0; i<10; ++i) {
         std::cout << "<" << dataset[i].first << ", " << dataset[i].second << ">" << std::endl;
     }
@@ -114,20 +116,28 @@ int benchmark(const std::vector<frpc::RpcClient*>& rpc_clients,
     // Load distribution
     std::cout << "benchmark > loading distribution" << std::endl;
     std::vector<uint32_t> set_get_distr;
-    std::ifstream distr_file;
-    distr_file.open(dst_file_name);
 
-    if (distr_file.is_open()) {
-        while (getline(distr_file, line)) {
-            set_get_distr.push_back(std::stoi(line.c_str()));
-        }
-    } else {
-        std::cout << "benchmark > failed to open distribution file" << std::endl;
-        return 1;
+    struct zipf_gen_state zipf_state;
+    mehcached_zipf_init(&zipf_state, 10000000, 0.9999, 123456);
+
+    for(size_t i=0; i<10000000; ++i) {
+        set_get_distr.push_back(mehcached_zipf_next(&zipf_state) % 10000000);
     }
 
+    //std::ifstream distr_file;
+    //distr_file.open(dst_file_name);
+//
+    //if (distr_file.is_open()) {
+    //    while (getline(distr_file, line)) {
+    //        set_get_distr.push_back(std::stoi(line.c_str()));
+    //    }
+    //} else {
+    //    std::cout << "benchmark > failed to open distribution file" << std::endl;
+    //    return 1;
+    //}
+
     std::cout << "benchmark > distribution loaded" << std::endl;
-    for(int i=0; i<10; ++i) {
+    for(int i=0; i<100; ++i) {
         std::cout << set_get_distr[i] << " ";
     }
     std::cout << "..." << std::endl;
@@ -166,29 +176,29 @@ int run_set_get_benchmark(frpc::RpcClient* rpc_client,
                           size_t set_get_fraction,
                           size_t set_get_req_delay) {
     // Warm-up benchmark
-    std::cout << "benchmark > doing warm-up" << std::endl;
-    static const size_t warm_up_iterations = 100000;
-    static const size_t warm_up_delay = 1000;
-
-    for(int i=0; i<warm_up_iterations; ++i) {
-        if (i%5 == 0) {
-            SetRequest req;
-            req.timestamp = frpc::utils::rdtsc();
-            sprintf(req.key, dataset[i].first.c_str());
-            sprintf(req.value, dataset[i].second.c_str());
-            rpc_client->set(req);
-        } else {
-            GetRequest req;
-            req.timestamp = frpc::utils::rdtsc();
-            sprintf(req.key, dataset[i].first.c_str());
-            rpc_client->get(req);
-        }
-
-        // Blocking delay to control rps rate
-        for (int delay=0; delay<warm_up_delay; ++delay) {
-            asm("");
-        }
-    }
+//    std::cout << "benchmark > doing warm-up" << std::endl;
+//    static const size_t warm_up_iterations = 100000;
+//    static const size_t warm_up_delay = 1000;
+//
+//    for(int i=0; i<warm_up_iterations; ++i) {
+//        if (i%5 == 0) {
+//            SetRequest req;
+//            req.timestamp = frpc::utils::rdtsc();
+//            sprintf(req.key, dataset[i].first.c_str());
+//            sprintf(req.value, dataset[i].second.c_str());
+//            rpc_client->set(req);
+//        } else {
+//            GetRequest req;
+//            req.timestamp = frpc::utils::rdtsc();
+//            sprintf(req.key, dataset[i].first.c_str());
+//            rpc_client->get(req);
+//        }
+//
+//        // Blocking delay to control rps rate
+//        for (int delay=0; delay<warm_up_delay; ++delay) {
+//            asm("");
+//        }
+//    }
 
     auto cq = rpc_client->get_completion_queue();
     cq->clear_queue();
@@ -201,13 +211,18 @@ int run_set_get_benchmark(frpc::RpcClient* rpc_client,
         if (i%set_get_fraction != 0) {
             GetRequest req;
             req.timestamp = frpc::utils::rdtsc();
-            sprintf(req.key, dataset[set_get_distr[i%50000000]].first.c_str());
+           // sprintf(req.key, dataset[set_get_distr[i%50000000]+1000*thread_id].first.c_str());
+            size_t data = set_get_distr[i%10000000]+1000000*thread_id;
+            memcpy(req.key, &data, 8);
             rpc_client->get(req);
         } else {
             SetRequest req;
             req.timestamp = frpc::utils::rdtsc();
-            sprintf(req.key, dataset[set_get_distr[i%50000000]].first.c_str());
-            sprintf(req.value, dataset[set_get_distr[i%50000000]].second.c_str());
+            //sprintf(req.key, dataset[set_get_distr[i%50000000]+1000*thread_id].first.c_str());
+            //sprintf(req.value, dataset[set_get_distr[i%50000000]+1000*thread_id].second.c_str());
+            size_t data = set_get_distr[i%10000000]+1000000*thread_id;
+            memcpy(req.key, &data, 8);
+            memcpy(req.value, &data, 8);
             rpc_client->set(req);
         }
 
@@ -224,12 +239,22 @@ int run_set_get_benchmark(frpc::RpcClient* rpc_client,
     size_t cq_size = cq->get_number_of_completed_requests();
     std::cout << "Thread #" << thread_id
               << ": CQ size= " << cq_size << std::endl;
-    if (cq_size > 100) {
-        for (int i=0; i<100; ++i) {
-            std::cout << reinterpret_cast<GetResponse*>(cq->pop_response().argv)->value << std::endl;
+//    if (cq_size > 100) {
+//        for (int i=0; i<100; ++i) {
+//            std::cout << *(size_t*)(reinterpret_cast<GetResponse*>(cq->pop_response().argv)->value) << std::endl;
+//        }
+//    }
+//    std::cout << "..." << std::endl;
+
+    // Check for correctness
+    size_t errors = 0;
+    for(size_t i=0; i<cq_size; ++i) {
+        if ((reinterpret_cast<SetResponse*>(cq->pop_response().argv)->status) == 1) {
+            ++errors;
         }
     }
-    std::cout << "..." << std::endl;
+
+    std::cout << "Errors found: " << errors << std::endl;
 
     // Print Latencies
     auto latency_records = cq->get_latency_records();

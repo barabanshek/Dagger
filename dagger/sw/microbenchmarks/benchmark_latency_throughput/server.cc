@@ -1,5 +1,6 @@
 #include <unistd.h>
 
+#include <csignal>
 #include <cstdlib>
 #include <iostream>
 
@@ -7,9 +8,16 @@
 #include "rpc_server_callback.h"
 #include "rpc_threaded_server.h"
 #include "rpc_types.h"
+#include "CLI11.hpp"
 
 // HW parameters
-#define NIC_ADDR 0x00000
+#define NIC_ADDR 0x20000
+
+// Ctl-C handler
+static volatile int keepRunning = 1;
+void intHandler(int dummy) {
+    keepRunning = 0;
+}
 
 // RPC functions
 static RpcRetCode loopback(CallHandler handler, LoopBackArgs args, NumericalResult* ret);
@@ -24,9 +32,17 @@ static RpcRetCode getUserData(CallHandler handler, UserName args, UserData* ret)
 
 // <max number of threads, run duration>
 int main(int argc, char* argv[]) {
-    size_t num_of_threads = atoi(argv[1]);
-    size_t duration_of_run = atoi(argv[2]);
+    // Parse input
+    CLI::App app{"Benchmark Server"};
 
+    size_t num_of_threads;
+    app.add_option("-t, --threads", num_of_threads, "number of threads")->required();
+    int load_balancer;
+    app.add_option("-l, --load-balancer", load_balancer, "load balancer")->required();
+
+    CLI11_PARSE(app, argc, argv);
+
+    // Server
     frpc::RpcThreadedServer server(NIC_ADDR, num_of_threads);
 
     // Init
@@ -40,13 +56,13 @@ int main(int argc, char* argv[]) {
         return res;
 
     // Enable perf
-    res = server.run_perf_thread({true, true, true}, nullptr);
+    res = server.run_perf_thread({true, true, true, true}, nullptr);
     if (res != 0)
         return res;
 
     // Open connections
     for (int i=0; i<num_of_threads; ++i) {
-        frpc::IPv4 client_addr("192.168.0.2", 3136);
+        frpc::IPv4 client_addr("192.168.0.1", 3136);
         if (server.connect(client_addr, i, i) != 0) {
             std::cout << "Failed to open connection on server" << std::endl;
             exit(1);
@@ -54,6 +70,9 @@ int main(int argc, char* argv[]) {
             std::cout << "Connection is open on server" << std::endl;
         }
     }
+
+    // Select
+    server.set_lb(load_balancer);
 
     // Register RPC functions
     std::vector<const void*> fn_ptr;
@@ -72,7 +91,13 @@ int main(int argc, char* argv[]) {
     }
 
     std::cout << "------- Server is running... -------" << std::endl;
-    sleep(duration_of_run);
+
+    std::cout << "Press Ctrl+C to stop..." << std::endl;
+    signal(SIGINT, intHandler);
+
+    while (keepRunning) {
+        sleep(1);
+    }
 
     res = server.stop_all_listening_threads();
     if (res != 0)

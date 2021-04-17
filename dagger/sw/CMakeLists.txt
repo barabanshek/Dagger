@@ -37,6 +37,7 @@ set(ASE_LIBS -lopae-c-ase)
 
 include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${CMAKE_SOURCE_DIR}/src/nic_impl)
+include_directories(${CMAKE_SOURCE_DIR}/src/utils)
 
 set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(RPC_CODEGEN_PATH ${ROOT_DIR}/codegen)
@@ -94,7 +95,7 @@ target_link_libraries(dagger ${FPGA_LIBS} ${LIBRARIES} -shared)
 #
 # Build tests
 #
-add_subdirectory(tests)
+#add_subdirectory(tests)
 
 #
 # Build ASE samples
@@ -109,4 +110,4 @@ add_subdirectory(microbenchmarks)
 #
 # Build end-to-end applications
 #
-add_subdirectory(apps)
+#add_subdirectory(apps)

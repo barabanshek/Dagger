@@ -50,12 +50,16 @@ int RpcThreadedServer::init_nic() {
     #error Nic CCI-P mode is not specified
 #endif
 
-    int res = nic_->connect_to_nic();
+    int res = nic_->connect_to_nic(0xaf);
     if (res != 0)
         return res;
     FRPC_INFO("Connected to NIC\n");
 
-    res = nic_->initialize_nic();
+    // Host networking addresses
+    PhyAddr cl_phy_addr = {0x1A, 0x2B, 0x3C, 0x4D, 0x5E, 0xFF};
+    IPv4 cl_ipv4_addr("192.168.0.2", 0);
+
+    res = nic_->initialize_nic(cl_phy_addr, cl_ipv4_addr);
     if (res != 0)
         return res;
 

@@ -19,9 +19,15 @@ get 0 key
 # Populate
 populate 0 /homes/nikita/kvs_dataset_tiny.data
 populate 1 /homes/nikita/kvs_dataset_tiny.data
+populate 2 /homes/nikita/kvs_dataset_tiny.data
+populate 3 /homes/nikita/kvs_dataset_tiny.data
 populate 0 /homes/nikita/kvs_dataset_small.data
 
 # Benchmark
-benchmark 1 10000000 /homes/nikita/kvs_dataset_tiny.data /homes/nikita/memcached_get.dst 20 1000
+benchmark 4 10000000 /homes/nikita/kvs_dataset_tiny.data /homes/nikita/memcached_get.dst 20 6000
+
+benchmark 4 10000000 /homes/nikita/kvs_dataset_tiny.data /homes/nikita/memcached_get.dst 20 6000
+
+benchmark 4 100000000 /homes/nikita/kvs_dataset_tiny.data /homes/nikita/memcached_get.dst 20 1000
 benchmark 1 50000000 /homes/nikita/kvs_dataset_small.data /homes/nikita/memcached_get.dst 20 1000
 // 1 here is the number of actual threads which should be <= number of provisioned threads

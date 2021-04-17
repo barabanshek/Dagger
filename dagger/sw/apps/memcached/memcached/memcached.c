@@ -84,7 +84,7 @@ static int set(char* key, char* value) {
 
     // Allocate item
     item *it;
-    it = item_alloc(key, strlen(key), 0, realtime(60), strlen(value));
+    it = item_alloc(key, 8/*strlen(key)*/, 0, realtime(60), 8/*strlen(value)*/);
     if (it == 0) {
         return 1;
     }
@@ -92,7 +92,7 @@ static int set(char* key, char* value) {
     // Copy data
     uint64_t req_cas_id=0;
     ITEM_set_cas(it, req_cas_id);
-    memcpy(ITEM_data(it), value, strlen(value));
+    memcpy(ITEM_data(it), value, 8/*strlen(value)*/);
 
     // Link item in
     uint32_t hv;
@@ -114,14 +114,14 @@ static int process_set(struct CallHandler handler,
         // Return fail
         printf("Failed to allocate memcached item\n");
         ret->timestamp = arg.timestamp;
-        sprintf(ret->status, "ERR\r");
+        ret->status = 1;
 
         return 0;
     }
 
     // Return success
     ret->timestamp = arg.timestamp;
-    sprintf(ret->status, "OK\r");
+    ret->status = 0;
 
     return 0;
 }
@@ -129,10 +129,10 @@ static int process_set(struct CallHandler handler,
 static int process_get(struct CallHandler handler,
                               struct GetRequest arg, struct GetResponse* ret) {
     char* key = arg.key;
-    size_t nkey = strlen(key);
+    size_t nkey = 8;//strlen(key);
 
     //
-    //printf("get <%s>\n", key);
+    //printf("get <%zu>\n", *(size_t*)key);
 
     // Look-up
     uint32_t hv;
@@ -147,8 +147,10 @@ static int process_get(struct CallHandler handler,
     // Return
     if (it != NULL) {
         char* val = ITEM_data(it);
-        sprintf(ret->value, val);
+        ret->status = 0;
+        memcpy(ret->value, val, 8);
     } else {
+        ret->status = 1;
         ret->value[0] = '\0';
     }
 
@@ -157,70 +159,102 @@ static int process_get(struct CallHandler handler,
     return 0;
 }
 
+static bool lb;
+
 static int process_populate(struct CallHandler handler,
                                    struct PopulateRequest arg, struct PopulateResponse* ret) {
-    const char* dataset_filename = arg.dataset;
-    printf("loading the dataset %s\n", dataset_filename);
+//    const char* dataset_filename = arg.dataset;
+//    printf("loading the dataset %s\n", dataset_filename);
+//
+//    FILE* fp;
+//    char* line = NULL;
+//    size_t len = 0;
+//    ssize_t read;
+//
+//    fp = fopen(dataset_filename, "r");
+//    if (fp == NULL) {
+//        sprintf(ret->status, "Failed to open dataset file\r");
+//        return 0;
+//    }
+//
+//    // get sizes
+//    if (getline(&line, &len, fp) == -1) {
+//        sprintf(ret->status, "First line is not found\r");
+//        return 0;
+//    }
+//    size_t key_size = atoi(line);
+//
+//    if (getline(&line, &len, fp) == -1) {
+//        sprintf(ret->status, "Second line is not found\r");
+//        return 0;
+//    }
+//    size_t value_size = atoi(line);
+//
+//    if (getline(&line, &len, fp) == -1) {
+//        sprintf(ret->status, "Third line is not found\r");
+//        return 0;
+//    }
+//    size_t number_of_samples = atoi(line);
+//
+//    printf("  key size: %zu\n", key_size);
+//    printf("  value size: %zu\n", value_size);
+//    printf("  number of samples: %zu\n", number_of_samples);
 
-    FILE* fp;
-    char* line = NULL;
-    size_t len = 0;
-    ssize_t read;
+    char* key = malloc(16);
+    char* value = malloc(16);
+    for (size_t i=0; i<10000000+1000000*10; ++i) {
+    //while ((read = getline(&line, &len, fp)) != -1) {
 
-    fp = fopen(dataset_filename, "r");
-    if (fp == NULL) {
-        sprintf(ret->status, "Failed to open dataset file\r");
-        return 0;
-    }
 
-    // get sizes
-    if (getline(&line, &len, fp) == -1) {
-        sprintf(ret->status, "First line is not found\r");
-        return 0;
-    }
-    size_t key_size = atoi(line);
+        //memcpy(key, line, key_size);
+        //key[key_size] = '\0';
+//
+        //memcpy(value, line + key_size + 1, value_size);
+        //value[value_size] = '\0';
 
-    if (getline(&line, &len, fp) == -1) {
-        sprintf(ret->status, "Second line is not found\r");
-        return 0;
-    }
-    size_t value_size = atoi(line);
-
-    if (getline(&line, &len, fp) == -1) {
-        sprintf(ret->status, "Third line is not found\r");
-        return 0;
-    }
-    size_t number_of_samples = atoi(line);
-
-    printf("  key size: %zu\n", key_size);
-    printf("  value size: %zu\n", value_size);
-    printf("  number of samples: %zu\n", number_of_samples);
-
-    size_t i = 0;
-    while ((read = getline(&line, &len, fp)) != -1) {
-        char key[key_size+1];
-        char value[value_size+1];
-
-        memcpy(key, line, key_size);
-        key[key_size] = '\0';
-
-        memcpy(value, line + key_size + 1, value_size);
-        value[value_size] = '\0';
+        *(size_t*)key = i;
+        *(size_t*)value = i;
 
         if (set(key, value) != 0) {
             sprintf(ret->status, "Failed to set <key, pair>\r");
             return 0;
         }
-
-        ++i;
     }
 
-    if(i != number_of_samples) {
-        sprintf(ret->status, "dataset corrupted\r");
-        return 0;
-    }
+//    for (int i=0; i<100; ++i) {
+//        *(size_t*)key = i;
+//
+//        size_t nkey = 8;
+//
+//        // Look-up
+//        uint32_t hv;
+//        hv = hash(key, nkey);
+//        item_lock(hv);
+//        item *it = assoc_find(key, nkey, hv);
+//        if (it != NULL) {
+//            refcount_incr(it);
+//        }
+//        item_unlock(hv);
+//
+//        // Return
+//        if (it != NULL) {
+//            char* val = ITEM_data(it);
+//            printf("%zu\n", *(size_t*)val);
+//        }
+//    }
 
-    sprintf(ret->status, "%zu values loaded\r", i);
+//    if(i != number_of_samples) {
+//        sprintf(ret->status, "dataset corrupted\r");
+//        return 0;
+//    }
+
+    sprintf(ret->status, "%d values loaded\r", 10000000);
+    free(key);
+    free(value);
+
+    
+//    lb ^= 1;
+
     return 0;
 }
 
@@ -10473,11 +10507,14 @@ int main (int argc, char **argv) {
             return r;
 
         /* run listening threads */
-        r = memcached_wrapper_run_new_listening_thread();
+        r = memcached_wrapper_run_new_listening_thread(12+ti);
         if (r != 0)
             return r;
     }
     fprintf(stderr, "Dagger layer initialized\n");
+
+    lb = false;
+    memcached_wrapper_set_lb(1);
 
     /* enter the event loop */
     while (!stop_main_loop) {

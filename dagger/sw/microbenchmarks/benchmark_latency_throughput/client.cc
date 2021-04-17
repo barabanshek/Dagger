@@ -8,11 +8,13 @@
 #include <thread>
 #include <vector>
 
+#include "defs.h"
 #include "rpc_call.h"
 #include "rpc_client.h"
 #include "rpc_client_pool.h"
 #include "rpc_types.h"
 #include "utils.h"
+#include "CLI11.hpp"
 
 // HW parameters
 #define NIC_ADDR 0x20000
@@ -36,29 +38,41 @@ static double rdtsc_in_ns() {
 enum TestType {performance, correctness};
 
 int main(int argc, char* argv[]) {
-    double cycles_in_ns = rdtsc_in_ns();
-    std::cout << "Cycles in ns: " << cycles_in_ns << std::endl;
-
     // Parse input
-    size_t num_of_threads = atoi(argv[1]);
-    size_t num_of_requests = atoi(argv[2]);
-    size_t req_delay = atoi(argv[3]);
+    CLI::App app{"Benchmark Client"};
+
+    size_t num_of_threads;
+    app.add_option("-t, --threads", num_of_threads, "number of threads")->required();
+    size_t num_of_requests;
+    app.add_option("-r, --requests", num_of_requests, "number of requests")->required();
+    size_t req_delay;
+    app.add_option("-d, --delay", req_delay, "delay")->required();
+    std::string fn_name;
+    app.add_option("-f, --function", fn_name, "function to call")->required();
+
+    CLI11_PARSE(app, argc, argv);
+
     int function_to_call = 0;
-    if (strcmp(argv[4], "-loopback") == 0)
+    if (fn_name == "loopback")
         function_to_call = 0;
-    else if (strcmp(argv[4], "-add") == 0)
+    else if (fn_name == "add")
         function_to_call = 1;
-    else if (strcmp(argv[4], "-sign") == 0)
+    else if (fn_name ==  "sign")
         function_to_call = 2;
-    else if (strcmp(argv[4], "-xor") == 0)
+    else if (fn_name == "xor")
         function_to_call = 3;
-    else if (strcmp(argv[4], "-getUserData") == 0)
+    else if (fn_name == "getUserData")
         function_to_call = 4;
     else {
         std::cout << "wrong parameter: function name" << std::endl;
         return 1;
     }
 
+    // Get time/freq
+    double cycles_in_ns = rdtsc_in_ns();
+    std::cout << "Cycles in ns: " << cycles_in_ns << std::endl;
+
+    // RClient
     frpc::RpcClientPool<frpc::RpcClient> rpc_client_pool(NIC_ADDR,
                                                          num_of_threads);
 
@@ -73,7 +87,7 @@ int main(int argc, char* argv[]) {
         return res;
 
     // Enable perf
-    res = rpc_client_pool.run_perf_thread({true, true, true}, nullptr);
+    res = rpc_client_pool.run_perf_thread({true, true, true, true}, nullptr);
     if (res != 0)
         return res;
 
@@ -86,7 +100,7 @@ int main(int argc, char* argv[]) {
         assert(rpc_client != nullptr);
 
         // Open connection
-        frpc::IPv4 server_addr("192.168.0.1", 3136);
+        frpc::IPv4 server_addr("192.168.0.2", 3136);
         if (rpc_client->connect(server_addr, thread_id) != 0) {
             std::cout << "Failed to open connection on client" << std::endl;
             exit(1);

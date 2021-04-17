@@ -6,6 +6,7 @@
 
 #include <vector>
 
+#include "defs.h"
 #include "connection_manager.h"
 
 namespace frpc {
@@ -22,6 +23,7 @@ struct NicPerfMask {
     bool performance;
     bool status;
     bool packet_counters;
+    bool network_counters;
 };
 
 class Nic {
@@ -30,8 +32,8 @@ public:
     virtual ~Nic() {}
 
     // Nic implementation dependent functionality
-    virtual int connect_to_nic() = 0;
-    virtual int initialize_nic() = 0;
+    virtual int connect_to_nic(int bus = -1) = 0;
+    virtual int initialize_nic(const PhyAddr& host_phy, const IPv4& host_ipv4) = 0;
     virtual int configure_data_plane() = 0;
     virtual int start() = 0;
     virtual int stop() = 0;

@@ -51,6 +51,10 @@ public:
     static constexpr uint8_t iRegConnSetupFrame = 120; // hw: 30, W
     static constexpr uint8_t iRegConnStatus     = 128;  // hw: 32, R
     static constexpr uint8_t iRegLb     = 136;  // hw: 34, W
+    static constexpr uint8_t iRegPhyNetAddr = 144;  // hw: 36, W
+    static constexpr uint8_t iRegIPv4NetAddr = 152; // hw: 38, W
+    static constexpr uint8_t iRegNetDropCntRead = 160;  // hw: 40, W
+    static constexpr uint8_t iRegNetDropCnt = 168;  // hw: 42, R
     static constexpr uint16_t iMMIOSpaceStart   = 256;  // hw: 64, -
 
     // Hardware register map constants
@@ -62,13 +66,14 @@ public:
     static constexpr int iConstCcipDma          = 2;
     static constexpr int iConstCcipQueuePolling = 3;
     static constexpr uint8_t iNumOfPckCnt       = 5;
+    static constexpr uint8_t iNumOfNetworkCnt   = 7;
 
     NicCCIP(uint64_t base_rf_addr, size_t num_of_flows, bool master_nic);
     virtual ~NicCCIP();
 
     // Common functionality
-    virtual int connect_to_nic() final;
-    virtual int initialize_nic() final;
+    virtual int connect_to_nic(int bus = -1) final;
+    virtual int initialize_nic(const PhyAddr& host_phy, const IPv4& host_ipv4) final;
     virtual int check_hw_errors() const final;
     virtual size_t get_mtu_size_bytes() const final {
         return mtu_cls * cfg::sys::cl_size_bytes;
@@ -104,7 +109,7 @@ protected:
 
 private:
     size_t round_up_to_pagesize(size_t val) const;
-    fpga_handle connect_to_accel(const char *accel_uuid) const;
+    fpga_handle connect_to_accel(const char *accel_uuid, int bus) const;
 
     // NIC status
     struct __attribute__ ((__packed__)) NicHwStatus {
@@ -167,12 +172,17 @@ private:
                             void(*callback)(const std::vector<uint64_t>&)) const;
     // Performance counters
     void get_perf() const;
+
     // NIC status
     void get_status() const;
+
     // Packet counters
     // This method accepts a callback fn which can be used to run user-specific
     // analytics over packet counters
     void get_packet_counters(void(*callback)(const std::vector<uint64_t>&)) const;
+
+    // Network counters
+    void get_network_counters() const;
 
 protected:
     uint64_t base_nic_addr_;

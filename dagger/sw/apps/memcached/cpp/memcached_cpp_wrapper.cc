@@ -8,7 +8,7 @@
 #include <iostream>
 #include <vector>
 
-static frpc::RpcThreadedServer server(0x00000, 8);
+static frpc::RpcThreadedServer server(0x00000, 4);
 
 static std::vector<const void*> fn_ptr;
 static std::unique_ptr<frpc::RpcServerCallBack> server_callback;
@@ -72,8 +72,8 @@ int memcached_wrapper_register_functions(int (*set)(struct CallHandler,
     return 0;
 }
 
-int memcached_wrapper_run_new_listening_thread() {
-    int res = server.run_new_listening_thread(server_callback.get());
+int memcached_wrapper_run_new_listening_thread(int pin_cpu) {
+    int res = server.run_new_listening_thread(server_callback.get(), pin_cpu);
     if (res != 0) {
         std::cout << "Failed to run a new listening thread" << std::endl;
         return res;
@@ -81,4 +81,9 @@ int memcached_wrapper_run_new_listening_thread() {
         std::cout << "New listening thread is running" << std::endl;
         return 0;
     }
+}
+
+int memcached_wrapper_set_lb(int lb) {
+    server.set_lb(lb);
+    return 0;
 }

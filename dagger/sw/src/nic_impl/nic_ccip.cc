@@ -42,11 +42,11 @@ NicCCIP::~NicCCIP() {
     FRPC_INFO("Nic is disconnected\n");
 }
 
-int NicCCIP::connect_to_nic() {
+int NicCCIP::connect_to_nic(int bus) {
     assert(connected_ == false);
 
     // Connect to FPGA
-    accel_handle_ = connect_to_accel(AFU_ACCEL_UUID);
+    accel_handle_ = connect_to_accel(AFU_ACCEL_UUID, bus);
     if (accel_handle_ == 0) {
         FRPC_ERROR("Failed to connect to nic\n");
         return 1;
@@ -56,7 +56,7 @@ int NicCCIP::connect_to_nic() {
     return 0;
 }
 
-int NicCCIP::initialize_nic() {
+int NicCCIP::initialize_nic(const PhyAddr& host_phy, const IPv4& host_ipv4) {
     assert(connected_ == true);
 
     // Assert initial hw state
@@ -68,11 +68,37 @@ int NicCCIP::initialize_nic() {
     assert(status.running == 0);
     assert(status.error == 0);
 
-    // Run initialization
+    // Program PHY and IPv4 host addresses
     fpga_result ret = fpgaWriteMMIO64(accel_handle_,
                                       0,
-                                      base_nic_addr_ + iRegNicInit,
-                                      iConstNicInit);
+                                      base_nic_addr_ + iRegPhyNetAddr,
+                                      host_phy.b5 |
+                                      host_phy.b4 << 8 |
+                                      host_phy.b3 << 16 |
+                                      host_phy.b2 << 24 |
+                                      host_phy.b1 << 32 |
+                                      host_phy.b0 << 40);
+    if (ret != FPGA_OK) {
+        FRPC_ERROR("Nic configuration error, failed to configure iRegPhyNetAddr"
+                    "nic returned %d\n", ret);
+        return 1;
+    }
+
+    ret = fpgaWriteMMIO64(accel_handle_,
+                          0,
+                          base_nic_addr_ + iRegIPv4NetAddr,
+                          host_ipv4.get_addr_inv());
+    if (ret != FPGA_OK) {
+        FRPC_ERROR("Nic configuration error, failed to configure iRegIPv4NetAddr"
+                    "nic returned %d\n", ret);
+        return 1;
+    }
+
+    // Run initialization
+    ret = fpgaWriteMMIO64(accel_handle_,
+                          0,
+                          base_nic_addr_ + iRegNicInit,
+                          iConstNicInit);
     if (ret != FPGA_OK) {
         FRPC_ERROR("Nic configuration error, failed to configure iRegNicInit"
                     "nic returned %d\n", ret);
@@ -579,7 +605,7 @@ void NicCCIP::get_packet_counters(void(*callback)(const std::vector<uint64_t>&))
 
     std::string counters_str;
     std::vector<uint64_t> counters;
-    counters_str += "Nic hw counters dump >> \n";
+    counters_str += "Nic RPC counters dump >> \n";
     for (uint8_t cnt_id=0; cnt_id<iNumOfPckCnt; ++cnt_id) {
         fpga_result res = fpgaWriteMMIO64(accel_handle_,
                                           0,
@@ -613,6 +639,39 @@ void NicCCIP::get_packet_counters(void(*callback)(const std::vector<uint64_t>&))
     }
 }
 
+void NicCCIP::get_network_counters() const {
+    assert(connected_ == true);
+
+    std::string counters_str;
+    counters_str += "Nic network counters dump >> \n";
+    for (uint8_t cnt_id=0; cnt_id<iNumOfNetworkCnt; ++cnt_id) {
+        fpga_result res = fpgaWriteMMIO64(accel_handle_,
+                                          0,
+                                          base_nic_addr_ + iRegNetDropCntRead,
+                                          cnt_id);
+        if (res != FPGA_OK) {
+            FRPC_ERROR("Nic configuration error, failed to read network counters"
+                        "nic returned: %d\n", res);
+        }
+
+        // Wait until fpgaWrite propagates and counter is read
+        // TODO: can we do it in a smarter way?
+        usleep(1000);
+        uint64_t network_cnt = 0;
+        res = fpgaReadMMIO64(accel_handle_,
+                             0,
+                             base_nic_addr_ + iRegNetDropCnt,
+                             &network_cnt);
+        if (res != FPGA_OK) {
+            FRPC_ERROR("Nic configuration error, failed to read network counters"
+                        "nic returned: %d\n", res);
+        }
+        counters_str += "  counter[" + std::to_string(cnt_id) + "] = " +
+                                       std::to_string(network_cnt) + "\n";
+    }
+    FRPC_INFO("%s\n", counters_str.c_str());
+}
+
 void NicCCIP::nic_perf_loop(NicPerfMask perf_mask,
                                      void(*callback)(const std::vector<uint64_t>&)) const {
     while(collect_perf_) {
@@ -624,6 +683,9 @@ void NicCCIP::nic_perf_loop(NicPerfMask perf_mask,
         }
         if (perf_mask.packet_counters) {
             get_packet_counters(callback);
+        }
+        if (perf_mask.network_counters) {
+            get_network_counters();
         }
 
         sleep(NIC_PERF_DELAY_S);
@@ -662,7 +724,7 @@ volatile void* NicCCIP::alloc_buffer(fpga_handle accel_handle, ssize_t size,
 }
 
 // Taken from Intel Corporation, OPAE example; modified by Nikita
-fpga_handle NicCCIP::connect_to_accel(const char *accel_uuid) const {
+fpga_handle NicCCIP::connect_to_accel(const char *accel_uuid, int bus) const {
     fpga_properties filter = nullptr;
     fpga_guid guid;
     fpga_token accel_token;
@@ -674,19 +736,33 @@ fpga_handle NicCCIP::connect_to_accel(const char *accel_uuid) const {
     setenv("ASE_LOG", "0", 0);
 
     // Set up a filter that will search for an accelerator
-    fpgaGetProperties(NULL, &filter);
-    fpgaPropertiesSetObjectType(filter, FPGA_ACCELERATOR);
+    res = fpgaGetProperties(NULL, &filter);
+    assert(res == FPGA_OK);
+
+    res = fpgaPropertiesSetObjectType(filter, FPGA_ACCELERATOR);
+    assert(res == FPGA_OK);
 
     // Add the desired UUID to the filter
     uuid_parse(accel_uuid, guid);
-    fpgaPropertiesSetGUID(filter, guid);
+    res = fpgaPropertiesSetGUID(filter, guid);
+    assert(res == FPGA_OK);
+
+    // Select bus
+    if (bus != -1) {
+        res = fpgaPropertiesSetBus(filter, bus);
+        if (res != FPGA_OK) {
+            FRPC_ERROR("Invalid bus %d\n", bus);
+        }
+    }
 
     // Do the search across the available FPGA contexts
     num_matches = 1;
-    fpgaEnumerate(&filter, 1, &accel_token, 1, &num_matches);
+    res = fpgaEnumerate(&filter, 1, &accel_token, 1, &num_matches);
+    assert(res == FPGA_OK);
 
     // Not needed anymore
-    fpgaDestroyProperties(&filter);
+    res = fpgaDestroyProperties(&filter);
+    assert(res == FPGA_OK);
 
     if (num_matches < 1) {
         FRPC_ERROR("Accelerator %s not found!\n", accel_uuid);
@@ -698,7 +774,8 @@ fpga_handle NicCCIP::connect_to_accel(const char *accel_uuid) const {
     assert(res == FPGA_OK);
 
     // Done with token
-    fpgaDestroyToken(&accel_token);
+    res = fpgaDestroyToken(&accel_token);
+    assert(res == FPGA_OK);
 
     return accel_handle;
 }
