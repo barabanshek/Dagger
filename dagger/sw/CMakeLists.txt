@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 2.8)
 project(F-RPC)
 
+# Options
+option(WITH_PHY_NETWORK "With physical networking" OFF)
+option(PLATFORM_BDX "Build for BDX platform" ON)
+
 set(CMAKE_CXX_COMPILER g++)
 
 add_definitions(-std=c++11 -O3 -march=native)
@@ -12,7 +16,7 @@ add_definitions(-fstack-protector -fPIE -fPIC)
 add_definitions(-Wno-unused-function)
 add_definitions(-D_FORTIFY_SOURCE=2)
 
-# Debug and logging
+# Debug and logging config
 #add_definitions(-DFRPC_LOG_LEVEL=3)
 #add_definitions(-DENABLE_DEBUG=1)
 #add_definitions(-DENABLE_ASSERT=1)
@@ -21,6 +25,25 @@ add_definitions(-D_FORTIFY_SOURCE=2)
 add_definitions(-DNIC_CCIP_POLLING)
 #add_definitions(-DNIC_CCIP_MMIO)
 #add_definitions(-DNIC_CCIP_DMA)
+
+# Networking config
+if (WITH_PHY_NETWORK)
+    message(STATUS "Bulding WITH physical networking enabled" )
+    if (PLATFORM_BDX)
+        message(FATAL_ERROR "Physical networking can only be enabled on the PAC_A10 platform" )
+    else()
+        add_definitions(-DNIC_PHY_NETWORK)
+    endif()
+endif()
+
+# Platform config
+if (PLATFORM_BDX)
+    message(STATUS "Bulding for BDX platform" )
+    add_definitions(-DPLATFORM_BDX)
+else()
+    message(STATUS "Bulding for PAC_A10 platform" )
+    add_definitions(-DPLATFORM_PAC_A10)
+endif()
 
 set(LIBRARIES ${LIBRARIES} -z noexecstack)
 set(LIBRARIES ${LIBRARIES} -z relro -z now)
@@ -57,13 +80,18 @@ set(SOURCES
     )
 
 # Prepare afu_json_info.h
-set(JSON_FILENAME ${CMAKE_SOURCE_DIR}/../hw/rtl/ccip_std_afu.json)
+if (WITH_PHY_NETWORK)
+    set(JSON_FILENAME ${CMAKE_SOURCE_DIR}/../hw/rtl/ccip_std_afu_hssi.json)
+else()
+    set(JSON_FILENAME ${CMAKE_SOURCE_DIR}/../hw/rtl/ccip_std_afu.json)
+endif()
+
 set(JSON_HEADER ${CMAKE_CURRENT_BINARY_DIR}/afu_json_info.h)
 execute_process(COMMAND afu_json_mgr json-info --afu-json=${JSON_FILENAME} --c-hdr=${JSON_HEADER}
                 WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
                 RESULT_VARIABLE JSON_GEN_RESULT)
 if(NOT JSON_GEN_RESULT EQUAL "0")
-        message(FATAL_ERROR "failed to generate AFU json")
+    message(FATAL_ERROR "failed to generate AFU json")
 endif()
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
@@ -71,11 +99,11 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 # Aux functions
 #
 FUNCTION(PREPEND var prefix)
-   SET(listVar "")
-   FOREACH(f ${ARGN})
+  SET(listVar "")
+  FOREACH(f ${ARGN})
       LIST(APPEND listVar "${prefix}/${f}")
-   ENDFOREACH(f)
-   SET(${var} "${listVar}" PARENT_SCOPE)
+  ENDFOREACH(f)
+  SET(${var} "${listVar}" PARENT_SCOPE)
 ENDFUNCTION(PREPEND)
 
 #

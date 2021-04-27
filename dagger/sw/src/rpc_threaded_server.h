@@ -16,7 +16,7 @@ public:
     RpcThreadedServer(uint64_t base_nic_addr, size_t max_num_of_threads);
     ~RpcThreadedServer();
 
-    int init_nic();
+    int init_nic(int bus);
     int start_nic();
     int stop_nic();
 

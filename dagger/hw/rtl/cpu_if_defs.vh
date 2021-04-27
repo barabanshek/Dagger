@@ -21,10 +21,17 @@ parameter CL_SIZE_WORDS = 16;
 // NIC status/mode structures
 // This should be consistent with the NicHwStatus in sw/nic_impl/nic_ccip.h
 // =============================================================
+typedef enum logic {PhyNetDisabled, PhyNetEnabled} PhyNetworkMode;
+
 typedef enum logic[1:0] { ccipMMIO,
                           ccipPolling,
                           ccipDMA,
                           ccipQueuePolling } CcipMode;
+
+typedef struct packed {
+    PhyNetworkMode phy_network_mode;
+    CcipMode ccip_mode;
+} NicMode;
 
 typedef struct packed {
     logic  err_rpc;

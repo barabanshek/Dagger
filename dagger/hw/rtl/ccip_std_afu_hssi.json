@@ -9,6 +9,10 @@
                [
                   {
                      "class": "cci-p"
+                  },
+                  {
+                     "class": "hssi",
+                     "interface": "raw_pr"
                   }
                ]
          },

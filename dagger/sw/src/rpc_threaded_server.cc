@@ -26,7 +26,7 @@ RpcThreadedServer::~RpcThreadedServer() {
     }
 }
 
-int RpcThreadedServer::init_nic() {
+int RpcThreadedServer::init_nic(int bus) {
     // Create Nic
     // Define Nic interface with CPU
 #ifdef NIC_CCIP_POLLING
@@ -50,7 +50,8 @@ int RpcThreadedServer::init_nic() {
     #error Nic CCI-P mode is not specified
 #endif
 
-    int res = nic_->connect_to_nic(0xaf);
+    // Connect to NIC
+    int res = nic_->connect_to_nic(bus);
     if (res != 0)
         return res;
     FRPC_INFO("Connected to NIC\n");

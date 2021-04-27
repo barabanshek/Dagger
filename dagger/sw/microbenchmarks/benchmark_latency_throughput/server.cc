@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <iostream>
 
+#include "config.h"
 #include "rpc_call.h"
 #include "rpc_server_callback.h"
 #include "rpc_threaded_server.h"
@@ -11,7 +12,30 @@
 #include "CLI11.hpp"
 
 // HW parameters
-#define NIC_ADDR 0x20000
+#ifdef PLATFORM_PAC_A10
+    #ifdef NIC_PHY_NETWORK
+        // Allocate FPGA on bus_2 for the server when running on PAC_A10 with physical networking
+        static constexpr int fpga_bus = frpc::cfg::platform::pac_a10_fpga_bus_2;
+
+        // If physical networking, running on different FPGAs, so NIC is placed by 0x20000
+        // for both client and server
+        static constexpr uint64_t nic_address = 0x20000;
+
+    #else
+        // Allocate FPGA on bus_1 for the server when running on PAC_A10 with loopback networking
+        static constexpr int fpga_bus = frpc::cfg::platform::pac_a10_fpga_bus_1;
+
+        // If loopback, running on the same FPGA, so NIC is placed by 0x00000 for client
+        // and 0x20000 for server
+        static constexpr uint64_t nic_address = 0x20000;
+
+    #endif
+#else
+    // Only loopback is possible here, so -1 for bus and 0x20000 for address
+    static constexpr int fpga_bus = -1;
+    static constexpr uint64_t nic_address = 0x20000;
+
+#endif
 
 // Ctl-C handler
 static volatile int keepRunning = 1;
@@ -43,10 +67,10 @@ int main(int argc, char* argv[]) {
     CLI11_PARSE(app, argc, argv);
 
     // Server
-    frpc::RpcThreadedServer server(NIC_ADDR, num_of_threads);
+    frpc::RpcThreadedServer server(nic_address, num_of_threads);
 
     // Init
-    int res = server.init_nic();
+    int res = server.init_nic(fpga_bus);
     if (res != 0)
         return res;
 

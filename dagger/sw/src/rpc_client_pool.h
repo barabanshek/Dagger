@@ -30,7 +30,7 @@ public:
         }
     }
 
-    int init_nic() {
+    int init_nic(int bus) {
         // Create Nic
 #ifdef ASE_SIMULATION
     // If running is ASE, create a slave Nic
@@ -85,7 +85,14 @@ public:
 
 #endif
 
-        int res = nic_->connect_to_nic(0x18);
+        // Connect to NIC
+#ifdef PLATFORM_PAC_A10
+        int res = nic_->connect_to_nic(bus);
+#elif PLATFORM_BDX
+        int res = nic_->connect_to_nic();
+#else
+        #error Platform is not specified
+#endif
         if (res != 0)
             return res;
         FRPC_INFO("Connected to NIC\n");

@@ -68,16 +68,45 @@ int NicCCIP::initialize_nic(const PhyAddr& host_phy, const IPv4& host_ipv4) {
     assert(status.running == 0);
     assert(status.error == 0);
 
+    // Check the nic networking mode
+    NicMode *ccip_mode;
+    uint64_t raw_mode;
+    fpga_result ret = fpgaReadMMIO64(accel_handle_,
+                                     0,
+                                     base_nic_addr_ + iRegNicMode,
+                                     &raw_mode);
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Nic configuration error, failed to read ccip mode register"
+                    "nic returned: %d\n", res);
+        return 1;
+    }
+    ccip_mode = reinterpret_cast<NicMode*>(&raw_mode);
+#ifdef NIC_PHY_NETWORK
+    if (ccip_mode->phy_network_mode != iPhyNetEnabled) {
+        FRPC_ERROR("Nic configuration error, "
+                   "software is configured with physical networking support, but "
+                   "the hardware runs in the loopback mode\n");
+        return 1;
+    }
+#else
+    if (ccip_mode->phy_network_mode != iPhyNetDisabled) {
+        FRPC_ERROR("Nic configuration error, "
+                   "software is configuredin the loopback mode, but "
+                   "the harwdare runs physical networking\n");
+        return 1;
+    }
+#endif
+
     // Program PHY and IPv4 host addresses
-    fpga_result ret = fpgaWriteMMIO64(accel_handle_,
-                                      0,
-                                      base_nic_addr_ + iRegPhyNetAddr,
-                                      host_phy.b5 |
-                                      host_phy.b4 << 8 |
-                                      host_phy.b3 << 16 |
-                                      host_phy.b2 << 24 |
-                                      host_phy.b1 << 32 |
-                                      host_phy.b0 << 40);
+    ret = fpgaWriteMMIO64(accel_handle_,
+                          0,
+                          base_nic_addr_ + iRegPhyNetAddr,
+                          host_phy.b5 |
+                          host_phy.b4 << 8 |
+                          host_phy.b3 << 16 |
+                          host_phy.b2 << 24 |
+                          host_phy.b1 << 32 |
+                          host_phy.b0 << 40);
     if (ret != FPGA_OK) {
         FRPC_ERROR("Nic configuration error, failed to configure iRegPhyNetAddr"
                     "nic returned %d\n", ret);
@@ -644,6 +673,7 @@ void NicCCIP::get_network_counters() const {
 
     std::string counters_str;
     counters_str += "Nic network counters dump >> \n";
+#ifdef NIC_PHY_NETWORK
     for (uint8_t cnt_id=0; cnt_id<iNumOfNetworkCnt; ++cnt_id) {
         fpga_result res = fpgaWriteMMIO64(accel_handle_,
                                           0,
@@ -669,6 +699,10 @@ void NicCCIP::get_network_counters() const {
         counters_str += "  counter[" + std::to_string(cnt_id) + "] = " +
                                        std::to_string(network_cnt) + "\n";
     }
+#else
+    counters_str += "  <no physical networking in this build, no network counters"
+                    " can be read>\n";
+#endif
     FRPC_INFO("%s\n", counters_str.c_str());
 }
 

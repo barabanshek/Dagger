@@ -30,6 +30,11 @@ static int run_server(std::promise<bool>& init_pr, std::future<bool>& cmpl_ft);
 static int run_client();
 
 int main() {
+#ifdef NIC_PHY_NETWORK
+    std::cout << "The ASE samle can only be run in the loopbacl mode" << std::endl;
+    return 1;
+#endif
+
     std::promise<bool> init_pr;
     std::future<bool> init_ft = init_pr.get_future();
 
@@ -37,20 +42,20 @@ int main() {
     std::future<bool> cmpl_ft = cmpl_pr.get_future();
 
     // Start server
-//    std::thread server_thread = std::thread(&run_server, std::ref(init_pr), std::ref(cmpl_ft));
+    std::thread server_thread = std::thread(&run_server, std::ref(init_pr), std::ref(cmpl_ft));
 
     // Wait until server is set-up
-//    init_ft.wait();
+    init_ft.wait();
 
     // Start client
     std::thread client_thread = std::thread(&run_client);
 
     // Wait untill client thread is terminated
     client_thread.join();
-//    cmpl_pr.set_value(true);
+    cmpl_pr.set_value(true);
 
     // Wait until server thread is terminated
-//    server_thread.join();
+    server_thread.join();
 
     return 0;
 }
@@ -68,7 +73,7 @@ static int run_server(std::promise<bool>& init_pr, std::future<bool>& cmpl_ft) {
     frpc::RpcThreadedServer server(SERVER_NIC_ADDR, NUMBER_OF_THREADS);
 
     // Init
-    int res = server.init_nic();
+    int res = server.init_nic(-1);
     if (res != 0)
         return res;
 
@@ -154,7 +159,7 @@ static RpcRetCode add(CallHandler handler, AddArgs args, NumericalResult* ret) {
 //
 // Client part
 //
-#define CLIENT_NIC_ADDR 0x20000
+#define CLIENT_NIC_ADDR 0x00000
 
 static int client(frpc::RpcClient* rpc_client, size_t thread_id, size_t num_of_requests) {
     // Open connection
@@ -198,7 +203,7 @@ static int run_client() {
                                                          NUMBER_OF_THREADS);
 
     // Init client pool
-    int res = rpc_client_pool.init_nic();
+    int res = rpc_client_pool.init_nic(-1);
     if (res != 0)
         return res;
 
@@ -209,7 +214,8 @@ static int run_client() {
 
     // Get client
     std::vector<std::thread> threads;
-    for (int i=0; i<1/*NUMBER_OF_THREADS*/; ++i) {
+    //for (int i=0; i<NUMBER_OF_THREADS; ++i) {
+    for (int i=0; i<1; ++i) {
         frpc::RpcClient* rpc_client = rpc_client_pool.pop();
         assert(rpc_client != nullptr);
 

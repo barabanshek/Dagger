@@ -1,6 +1,13 @@
 #ifndef _CONFIG_H_
 #define _CONFIG_H_
 
+// Check build configuration
+#ifdef NIC_PHY_NETWORK
+#ifdef PLATFORM_BDX
+    #error Physical networking can only be supported on PAC_A10 platform
+#endif
+#endif
+
 #include <type_traits>
 
 namespace frpc {
@@ -50,6 +57,15 @@ namespace frpc {
             constexpr size_t polling_rate = 10;
 
         } // namespace nic
+
+        namespace platform {
+            // Bus ID of the first FPGA on PAC_A10
+            constexpr uint8_t pac_a10_fpga_bus_1 = 0x18;
+
+            // Bus ID of the second FPGA on PAC_A10
+            constexpr uint8_t pac_a10_fpga_bus_2 = 0xaf;
+
+        } // namespace platform
 
     }  // namespace cgf
 

@@ -42,7 +42,7 @@ public:
     static constexpr uint8_t iRegCcipRps     = 48;   // hw: 12, R
     static constexpr uint8_t iRegGetPckCnt   = 56;   // hw: 14, W
     static constexpr uint8_t iRegPckCnt      = 64;   // hw: 16, R
-    static constexpr uint8_t iRegCcipMode    = 72;   // hw: 18, R
+    static constexpr uint8_t iRegNicMode     = 72;   // hw: 18, R
     static constexpr uint8_t iRegCcipDmaTrg  = 80;   // hw: 20, W
     static constexpr uint8_t iRegRxQueueSize = 88;   // hw: 22, W
     static constexpr uint8_t lRegTxBatchSize = 96;   // hw: 24, W
@@ -65,6 +65,8 @@ public:
     static constexpr int iConstCcipPolling      = 1;
     static constexpr int iConstCcipDma          = 2;
     static constexpr int iConstCcipQueuePolling = 3;
+    static constexpr int iPhyNetDisabled        = 0;
+    static constexpr int iPhyNetEnabled         = 1;
     static constexpr uint8_t iNumOfPckCnt       = 5;
     static constexpr uint8_t iNumOfNetworkCnt   = 7;
 
@@ -106,6 +108,12 @@ protected:
 
     int start_nic();
     int stop_nic();
+
+    // NIC mode
+    struct __attribute__ ((__packed__)) NicMode {
+        uint8_t ccip_mode        : 2;
+        uint8_t phy_network_mode : 1;
+    };
 
 private:
     size_t round_up_to_pagesize(size_t val) const;

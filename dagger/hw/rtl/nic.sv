@@ -140,7 +140,7 @@ module nic
                         = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 14);
     localparam t_ccip_mmioAddr addrPckCnt
                         = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 16);
-    localparam t_ccip_mmioAddr addrRegCcipMode
+    localparam t_ccip_mmioAddr addrRegNicMode
                         = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 18);
     localparam t_ccip_mmioAddr addrCcipDmaMmio
                         = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 20);
@@ -177,7 +177,6 @@ module nic
     logic[31:0]                    iRegCcipRps;
     logic[7:0]                     iRegGetPckCnt;
     logic[63:0]                    iRegPckCnt;
-    CcipMode[1:0]                  iRegCcipMode;
     logic[LMAX_RX_QUEUE_SIZE-1:0]  iRegRxQueueSize;  // iRegRxQueueSize = rx queue size - 1
     logic[LMAX_CCIP_BATCH-1:0]     lRegTxBatchSize;
     logic[LMAX_CCIP_DMA_BATCH-1:0] iRegRxBatchSize;
@@ -191,6 +190,7 @@ module nic
     logic                          iRegReadNetDropCntValid;
     logic[4:0]                     iRegReadNetDropCnt;
     logic[31:0]                    iRegNetDropCnt;
+    NicMode                        iNicMode;
 
     // CSR read logic
     logic is_csr_read;
@@ -255,8 +255,8 @@ module nic
                 sTx.c2.data[$bits(iRegPckCnt)-1:0] <= iRegPckCnt;
             end
 
-            addrRegCcipMode: begin
-                sTx.c2.data[$bits(CcipMode)-1:0] <= iRegCcipMode;
+            addrRegNicMode: begin
+                sTx.c2.data[$bits(iNicMode)-1:0] <= iNicMode;
             end
 
             addrConnStatus: begin
@@ -496,6 +496,9 @@ module nic
         .pdrop_tx_flows_out(pdrop_tx_flows)
     );
 
+    // Set NIC mode infrmation register
+    assign iNicMode.ccip_mode = ccipMMIO;
+
 `elsif CCIP_POLLING
     $info("Building CCI-P polling-based nic");
 
@@ -537,6 +540,9 @@ module nic
 
         .pdrop_tx_flows_out(pdrop_tx_flows)
     );
+
+    // Set NIC mode infrmation register
+    assign iNicMode.ccip_mode = ccipPolling;
 
 `elsif CCIP_DMA
     $info("Building CCI-P DMA-based nic");
@@ -580,6 +586,9 @@ module nic
 
         .pdrop_tx_flows_out(pdrop_tx_flows)
     );
+
+    // Set NIC mode infrmation register
+    assign iNicMode.ccip_mode = ccipDMA;
 
 `elsif CCIP_QUEUE_POLLING
     $info("Building CCI-P polling-based nic with queues");
@@ -628,23 +637,13 @@ module nic
         .pdrop_tx_flows_out(pdrop_tx_flows)
     );
 
+    // Set NIC mode infrmation register
+    assign iNicMode.ccip_mode = ccipQueuePolling;
+
 `else
     $error("** Illegal Configuration ** CCI-P mode is not set");
 
 `endif
-
-    // Set current CCI-P mode information register
-    always_comb begin
-        `ifdef CCIP_MMIO
-            iRegCcipMode = ccipMMIO;
-        `elsif CCIP_POLLING
-            iRegCcipMode = ccipPolling;
-        `elsif CCIP_DMA
-            iRegCcipMode = ccipDMA;
-        `elsif CCIP_QUEUE_POLLING
-            iRegCcipMode = ccipQueuePolling;
-        `endif
-    end
 
 
     // =============================================================
@@ -800,11 +799,19 @@ module nic
 
             .error()
         );
+
+    // Set NIC mode infrmation register
+    assign iNicMode.phy_network_mode = PhyNetEnabled;
+
 `else
     // L4 I/O
     assign network_clk_out = network_clk;
     assign network_tx_out = network_tx;
     assign network_rx = network_rx_in;
+
+    // Set NIC mode infrmation register
+    assign iNicMode.phy_network_mode = PhyNetDisabled;
+
 `endif
 
 

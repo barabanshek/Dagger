@@ -38,17 +38,19 @@ int NicPollingCCIP::configure_data_plane() {
     assert(dp_configured_ == false);
 
     // Check the nic is polling-compatible
-    uint64_t ccip_mode = 0;
+    NicMode *ccip_mode;
+    uint64_t raw_mode;
     fpga_result res = fpgaReadMMIO64(accel_handle_,
                                      0,
-                                     base_nic_addr_ + iRegCcipMode,
-                                     &ccip_mode);
+                                     base_nic_addr_ + iRegNicMode,
+                                     &raw_mode);
     if (res != FPGA_OK) {
         FRPC_ERROR("Nic configuration error, failed to read ccip mode register"
                     "nic returned: %d\n", res);
         return 1;
     }
-    if (ccip_mode != iConstCcipQueuePolling) {
+    ccip_mode = reinterpret_cast<NicMode*>(&raw_mode);
+    if (ccip_mode->ccip_mode != iConstCcipQueuePolling) {
         FRPC_ERROR("Nic configuration error, "
                    "the harwdare is not CCI-P queue polling compatible\n");
         // It always fails when cross-clock shim is used in HW

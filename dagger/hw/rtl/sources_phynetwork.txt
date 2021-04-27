@@ -1,7 +1,7 @@
 +define+PHY_NETWORK
 +define+PLATFORM_PAC_A10
 
-ccip_std_afu.json
+ccip_std_afu_hssi.json
 
 C:${FPGA_BBB_CCI_SRC}/BBB_ccip_mux/hw/sim/mux_simfiles.list
 
