@@ -20,7 +20,7 @@ TEST_F(ClientServerTest, SingleLoopback1CallTest) {
     ASSERT_NE(cq, nullptr);
 
     // Open connection
-    frpc::IPv4 server_addr("192.168.0.1", 3136);
+    frpc::IPv4 server_addr("192.168.0.2", 3136);
     int res = c->connect(server_addr, 0);
     ASSERT_EQ(res, 0);
 
@@ -57,7 +57,7 @@ TEST_F(ClientServerTest, MultipleLoopback1CallTest) {
     ASSERT_NE(cq, nullptr);
 
     // Open connection
-    frpc::IPv4 server_addr("192.168.0.1", 3136);
+    frpc::IPv4 server_addr("192.168.0.2", 3136);
     int res = c->connect(server_addr, 0);
     ASSERT_EQ(res, 0);
 
@@ -107,7 +107,7 @@ TEST_F(ClientServerTest, SingleLoopBack2CallTest) {
     ASSERT_NE(cq, nullptr);
 
     // Open connection
-    frpc::IPv4 server_addr("192.168.0.1", 3136);
+    frpc::IPv4 server_addr("192.168.0.2", 3136);
     int res = c->connect(server_addr, 0);
     ASSERT_EQ(res, 0);
 
@@ -144,7 +144,7 @@ TEST_F(ClientServerTest, MultipleLoopback2CallTest) {
     ASSERT_NE(cq, nullptr);
 
     // Open connection
-    frpc::IPv4 server_addr("192.168.0.1", 3136);
+    frpc::IPv4 server_addr("192.168.0.2", 3136);
     int res = c->connect(server_addr, 0);
     ASSERT_EQ(res, 0);
 
@@ -197,7 +197,7 @@ TEST_F(ClientServerTest, MultipleLoopback5CallTest) {
     ASSERT_NE(cq, nullptr);
 
     // Open connection
-    frpc::IPv4 server_addr("192.168.0.1", 3136);
+    frpc::IPv4 server_addr("192.168.0.2", 3136);
     int res = c->connect(server_addr, 0);
     ASSERT_EQ(res, 0);
 
@@ -252,7 +252,7 @@ TEST_F(ClientServerTest, MixedCallTest) {
     ASSERT_NE(cq, nullptr);
 
     // Open connection
-    frpc::IPv4 server_addr("192.168.0.1", 3136);
+    frpc::IPv4 server_addr("192.168.0.2", 3136);
     int res = c->connect(server_addr, 0);
     ASSERT_EQ(res, 0);
 

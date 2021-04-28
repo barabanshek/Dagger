@@ -28,7 +28,7 @@ TEST_F(ClientServerTestMultithreaded, SingleSameCallSingleThreadTest) {
     }
 
     // Open connections
-    frpc::IPv4 server_addr("192.168.0.1", 3136);
+    frpc::IPv4 server_addr("192.168.0.2", 3136);
     for(int i=0; i<num_of_threads; ++i) {
         int res = clients[i]->connect(server_addr, i);
         ASSERT_EQ(res, 0);
@@ -92,7 +92,7 @@ TEST_F(ClientServerTestMultithreaded, SingleDifferentCallsSingleThreadTest) {
     }
 
     // Open connections
-    frpc::IPv4 server_addr("192.168.0.1", 3136);
+    frpc::IPv4 server_addr("192.168.0.2", 3136);
     for(int i=0; i<num_of_threads; ++i) {
         int res = clients[i]->connect(server_addr, i);
         ASSERT_EQ(res, 0);
@@ -174,7 +174,7 @@ TEST_F(ClientServerTestMultithreaded, MultipleDifferentCallsSingleThreadTest) {
     }
 
     // Open connections
-    frpc::IPv4 server_addr("192.168.0.1", 3136);
+    frpc::IPv4 server_addr("192.168.0.2", 3136);
     for(int i=0; i<num_of_threads; ++i) {
         int res = clients[i]->connect(server_addr, i);
         ASSERT_EQ(res, 0);
@@ -330,7 +330,7 @@ TEST_F(ClientServerTestMultithreaded, MultipleDifferentCallsMultipleThreadTest) 
     }
 
     // Open connections
-    frpc::IPv4 server_addr("192.168.0.1", 3136);
+    frpc::IPv4 server_addr("192.168.0.2", 3136);
     for(int i=0; i<num_of_threads; ++i) {
         int res = clients[i]->connect(server_addr, i);
         ASSERT_EQ(res, 0);

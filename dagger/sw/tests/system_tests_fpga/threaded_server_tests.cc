@@ -5,6 +5,33 @@
 #include "rpc_server_callback.h"
 #include "rpc_threaded_server.h"
 
+// HW parameters
+#ifdef PLATFORM_PAC_A10
+    #ifdef NIC_PHY_NETWORK
+        // Allocate FPGA on bus_1 for the client when running on PAC_A10 with physical networking
+        static constexpr int fpga_bus = frpc::cfg::platform::pac_a10_fpga_bus_1;
+
+        // If physical networking, running on different FPGAs, so NIC is placed by 0x20000
+        // for both client and server
+        static constexpr uint64_t nic_address = 0x20000;
+
+    #else
+        // Allocate FPGA on bus_1 for the client when running on PAC_A10 with loopback networking
+        static constexpr int fpga_bus = frpc::cfg::platform::pac_a10_fpga_bus_1;
+
+        // If loopback, running on the same FPGA, so NIC is placed by 0x00000 for client
+        // and 0x20000 for server
+        static constexpr uint64_t nic_address = 0x00000;
+
+    #endif
+#else
+    // Only loopback is possible here, so -1 for bus and 0x00000 for address
+    static constexpr int fpga_bus = -1;
+    static constexpr uint64_t nic_address = 0x00000;
+
+#endif
+
+
 namespace frpc {
 
 static uint64_t loopback1(uint64_t a) {
@@ -12,12 +39,11 @@ static uint64_t loopback1(uint64_t a) {
 }
 
 TEST(ThreadedServerTest, ListenSingleThreadTest) {
-    uint64_t base_nic_addr = 0x000000;
     uint64_t max_number_of_threads = 1;
 
-    RpcThreadedServer rpc_server(base_nic_addr, max_number_of_threads);
+    RpcThreadedServer rpc_server(nic_address, max_number_of_threads);
 
-    int res = rpc_server.init_nic();
+    int res = rpc_server.init_nic(fpga_bus);
     ASSERT_EQ(res, 0);
 
     res = rpc_server.start_nic();
@@ -44,12 +70,11 @@ TEST(ThreadedServerTest, ListenSingleThreadTest) {
 }
 
 TEST(ThreadedServerTest, ListenSingleThreadTwoRequestedTest) {
-    uint64_t base_nic_addr = 0x000000;
     uint64_t max_number_of_threads = 1;
 
-    RpcThreadedServer rpc_server(base_nic_addr, max_number_of_threads);
+    RpcThreadedServer rpc_server(nic_address, max_number_of_threads);
 
-    int res = rpc_server.init_nic();
+    int res = rpc_server.init_nic(fpga_bus);
     ASSERT_EQ(res, 0);
 
     res = rpc_server.start_nic();
@@ -79,12 +104,11 @@ TEST(ThreadedServerTest, ListenSingleThreadTwoRequestedTest) {
 }
 
 TEST(ThreadedServerTest, ListenMultipleThreadsTest) {
-    uint64_t base_nic_addr = 0x000000;
     uint64_t max_number_of_threads = 8;
 
-    RpcThreadedServer rpc_server(base_nic_addr, max_number_of_threads);
+    RpcThreadedServer rpc_server(nic_address, max_number_of_threads);
 
-    int res = rpc_server.init_nic();
+    int res = rpc_server.init_nic(fpga_bus);
     ASSERT_EQ(res, 0);
 
     res = rpc_server.start_nic();
@@ -113,12 +137,11 @@ TEST(ThreadedServerTest, ListenMultipleThreadsTest) {
 }
 
 TEST(ThreadedServerTest, ListenMultipleThreadsStartStopTest) {
-    uint64_t base_nic_addr = 0x000000;
     uint64_t max_number_of_threads = 8;
 
-    RpcThreadedServer rpc_server(base_nic_addr, max_number_of_threads);
+    RpcThreadedServer rpc_server(nic_address, max_number_of_threads);
 
-    int res = rpc_server.init_nic();
+    int res = rpc_server.init_nic(fpga_bus);
     ASSERT_EQ(res, 0);
 
     res = rpc_server.start_nic();
