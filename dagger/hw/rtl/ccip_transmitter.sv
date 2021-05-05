@@ -117,6 +117,7 @@ module ccip_transmitter
                 .pop_valid(ff_pop_valid[gi]),
                 .pop_data(ff_pop_data[gi]),
                 .pop_dw(ff_dw[gi]),
+                .loss_out(),
                 .error(ff_ovf[gi])
             );
     end

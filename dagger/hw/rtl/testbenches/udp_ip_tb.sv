@@ -188,6 +188,7 @@ module udp_ip_tb();
             .pop_data(recv_queue_pop_data),
             .pop_dw(recv_queue_pop_dw),
             .pop_empty(),
+            .loss_out(),
             .error()
         );
 

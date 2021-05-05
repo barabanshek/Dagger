@@ -31,13 +31,25 @@
         request.hdr.ctl.req_type = <REQ_TYPE>;
         request.hdr.ctl.valid    = 1;
 
-/*DATA_LAYOUT*/
-        // MMIO only supports AVX writes
-        _mm256_store_si256(reinterpret_cast<__m256i*>(tx_ptr),
-                           *(reinterpret_cast<__m256i*>(&request)));
-        _mm256_store_si256(reinterpret_cast<__m256i*>(tx_ptr + 32),
-                           *(reinterpret_cast<__m256i*>(&request)));
         _mm_mfence();
+
+/*DATA_LAYOUT_MMIO*/
+
+        // MMIO only supports AVX writes
+        #ifdef PLATFORM_PAC_A10
+            // PAC_A10 supports AVX-512 - easy!
+            _mm512_store_si512(reinterpret_cast<__m512i*>(tx_ptr),
+                               *(reinterpret_cast<__m512i*>(&request)));
+        #else
+            // BDX only supports AVX-256, so split into two writes
+            //  - performance will not be good
+            //  - and I'm not even sure, this will ever work (so far, I have not seen any testing issues)
+            //  - better to avoid the MMIO interface for BDX
+            _mm256_store_si256(reinterpret_cast<__m256i*>(tx_ptr),
+                               *(reinterpret_cast<__m256i*>(&request)));
+            _mm256_store_si256(reinterpret_cast<__m256i*>(tx_ptr + 32),
+                               *(reinterpret_cast<__m256i*>(reinterpret_cast<uint8_t*>(&request) + 32)));
+        #endif
     #elif NIC_CCIP_DMA
         RpcPckt* tx_ptr_casted = reinterpret_cast<RpcPckt*>(tx_ptr);
 

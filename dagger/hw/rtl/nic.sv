@@ -78,11 +78,6 @@ module nic
     // =============================================================
     // General local config
     // =============================================================
-    // CCI-P mode
-    //`define CCIP_MMIO
-    //`define CCIP_POLLING
-    //`define CCIP_DMA
-    `define CCIP_QUEUE_POLLING
     // log number of NIC flows
     localparam LMAX_RX_QUEUE_SIZE = 3;   // 2**3=8
     // CCI-P VCs
@@ -488,6 +483,8 @@ module nic
         .rpc_out_valid(from_ccip_valid),
         .rpc_flow_id_out(from_ccip.flow_id),
 
+        .lb_select(iLB),
+
         .ccip_tx_ready(ccip_tx_ready),
         .rpc_in(to_ccip.rpc_data),
         .rpc_in_valid(to_ccip_valid),
@@ -671,6 +668,7 @@ module nic
             .pop_valid(to_rpc_valid),
             .pop_data(to_rpc),
             .pop_dw(),
+            .loss_out(),
             .error(rpc_rx_fifo_error)
         );
 
@@ -694,6 +692,7 @@ module nic
             .pop_valid(to_ccip_valid),
             .pop_data(to_ccip),
             .pop_dw(),
+            .loss_out(),
             .error(rpc_tx_fifo_error)
         );
 
@@ -715,6 +714,7 @@ module nic
             .pop_valid(conn_setup_en),
             .pop_data(conn_setup_frame),
             .pop_dw(),
+            .loss_out(),
             .error()
         );
 

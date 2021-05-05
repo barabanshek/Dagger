@@ -85,6 +85,7 @@ module request_queue
             .pop_data(fr_addr_pop),
             .pop_dw(),
             .pop_empty(fr_pop_empty),
+            .loss_out(),
             .error(free_entry_fifo_error)
         );
 

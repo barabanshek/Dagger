@@ -130,7 +130,9 @@ module udp_ip
             .pop_data(tx_fifo_pop_data),
             .pop_dw(),
             .pop_empty(tx_fifo_pop_empty),
-            .error(tx_fifo_ovf)
+
+            .loss_out(tx_fifo_ovf),
+            .error()
         );
 
     // Sync
@@ -568,7 +570,9 @@ module udp_ip
             .pop_data({network_rx_out.addr_tpl, network_rx_out.payload}),
             .pop_dw(),
             .pop_empty(),
-            .error(rx_fifo_ovf)
+
+            .loss_out(rx_fifo_ovf),
+            .error()
         );
 
     // Check for rx_fifo overflow

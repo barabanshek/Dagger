@@ -314,8 +314,6 @@ module ccip_queue_polling
     // =============================================================
     // NIC - CPU datapath
     // =============================================================
-    localparam LTX_FIFO_DEPTH = 3;
-
     logic ccip_transmitter_initialized;
     logic ccip_transmitter_error;
 

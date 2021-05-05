@@ -26,6 +26,7 @@ module async_fifo_channel
     output logic [LOG_DEPTH-1:0]  pop_dw,
     output logic                  pop_empty,
 
+    output logic loss_out,
     output logic error
     );
 
@@ -82,16 +83,22 @@ module async_fifo_channel
     end
     assign pop_valid = pop_valid_delay;
 
-    // Error if full
-    logic packet_lost_detected;
+    // If full and write - detect packet loss:
+    //  - assert packet_loss_detected/error forever (because sometimes it's critical)
+    //  - assert loss_out for a singe cycle
+    logic packet_loss_detected;
     always @(posedge clk_1, posedge clear) begin
         if (clear) begin
-            packet_lost_detected <= 1'b0;
+            packet_loss_detected <= 1'b0;
+            loss_out <= 1'b0;
         end else if (push_en & fifo_full) begin
-            packet_lost_detected <= 1'b1;
+            packet_loss_detected <= 1'b1;
+            loss_out <= 1'b1;
+        end else begin
+            loss_out <= 1'b0;
         end
     end
-    assign error = packet_lost_detected;
+    assign error = packet_loss_detected;
 
     assign pop_empty = fifo_empty;
 

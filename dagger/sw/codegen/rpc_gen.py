@@ -287,8 +287,16 @@ public:
 		c_codegen.replace('<FUN_ARG_LENGTH_BYTES>', 'ret_size')
 		c_codegen.replace('<REQ_TYPE>', 'rpc_response')
 
-		# Make data layout
-		for i in range(3):
+		# Make data layout for MMIO-based interface
+		c_codegen.seek('/*DATA_LAYOUT_MMIO*/')
+		c_codegen.remove_token('/*DATA_LAYOUT_MMIO*/')
+		c_codegen.append(
+			self.__new_line(
+			self.__memcpy('request.argv', 'ret_buff', 'ret_size'), 2)
+		)
+
+		# Make data layout for polling- and DMA-based interfaces
+		for i in range(2):
 			c_codegen.seek('/*DATA_LAYOUT*/')
 			c_codegen.remove_token('/*DATA_LAYOUT*/')
 			c_codegen.append(
@@ -365,6 +373,7 @@ public:
 
 #include "rpc_types.h"
 
+#include <cstring>
 #include <immintrin.h>
 
 namespace frpc {
@@ -424,8 +433,18 @@ public:
 			f_codegen.replace('<FUN_ARG_LENGTH_BYTES>', 'sizeof(' + arg_name + ')')
 			f_codegen.replace('<REQ_TYPE>', 'rpc_request')
 
-			# Make data layout
-			for i in range(3):
+			# Make data layout for MMIO-based interface
+			f_codegen.seek('/*DATA_LAYOUT_MMIO*/')
+			f_codegen.remove_token('/*DATA_LAYOUT_MMIO*/')
+			f_codegen.append(
+				self.__new_line(
+				self.__memcpy('request.argv',
+					          self.__reinterpret_cast(self.__make_const(self.__make_ptr('void')), self.__pointer('args')),
+					          'sizeof(' + arg_name + ')'), 2)
+			)
+
+			# Make data layout for polling- and DMA-based interfaces
+			for i in range(2):
 				f_codegen.seek('/*DATA_LAYOUT*/')
 				f_codegen.remove_token('/*DATA_LAYOUT*/')
 				f_codegen.append(self.__new_line(
@@ -508,6 +527,9 @@ public:
 
 	def __make_ref(self, expr):
 		return expr + '&'
+
+	def __pointer(self, expr):
+		return '&' + expr
 
 	def __make_const(self, expr):
 		return 'const ' + expr

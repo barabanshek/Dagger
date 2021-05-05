@@ -34,9 +34,12 @@ namespace frpc {
             //   - in UPI polling mode, any size allowed
             //   - in MMIO mode, must be equal to 0
             //   - in DMA mode, must be multiple of DMA batch size
-            constexpr size_t l_tx_queue_size = 3;
+            constexpr size_t l_tx_queue_size = 0;
             static_assert((1 << l_tx_queue_size) >= tx_batch_size,
                           "tx queue size should be multiple of tx batch size");
+#ifdef NIC_CCIP_MMIO
+            static_assert(l_tx_queue_size == 0, "tx queue size should be 0 for MMIO-based mode");
+#endif
 
             // Log rx batch size
             //   - in MTUs

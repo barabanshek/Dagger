@@ -215,6 +215,7 @@ module ccip_dma
             .pop_valid(tx_fifo_pop_valid),
             .pop_data({tx_fifo_pop_data}),
             .pop_dw(tx_fifo_dw),
+            .loss_out(),
             .error(error)
         );
 
