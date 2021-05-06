@@ -13,6 +13,7 @@
 
 #include "config.h"
 #include "connection_manager.h"
+#include "fpga_hssi.h"
 #include "nic.h"
 
 namespace frpc {
@@ -68,7 +69,7 @@ public:
     static constexpr int iPhyNetDisabled        = 0;
     static constexpr int iPhyNetEnabled         = 1;
     static constexpr uint8_t iNumOfPckCnt       = 5;
-    static constexpr uint8_t iNumOfNetworkCnt   = 7;
+    static constexpr uint8_t iNumOfNetworkCnt   = 8;
 
     NicCCIP(uint64_t base_rf_addr, size_t num_of_flows, bool master_nic);
     virtual ~NicCCIP();
@@ -118,6 +119,10 @@ protected:
 private:
     size_t round_up_to_pagesize(size_t val) const;
     fpga_handle connect_to_accel(const char *accel_uuid, int bus) const;
+
+    static constexpr int phy_net_channel = 0;
+    int initialize_phy_network(int channel);
+    void dump_hssi_stat(int channel);
 
     // NIC status
     struct __attribute__ ((__packed__)) NicHwStatus {
@@ -195,8 +200,11 @@ private:
 protected:
     uint64_t base_nic_addr_;
 
-    // NIC handler
+    // FPGA handler
     fpga_handle accel_handle_;
+
+    // HSSI handler
+    fpga_hssi_handle hssi_h_;
 
     // NIC status
     // TODO: define a status enum instead
@@ -208,6 +216,9 @@ private:
     // In case of running multiple NICs, specify the one
     // responsible for closing physical connection with FPGA
     bool master_nic_;
+
+    // PHY network enabled/disabled
+    bool phy_network_en_;
 
     // Perf thread
     volatile bool collect_perf_;

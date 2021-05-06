@@ -25,6 +25,7 @@ NicCCIP::NicCCIP(uint64_t base_nic_addr, size_t num_of_flows, bool master_nic = 
     initialized_(false),
     started_(false),
     master_nic_(master_nic),
+    phy_network_en_(false),
     collect_perf_(false),
     conn_manager_(num_of_flows + 100) {
 
@@ -33,6 +34,11 @@ NicCCIP::NicCCIP(uint64_t base_nic_addr, size_t num_of_flows, bool master_nic = 
 NicCCIP::~NicCCIP() {
     if (started_) {
         stop_nic();
+    }
+
+    if (hssi_h_) {
+        dump_hssi_stat(phy_net_channel);
+        fpgaHssiClose(hssi_h_);
     }
 
     if (connected_ && master_nic_) {
@@ -75,9 +81,9 @@ int NicCCIP::initialize_nic(const PhyAddr& host_phy, const IPv4& host_ipv4) {
                                      0,
                                      base_nic_addr_ + iRegNicMode,
                                      &raw_mode);
-    if (res != FPGA_OK) {
+    if (ret != FPGA_OK) {
         FRPC_ERROR("Nic configuration error, failed to read ccip mode register"
-                    "nic returned: %d\n", res);
+                    "nic returned: %d\n", ret);
         return 1;
     }
     ccip_mode = reinterpret_cast<NicMode*>(&raw_mode);
@@ -88,6 +94,17 @@ int NicCCIP::initialize_nic(const PhyAddr& host_phy, const IPv4& host_ipv4) {
                    "the hardware runs in the loopback mode\n");
         return 1;
     }
+
+    // Init HSSI
+    res = initialize_phy_network(phy_net_channel);
+    if (res != 0) {
+        FRPC_ERROR("Failed to initialize physical network\n");
+        return 1;
+    } else {
+        FRPC_INFO("Physical network is initialized\n");
+    }
+
+    phy_network_en_ = true;
 #else
     if (ccip_mode->phy_network_mode != iPhyNetDisabled) {
         FRPC_ERROR("Nic configuration error, "
@@ -95,6 +112,8 @@ int NicCCIP::initialize_nic(const PhyAddr& host_phy, const IPv4& host_ipv4) {
                    "the harwdare runs physical networking\n");
         return 1;
     }
+
+    phy_network_en_ = false;
 #endif
 
     // Program PHY and IPv4 host addresses
@@ -602,6 +621,20 @@ std::string NicCCIP::dump_nic_hw_status(const NicHwStatus& status) const {
     return ret;
 }
 
+void NicCCIP::dump_hssi_stat(int channel) {
+    // Print HSSI channel statistics
+    int res;
+    if (hssi_h_) {
+        FRPC_INFO("********* HSSI stat *********\n");
+        res = fpgaHssiPrintChannelStats(hssi_h_, PHY, channel);
+        assert(res == FPGA_OK);
+        res = fpgaHssiPrintChannelStats(hssi_h_, TX, channel);
+        assert(res == FPGA_OK);
+        res = fpgaHssiPrintChannelStats(hssi_h_, RX, channel);
+        assert(res == FPGA_OK);
+    }
+}
+
 void NicCCIP::get_perf() const {
     assert(connected_ == true);
 
@@ -673,36 +706,36 @@ void NicCCIP::get_network_counters() const {
 
     std::string counters_str;
     counters_str += "Nic network counters dump >> \n";
-#ifdef NIC_PHY_NETWORK
-    for (uint8_t cnt_id=0; cnt_id<iNumOfNetworkCnt; ++cnt_id) {
-        fpga_result res = fpgaWriteMMIO64(accel_handle_,
-                                          0,
-                                          base_nic_addr_ + iRegNetDropCntRead,
-                                          cnt_id);
-        if (res != FPGA_OK) {
-            FRPC_ERROR("Nic configuration error, failed to read network counters"
-                        "nic returned: %d\n", res);
-        }
+    if (phy_network_en_) {
+        for (uint8_t cnt_id=0; cnt_id<iNumOfNetworkCnt; ++cnt_id) {
+            fpga_result res = fpgaWriteMMIO64(accel_handle_,
+                                              0,
+                                              base_nic_addr_ + iRegNetDropCntRead,
+                                              cnt_id);
+            if (res != FPGA_OK) {
+                FRPC_ERROR("Nic configuration error, failed to read network counters"
+                            "nic returned: %d\n", res);
+            }
 
-        // Wait until fpgaWrite propagates and counter is read
-        // TODO: can we do it in a smarter way?
-        usleep(1000);
-        uint64_t network_cnt = 0;
-        res = fpgaReadMMIO64(accel_handle_,
-                             0,
-                             base_nic_addr_ + iRegNetDropCnt,
-                             &network_cnt);
-        if (res != FPGA_OK) {
-            FRPC_ERROR("Nic configuration error, failed to read network counters"
-                        "nic returned: %d\n", res);
+            // Wait until fpgaWrite propagates and counter is read
+            // TODO: can we do it in a smarter way?
+            usleep(1000);
+            uint64_t network_cnt = 0;
+            res = fpgaReadMMIO64(accel_handle_,
+                                 0,
+                                 base_nic_addr_ + iRegNetDropCnt,
+                                 &network_cnt);
+            if (res != FPGA_OK) {
+                FRPC_ERROR("Nic configuration error, failed to read network counters"
+                            "nic returned: %d\n", res);
+            }
+            counters_str += "  counter[" + std::to_string(cnt_id) + "] = " +
+                                           std::to_string(network_cnt) + "\n";
         }
-        counters_str += "  counter[" + std::to_string(cnt_id) + "] = " +
-                                       std::to_string(network_cnt) + "\n";
+    } else {
+        counters_str += "  <no physical networking in this build, no network counters"
+                        " can be read>\n";
     }
-#else
-    counters_str += "  <no physical networking in this build, no network counters"
-                    " can be read>\n";
-#endif
     FRPC_INFO("%s\n", counters_str.c_str());
 }
 
@@ -811,7 +844,50 @@ fpga_handle NicCCIP::connect_to_accel(const char *accel_uuid, int bus) const {
     res = fpgaDestroyToken(&accel_token);
     assert(res == FPGA_OK);
 
+    // Reset FPGA
+    res = fpgaReset(accel_handle);
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Failed to reset FPGA\n");
+        return 0;
+    }
+
     return accel_handle;
+}
+
+int NicCCIP::initialize_phy_network(int channel) {
+    // Open HSSI
+    int res = fpgaHssiOpen(accel_handle_, &hssi_h_);
+    assert(res == FPGA_OK);
+    if (!hssi_h_) {
+        FRPC_ERROR("Failed to open HSSI\n");
+        return 1;
+    }
+
+    // Reset HSSI
+    res = fpgaHssiReset(hssi_h_);
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Failed to reset HSSI\n");
+        return 1;
+    } else {
+        FRPC_INFO("HSSI is reset\n");
+    }
+
+    // Disable HSSI loopback
+    res = fpgaHssiCtrlLoopback(hssi_h_, channel, false);
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Failed to disable HSSI loopback\n");
+        return 1;
+    } else {
+        FRPC_INFO("HSSI loopback is disabled\n");
+    }
+
+    // Clear HSSI stat
+    res = fpgaHssiClearChannelStats(hssi_h_, TX, channel);
+    assert(res == FPGA_OK);
+    res = fpgaHssiClearChannelStats(hssi_h_, RX, channel);
+    assert(res == FPGA_OK);
+
+    return 0;
 }
 
 }  // namespace frpc

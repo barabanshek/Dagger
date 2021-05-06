@@ -61,6 +61,9 @@ set(ASE_LIBS -lopae-c-ase)
 include_directories(${CMAKE_SOURCE_DIR}/src)
 include_directories(${CMAKE_SOURCE_DIR}/src/nic_impl)
 include_directories(${CMAKE_SOURCE_DIR}/src/utils)
+include_directories(${CMAKE_SOURCE_DIR}/src/network_ctl)
+
+link_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(RPC_CODEGEN_PATH ${ROOT_DIR}/codegen)
@@ -77,6 +80,11 @@ set(SOURCES
     src/completion_queue.cc
     src/rpc_client_nonblocking_base.cc
     src/connection_manager.cc
+    )
+
+set(PHY_NET_SRC
+    src/network_ctl/fpga_hssi_common.cc
+    src/network_ctl/fpga_hssi_e40.cc
     )
 
 # Prepare afu_json_info.h
@@ -105,6 +113,16 @@ FUNCTION(PREPEND var prefix)
   ENDFOREACH(f)
   SET(${var} "${listVar}" PARENT_SCOPE)
 ENDFUNCTION(PREPEND)
+
+#
+# Build PHY network controller as a shared library
+#
+if (WITH_PHY_NETWORK)
+    add_library(dagger-phy-network SHARED ${PHY_NET_SRC})
+    target_link_libraries(dagger-phy-network ${LIBRARIES} -shared)
+
+    set(LIBRARIES ${LIBRARIES} -ldagger-phy-network)
+endif()
 
 #
 # Build ASE Dagger as a shared library

@@ -595,10 +595,15 @@ module udp_ip
 
 
     // =============================================================
-    // Drop counter interface
+    // Drop counter/debug interface
     // =============================================================
+    // Use it to read internal HW state in runtime on real hardware a.k.a. signal tap
+    logic [31:0] debug_out;
+    assign debug_out = tx_state;
+
     logic [31:0] drop_cnt_sync, rx_fifo_drop_sync, tx_fifo_drop_sync, dest_mac_error_cnt_sync,
-                 dest_ip_error_cnt_sync, protocol_id_err_cnt_sync, ip_version_err_cnt_sync;
+                 dest_ip_error_cnt_sync, protocol_id_err_cnt_sync, ip_version_err_cnt_sync,
+                 debug_out_sync;
     always_ff @(posedge clk) begin
         drop_cnt_sync <= drop_cnt;
         rx_fifo_drop_sync <= rx_fifo_drop;
@@ -607,6 +612,7 @@ module udp_ip
         dest_ip_error_cnt_sync <= dest_ip_error_cnt;
         protocol_id_err_cnt_sync <= protocol_id_err_cnt;
         ip_version_err_cnt_sync <= ip_version_err_cnt;
+        debug_out_sync <= debug_out;
     end
 
     always_ff @(posedge clk) begin
@@ -635,6 +641,9 @@ module udp_ip
 
                     // Drops due to ip_version_err_cnt
                     6: pckt_drop_cnt_out <= ip_version_err_cnt_sync;
+
+                    // Debug output
+                    7: pckt_drop_cnt_out <= debug_out_sync;
 
                     default: pckt_drop_cnt_out <= 32'b0;
                 endcase
