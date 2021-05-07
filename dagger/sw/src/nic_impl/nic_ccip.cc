@@ -21,6 +21,7 @@ namespace frpc {
 
 NicCCIP::NicCCIP(uint64_t base_nic_addr, size_t num_of_flows, bool master_nic = true):
     base_nic_addr_(base_nic_addr),
+    hssi_h_(0),
     connected_(false),
     initialized_(false),
     started_(false),
@@ -37,7 +38,8 @@ NicCCIP::~NicCCIP() {
     }
 
     if (hssi_h_) {
-        dump_hssi_stat(phy_net_channel);
+    //    dump_hssi_stat(phy_net_channel);
+        // TODO: make it to be dependent on FRPC_LOG_LEVEL
         fpgaHssiClose(hssi_h_);
     }
 

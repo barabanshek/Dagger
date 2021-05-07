@@ -24,10 +24,10 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 # Build unit tests
 add_executable(dagger_unit_tests ${PREP_SOURCES} ${UNIT_TEST_SOURCES})
-target_compile_definitions(dagger_unit_tests PRIVATE FRPC_LOG_LEVEL=4)
+target_compile_definitions(dagger_unit_tests PRIVATE FRPC_LOG_LEVEL=0)
 target_link_libraries(dagger_unit_tests ${GTEST_LIBRARIES} ${ASE_LIBS} ${LIBRARIES})
 
 # Build system tests
 add_executable(dagger_sys_tests ${PREP_SOURCES} ${SYSTEM_TEST_SOURCES})
-target_compile_definitions(dagger_sys_tests PRIVATE FRPC_LOG_LEVEL=4)
+target_compile_definitions(dagger_sys_tests PRIVATE FRPC_LOG_LEVEL=0)
 target_link_libraries(dagger_sys_tests ${GTEST_LIBRARIES} ${FPGA_LIBS} ${LIBRARIES})

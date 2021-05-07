@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 2.8)
 project(F-RPC)
 
 # Options
-option(WITH_PHY_NETWORK "With physical networking" OFF)
-option(PLATFORM_BDX "Build for BDX platform" ON)
+option(WITH_PHY_NETWORK "With physical networking" ON)
+option(PLATFORM_BDX "Build for BDX platform" OFF)
 
 set(CMAKE_CXX_COMPILER g++)
 
@@ -22,8 +22,8 @@ add_definitions(-D_FORTIFY_SOURCE=2)
 #add_definitions(-DENABLE_ASSERT=1)
 
 # CCI-P config
-add_definitions(-DNIC_CCIP_POLLING)
-#add_definitions(-DNIC_CCIP_MMIO)
+#add_definitions(-DNIC_CCIP_POLLING)
+add_definitions(-DNIC_CCIP_MMIO)
 #add_definitions(-DNIC_CCIP_DMA)
 
 # Networking config
@@ -83,8 +83,8 @@ set(SOURCES
     )
 
 set(PHY_NET_SRC
-    src/network_ctl/fpga_hssi_common.cc
-    src/network_ctl/fpga_hssi_e40.cc
+    src/network_ctl/fpga_hssi_common.c
+    src/network_ctl/fpga_hssi_e40.c
     )
 
 # Prepare afu_json_info.h
@@ -117,17 +117,16 @@ ENDFUNCTION(PREPEND)
 #
 # Build PHY network controller as a shared library
 #
-if (WITH_PHY_NETWORK)
-    add_library(dagger-phy-network SHARED ${PHY_NET_SRC})
-    target_link_libraries(dagger-phy-network ${LIBRARIES} -shared)
+add_library(dagger-phy-network SHARED ${PHY_NET_SRC})
+target_link_libraries(dagger-phy-network ${LIBRARIES} -shared)
 
-    set(LIBRARIES ${LIBRARIES} -ldagger-phy-network)
-endif()
+set(LIBRARIES ${LIBRARIES} -ldagger-phy-network)
 
 #
 # Build ASE Dagger as a shared library
 #
 add_library(dagger_ase SHARED ${SOURCES})
+add_dependencies(dagger_ase dagger-phy-network)
 target_compile_definitions(dagger_ase PRIVATE -DASE_SIMULATION)
 target_link_libraries(dagger_ase ${ASE_LIBS} ${LIBRARIES} -shared)
 
@@ -135,6 +134,7 @@ target_link_libraries(dagger_ase ${ASE_LIBS} ${LIBRARIES} -shared)
 # Build FPGA Dagger as a shared library
 #
 add_library(dagger SHARED ${SOURCES})
+add_dependencies(dagger dagger-phy-network)
 target_compile_definitions(dagger PRIVATE PROFILE_LATENCY=1)
 target_link_libraries(dagger ${FPGA_LIBS} ${LIBRARIES} -shared)
 
