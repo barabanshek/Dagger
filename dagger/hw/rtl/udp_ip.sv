@@ -6,6 +6,13 @@
 //                    - Ethernet MAC/PHY interface FSM
 //                    - UDP/IP/Ethernet header encapsulation
 //                    - error checking and packet drop control
+// Known bugs:
+//                  1) Networking might fail when running applications many times
+//                      - symptoms: when re-running applications, networking might
+//                        fail; but it never fails when sending large streams withing a
+//                        single application run, i.e. is only reproducible when re-starting
+//                        applications
+//                      - status: fixed with a workaround; TODO: find a better solution
 //
 
 `include "nic_defs.vh"
@@ -48,7 +55,7 @@ module udp_ip
         // Drop counter interfaces
         input logic [3:0]   pckt_drop_cnt_in,
         input               pckt_drop_cnt_valid_in,
-        output logic [31:0] pckt_drop_cnt_out,
+        output logic [63:0] pckt_drop_cnt_out,
 
         // Error
         output error
@@ -208,9 +215,23 @@ module udp_ip
     logic tx_empty_load;
     logic [4:0] tx_byte_remain;
 
+    // Move clk's reset to the tx_clk_in domain
+    logic reset_tx_clk_in;
+    always_ff @(posedge tx_clk_in) begin
+        if (reset)
+            reset_tx_clk_in <= 1'b1;
+        else
+            reset_tx_clk_in <= 1'b0;
+    end
+
     // FSM current state logic
     always_ff @(posedge tx_clk_in or posedge tx_reset_in) begin
-        if (tx_reset_in)
+        // TODO: I don't like this resetting logic here but it fixes the bug #1
+        //          - seems like tx_reset_in is never set, so the network never gets
+        //            reset
+        //          - resetting the network by reset_tx_clk_in derived from reset is a workaround
+        //          - better to understand why tx_reset_in never comes
+        if (tx_reset_in || reset_tx_clk_in)
             tx_state <= TxIdle;
         else
             tx_state <= tx_state_next;
@@ -598,12 +619,12 @@ module udp_ip
     // Drop counter/debug interface
     // =============================================================
     // Use it to read internal HW state in runtime on real hardware a.k.a. signal tap
-    logic [31:0] debug_out;
-    assign debug_out = tx_state;
+    logic [63:0] debug_out;
+    assign debug_out = 32'hff00ff00 | (tx_state << 40) | (tx_fifo_pop_empty << 48) | (tx_state_next << 56);
 
     logic [31:0] drop_cnt_sync, rx_fifo_drop_sync, tx_fifo_drop_sync, dest_mac_error_cnt_sync,
-                 dest_ip_error_cnt_sync, protocol_id_err_cnt_sync, ip_version_err_cnt_sync,
-                 debug_out_sync;
+                 dest_ip_error_cnt_sync, protocol_id_err_cnt_sync, ip_version_err_cnt_sync;
+    logic [63:0] debug_out_sync;
     always_ff @(posedge clk) begin
         drop_cnt_sync <= drop_cnt;
         rx_fifo_drop_sync <= rx_fifo_drop;
@@ -617,35 +638,56 @@ module udp_ip
 
     always_ff @(posedge clk) begin
         if (reset)
-            pckt_drop_cnt_out <= 32'b0;
+            pckt_drop_cnt_out <= 64'b0;
         else begin
             if (pckt_drop_cnt_valid_in) begin
                 case (pckt_drop_cnt_in)
                     // Total number of drops
-                    0: pckt_drop_cnt_out <= drop_cnt_sync;
+                    0: begin
+                        pckt_drop_cnt_out[31:0] <= drop_cnt_sync;
+                        pckt_drop_cnt_out[63:32] <= 32'b0;
+                    end
 
                     // Drops due to rx fifo ovf
-                    1: pckt_drop_cnt_out <= rx_fifo_drop_sync;
+                    1: begin
+                        pckt_drop_cnt_out[31:0] <= rx_fifo_drop_sync;
+                        pckt_drop_cnt_out[63:32] <= 32'b0;
+                    end
 
                     // Drops due to tx fifo ovf
-                    2: pckt_drop_cnt_out <= tx_fifo_drop_sync;
+                    2: begin
+                        pckt_drop_cnt_out[31:0] <= tx_fifo_drop_sync;
+                        pckt_drop_cnt_out[63:32] <= 32'b0;
+                    end
 
                     // Drop due to dest_mac_error_cnt
-                    3: pckt_drop_cnt_out <= dest_mac_error_cnt_sync;
+                    3: begin
+                        pckt_drop_cnt_out[31:0] <= dest_mac_error_cnt_sync;
+                        pckt_drop_cnt_out[63:32] <= 32'b0;
+                    end
 
                     // Drops due to dest_ip_error_cnt
-                    4: pckt_drop_cnt_out <= dest_ip_error_cnt_sync;
+                    4: begin
+                        pckt_drop_cnt_out[31:0] <= dest_ip_error_cnt_sync;
+                        pckt_drop_cnt_out[63:32] <= 32'b0;
+                    end
 
                     // Drops due to protocol_id_err_cnt
-                    5: pckt_drop_cnt_out <= protocol_id_err_cnt_sync;
+                    5: begin
+                        pckt_drop_cnt_out[31:0] <= protocol_id_err_cnt_sync;
+                        pckt_drop_cnt_out[63:32] <= 32'b0;
+                    end
 
                     // Drops due to ip_version_err_cnt
-                    6: pckt_drop_cnt_out <= ip_version_err_cnt_sync;
+                    6: begin
+                        pckt_drop_cnt_out[31:0] <= ip_version_err_cnt_sync;
+                        pckt_drop_cnt_out[63:32] <= 32'b0;
+                    end
 
                     // Debug output
                     7: pckt_drop_cnt_out <= debug_out_sync;
 
-                    default: pckt_drop_cnt_out <= 32'b0;
+                    default: pckt_drop_cnt_out <= 64'b0;
                 endcase
             end
         end

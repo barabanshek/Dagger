@@ -184,7 +184,7 @@ module nic
     IPv4                           iRegIpv4NetAddr;
     logic                          iRegReadNetDropCntValid;
     logic[4:0]                     iRegReadNetDropCnt;
-    logic[31:0]                    iRegNetDropCnt;
+    logic[63:0]                    iRegNetDropCnt;
     NicMode                        iNicMode;
 
     // CSR read logic
@@ -262,7 +262,7 @@ module nic
             end
 
             addrNetDropCnt: begin
-                sTx.c2.data[31:0] <= iRegNetDropCnt;
+                sTx.c2.data <= iRegNetDropCnt;
             end
 
             default: sTx.c2.data <= t_ccip_mmioData'(0);
