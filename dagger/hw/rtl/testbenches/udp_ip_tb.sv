@@ -60,6 +60,7 @@ module udp_ip_tb();
             .clk(clk_100),
             .reset(reset_100),
             .network_tx_in(network_tx),
+            .network_tx_size_in(16'd64),
             .network_rx_out(),
 
             .tx_clk_in (clk_312_5),
@@ -96,6 +97,7 @@ module udp_ip_tb();
             .clk(clk_100),
             .reset(reset_100),
             .network_tx_in(),
+            .network_tx_size_in(16'd64),
             .network_rx_out(network_rx),
 
             .tx_clk_in (),

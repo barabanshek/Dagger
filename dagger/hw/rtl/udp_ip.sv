@@ -6,6 +6,8 @@
 //                    - Ethernet MAC/PHY interface FSM
 //                    - UDP/IP/Ethernet header encapsulation
 //                    - error checking and packet drop control
+//                    - minimum payload size: 22 B
+//                    - maximum payload size: 1456 B
 // Known bugs:
 //                  1) Networking might fail when running applications many times
 //                      - symptoms: when re-running applications, networking might
@@ -27,6 +29,7 @@ module udp_ip
         input logic reset,
         input logic clk,
         input NetworkIf  network_tx_in,
+        input logic [15:0] network_tx_size_in,
         output NetworkIf network_rx_out,
 
         // Networking MAC/PHY interface
@@ -62,8 +65,6 @@ module udp_ip
     );
 
     // Types
-    localparam RPC_PAYLOAD_SIZE_BYTES = 64;
-
     typedef logic[255:0] TxData_;
 
     localparam BROADCAST_PHY_ADDR = 48'hFFFFFFFFFFFF;
@@ -103,7 +104,8 @@ module udp_ip
     typedef struct packed {
         PhyAddr dest_mac;
         PhyAddr src_mac;
-        logic [15:0] length;    // payload
+        logic [4:0] padd;
+        logic [10:0] length;    // of the payload
     } EthernetHdr;  // 14B
 
 
@@ -164,7 +166,8 @@ module udp_ip
     always_comb begin
         tx_eth_hdr = '{BROADCAST_PHY_ADDR,
                        host_phy_addr_sync_tx,
-                       $bits(IPHdr)/8 + $bits(UDPHdr)/8 + RPC_PAYLOAD_SIZE_BYTES};
+                       5'b0,
+                       $bits(IPHdr)/8 + $bits(UDPHdr)/8 + network_tx_size_in};
     end
 
     IPHdr tx_ip_hdr;
@@ -173,7 +176,7 @@ module udp_ip
         tx_ip_hdr.IHL = 4'h5;
         tx_ip_hdr.DSCP = 6'h0;
         tx_ip_hdr.ECN = 2'h0;
-        tx_ip_hdr.length = $bits(IPHdr)/8 + $bits(UDPHdr)/8 + RPC_PAYLOAD_SIZE_BYTES;
+        tx_ip_hdr.length = $bits(IPHdr)/8 + $bits(UDPHdr)/8 + network_tx_size_in;
         tx_ip_hdr.identification = 16'h0;
         tx_ip_hdr.flags = 3'b000;
         tx_ip_hdr.fragment_offst = 13'h0;
@@ -202,18 +205,18 @@ module udp_ip
     always_comb begin
         tx_udp_hdr.src_port = tx_fifo_pop_data.addr_tpl.source_port;
         tx_udp_hdr.dest_port = tx_fifo_pop_data.addr_tpl.dest_port;
-        tx_udp_hdr.length = $bits(UDPHdr)/8 + RPC_PAYLOAD_SIZE_BYTES;
-        tx_udp_hdr.checksum = 16'h0;
+        tx_udp_hdr.length = $bits(UDPHdr)/8 + network_tx_size_in;
     end
 
     // TX FSM
-    typedef enum logic [2:0] { TxIdle, TxPop, TxSop, TxData, TxData_1, TxEop, TxDel } TxState;
+    typedef enum logic [2:0] { TxIdle, TxPop, TxHeader, TxHeaderData, TxData } TxState;
 
     TxState tx_state, tx_state_next;
     TxData_ tx_data;
     logic tx_sop, tx_eop, tx_dt;
     logic tx_empty_load;
     logic [4:0] tx_byte_remain;
+    logic [15:0] bytes_to_send, bytes_to_send_next;
 
     // Move clk's reset to the tx_clk_in domain
     logic reset_tx_clk_in;
@@ -231,10 +234,13 @@ module udp_ip
         //            reset
         //          - resetting the network by reset_tx_clk_in derived from reset is a workaround
         //          - better to understand why tx_reset_in never comes
-        if (tx_reset_in || reset_tx_clk_in)
+        if (tx_reset_in || reset_tx_clk_in) begin
             tx_state <= TxIdle;
-        else
+            bytes_to_send <= 'b0;
+        end else begin
             tx_state <= tx_state_next;
+            bytes_to_send <= bytes_to_send_next;
+        end
     end
 
     // FSM switch state logic
@@ -242,6 +248,7 @@ module udp_ip
         // Defaults
         tx_state_next = tx_state;
         tx_fifio_pop_en = 1'b0;
+        bytes_to_send_next = bytes_to_send;
 
         // Switch state
         case (tx_state)
@@ -254,43 +261,70 @@ module udp_ip
             end
 
             TxPop: begin
-                if (tx_fifo_pop_valid)
-                    tx_state_next = TxSop;
+                if (tx_fifo_pop_valid) begin
+                    bytes_to_send_next = network_tx_size_in;
+                    tx_state_next = TxHeader;
+                end
             end
 
-            TxSop: begin
+            TxHeader: begin
                 if (tx_ready_in)
-                    tx_state_next = TxData;
+                    tx_state_next = TxHeaderData;
+            end
+
+            TxHeaderData: begin
+                if (tx_ready_in) begin
+                    if (bytes_to_send > 16'd22) begin
+                        bytes_to_send_next = bytes_to_send - 16'd22;
+                        tx_state_next = TxData;
+                    end else
+                        tx_state_next = TxIdle;
+                end
             end
 
             TxData: begin
-                if (tx_ready_in)
-                    tx_state_next = TxData_1;
+                if (tx_ready_in) begin
+                    if (bytes_to_send > 16'd32) begin
+                        bytes_to_send_next = bytes_to_send - 16'd32;
+                        tx_state_next = TxData;
+                    end else
+                        tx_state_next = TxIdle;
+                end
             end
 
-            TxData_1: begin
-                if (tx_ready_in)
-                    tx_state_next = TxEop;
-            end
-
-            TxEop: begin
-                if (tx_ready_in)
-                    tx_state_next = TxDel;
-            end
-
-            TxDel: begin
-                tx_state_next = TxIdle;
-            end
         endcase
+    end
+
+    // Shift payload
+    logic [511:0] payload_sr;
+    always_ff @(posedge tx_clk_in) begin
+        if (tx_reset_in || reset_tx_clk_in)
+            payload_sr <= 'b0;
+        else begin
+            if (tx_ready_in) begin
+                if (tx_state == TxHeader)
+                    payload_sr <= tx_fifo_pop_data.payload;
+                else if (tx_state == TxHeaderData)
+                    payload_sr <= payload_sr >> 176;
+                else if (tx_state == TxData) begin
+                    payload_sr <= payload_sr >> 256;
+                    // TODO: if longer data should be sent, load a new value
+                    //       to payload_sr here
+                end
+            end
+        end
     end
 
     // Form packets
     always_comb begin
+        tx_sop = 1'b0;
+        tx_eop = 1'b0;
+        tx_dt = 1'b0;
         tx_data = 'h0;
         tx_empty_load = 1'b0;
         tx_byte_remain = 5'd0;
 
-        if (tx_state == TxSop) begin
+        if (tx_state == TxHeader) begin
             // Ethernet header
             //   - 14B
             //   - 32B - 14B = 18B left = 144b
@@ -301,7 +335,10 @@ module udp_ip
             //   - send first 18B of the IP header
             tx_data[143:0] = tx_ip_hdr[143:0];
 
-        end else if (tx_state == TxData) begin
+            // TX SoP
+            tx_sop = 1'b1;
+
+        end else if (tx_state == TxHeaderData) begin
             // IP header (end)
             //   - 2B
             //   - 32B - 2B = 30B left = 240b
@@ -315,51 +352,30 @@ module udp_ip
             // Payload (begin)
             //   - 64B
             //   - send first 22B of payload
-            tx_data[175:0] = tx_fifo_pop_data.payload[175:0];
+            tx_data[175:0] = payload_sr[175:0];
 
-        end else if (tx_state == TxData_1) begin
+            // TX DT/EoP
+            if (bytes_to_send <= 16'd22)
+                tx_eop = 1'b1;
+            else
+                tx_dt = 1'b1;
+
+        end else if (tx_state == TxData) begin
             // Payload (cont.)
             //   - 32B
-            tx_data = tx_fifo_pop_data.payload[431:176];
+            tx_data = payload_sr[255:0];
 
-        end else if (tx_state == TxEop) begin
-            // Payload (last)
-            //   - 10B
-            tx_data[79:0] = tx_fifo_pop_data.payload[511:432];
+            // TX DT/EoP and tx_byte_remain
+            if (bytes_to_send <= 16'd31) begin
+                tx_empty_load = 1'b1;
+                tx_byte_remain = bytes_to_send[4:0];
+                tx_eop = 1'b1;
+            end else if (bytes_to_send == 16'd32)
+                tx_eop = 1'b1;
+            else
+                tx_dt = 1'b1;
 
-            // Padding
-            //   - 22B
-            // Note: this is just to pad the Avalon MAC 256-bit stream;
-            //       due to correctly set packet length, no zero transmissions actually occur
-            tx_data[255:80] = 'h0;
-
-            tx_empty_load = 1'b1;
-            tx_byte_remain = 5'd10;
         end
-    end
-
-    // Form tx_sop
-    always_comb begin
-        if (tx_state == TxSop)
-            tx_sop = 1'b1;
-        else
-            tx_sop = 1'b0;
-    end
-
-    // Form tx_dt
-    always_comb begin
-        if (tx_state == TxData || tx_state == TxData_1)
-            tx_dt = 1'b1;
-        else
-            tx_dt = 1'b0;
-    end
-
-    // Form tx_eop
-    always_comb begin
-        if (tx_state == TxEop)
-            tx_eop = 1'b1;
-        else
-            tx_eop = 1'b0;
     end
 
     // Send to network
@@ -402,7 +418,7 @@ module udp_ip
     end
 
     // RX FSM
-    typedef enum logic [2:0] { RxSop, RxData, RxData_1, RxEop } RxState;
+    typedef enum logic [2:0] { RxHeader, RxHeaderData, RxData, RxCheckData, RxCheckData_1d } RxState;
 
     RxState rx_state, rx_state_next;
     logic rx_sop_error, rx_eop_err;
@@ -412,40 +428,83 @@ module udp_ip
     UDPHdr rx_udp_hdr;
     NetworkPayload rx_payload;
     logic rx_valid;
+    logic [15:0] bytes_recv, bytes_recv_next;
+
+    // Move clk's reset to the rx_clk_in domain
+    logic reset_rx_clk_in;
+    always_ff @(posedge rx_clk_in) begin
+        if (reset)
+            reset_rx_clk_in <= 1'b1;
+        else
+            reset_rx_clk_in <= 1'b0;
+    end
 
     // FSM current state logic
     always_ff @(posedge rx_clk_in or posedge rx_reset_in) begin
-        if (rx_reset_in)
-            rx_state <= RxSop;
-        else
+        // TODO: I don't like this resetting logic here but it fixes the bug #1
+        //          - seems like rx_reset_in is never set, so the network never gets
+        //            reset
+        //          - resetting the network by reset_rx_clk_in derived from reset is a workaround
+        //          - better to understand why rx_reset_in never comes
+        if (rx_reset_in || reset_rx_clk_in) begin
+            rx_state <= RxHeader;
+            bytes_recv <= 1'b0;
+        end else begin
             rx_state <= rx_state_next;
+            bytes_recv <= bytes_recv_next;
+        end
     end
 
     // FSM switch state logic
     always_comb begin
         // Defaults
         rx_state_next = rx_state;
+        bytes_recv_next = bytes_recv;
 
         case (rx_state)
-            RxSop: begin
+            RxHeader: begin
+                bytes_recv_next = 16'b0;
+
                 if (rx_valid_in & rx_sop_in)
-                    rx_state_next = RxData;
+                    rx_state_next = RxHeaderData;
+            end
+
+            RxHeaderData: begin
+                if (rx_valid_in) begin
+                    bytes_recv_next = bytes_recv + 16'd22;
+
+                    if (rx_eop_in)
+                        // We got EoP at the same time with data, we don't have time
+                        // to check the headers here, so let's move to a delay slot (2 cycles)
+                        rx_state_next = RxCheckData;
+                    else
+                        rx_state_next = RxData;
+                end
             end
 
             RxData: begin
-                if (rx_valid_in)
-                    rx_state_next = RxData_1;
+                if (rx_valid_in) begin
+                    if (rx_eop_in) begin
+                        bytes_recv_next = bytes_recv + 16'd32 - rx_empty_in;
+
+                        if (bytes_recv <= 16'd22)
+                            // We got EoP at the same time with first data, we don't have time
+                            // to check data here, so let's move to a delay slot (1 cycle)
+                            rx_state_next = RxCheckData_1d;
+                        else
+                            rx_state_next = RxHeader;
+                    end else begin
+                        bytes_recv_next = bytes_recv + 16'd32;
+                        rx_state_next = RxData;
+                    end
+                end
             end
 
-            RxData_1: begin
-                if (rx_valid_in)
-                    rx_state_next = RxEop;
-            end
+            RxCheckData:
+                rx_state_next = RxCheckData_1d;
 
-            RxEop: begin
-                if (rx_valid_in & rx_eop_in)
-                    rx_state_next = RxSop;
-            end
+            RxCheckData_1d:
+                rx_state_next = RxHeader;
         endcase
     end
 
@@ -454,8 +513,17 @@ module udp_ip
     logic udp_ip_hdr_valid;
     logic drop_packet;
 
+    // Shift payload
+    logic [9:0] rx_payload_sr;
+    always_comb begin
+        if (bytes_recv <= 16'd22)
+            rx_payload_sr = 10'd176;
+        else
+            rx_payload_sr = 10'd256 + 10'd176;
+    end
+
     always_ff @(posedge rx_clk_in or posedge rx_reset_in) begin
-        if (rx_reset_in) begin
+        if (rx_reset_in || reset_rx_clk_in) begin
             rx_sop_error <= 1'b0;
             rx_eop_err <= 1'b0;
             rx_valid <= 1'b0;
@@ -474,35 +542,39 @@ module udp_ip
             rx_valid <= 1'b0;
 
             if (rx_valid_in) begin
-                if (rx_state == RxSop && rx_sop_in) begin
+                if (rx_state == RxHeader && rx_sop_in) begin
+                    rx_payload       <= 'b0;
                     rx_eth_hdr       <= rx_data_in[255:144];
                     rx_ip_hdr[143:0] <= rx_data_in[143:0];
                 end
 
-                if (rx_state == RxData) begin
-                    rx_ip_hdr[159:144] <= rx_data_in[255:240];
-                    rx_udp_hdr         <= rx_data_in[239:176];
-                    rx_payload[175:0]  <= rx_data_in[175:0];
+                if (rx_state == RxHeaderData) begin
+                    rx_ip_hdr[159:144]  <= rx_data_in[255:240];
+                    rx_udp_hdr          <= rx_data_in[239:176];
+                    rx_payload[175:0]   <= rx_data_in[175:0];
 
                     udp_ip_hdr_valid <= 1'b1;
                 end
 
-                if (rx_state == RxData_1) begin
-                    rx_payload[431:176] <= rx_data_in;
-                end
-
-                if (rx_state == RxEop/* && rx_eop_in*/) begin
-                    if (rx_eop_in != 1'b1)
-                        rx_eop_err <= 1'b1;
-                    else begin
-                        rx_payload[511:432] <= rx_data_in[79:0];
-
+                if (rx_state == RxData) begin
+                    if (rx_eop_in) begin
                         // Drop packet here if needed
                         if (~drop_packet)
                             rx_valid <= 1'b1;
                         else
                             drop_cnt <= drop_cnt + 1;
                     end
+
+                    // Commit payload
+                    rx_payload <= rx_payload | (rx_data_in << rx_payload_sr);
+                end
+
+                if (rx_state == RxCheckData_1d) begin
+                    // Drop packet here if needed
+                    if (~drop_packet)
+                        rx_valid <= 1'b1;
+                    else
+                        drop_cnt <= drop_cnt + 1;
                 end
             end
         end
@@ -513,6 +585,7 @@ module udp_ip
     logic [31:0] dest_ip_error_cnt;
     logic [31:0] protocol_id_err_cnt;
     logic [31:0] ip_version_err_cnt;
+    logic [31:0] pckt_length_err_cnt;
 
     always_ff @(posedge rx_clk_in or posedge rx_reset_in) begin
         if (rx_reset_in) begin
@@ -520,11 +593,12 @@ module udp_ip
             dest_ip_error_cnt <= 32'b0;
             protocol_id_err_cnt <= 32'b0;
             ip_version_err_cnt <= 32'b0;
+            pckt_length_err_cnt <= 32'b0;
             drop_packet <= 1'b0;
 
         end else begin
             // Reset drop_packet
-            if (rx_state == RxSop)
+            if (rx_state == RxHeader)
                 drop_packet <= 1'b0;
 
             // Check for errors, drop packets if found
@@ -553,7 +627,15 @@ module udp_ip
                     drop_packet <= 1'b1;
                 end
 
-                // Check ip checksum errors
+                // Check packet length
+                if (rx_valid && rx_udp_hdr.length - $bits(UDPHdr)/8 != bytes_recv) begin
+                    pckt_length_err_cnt <= pckt_length_err_cnt + 1;
+                    // TODO: maybe drop it if the length does not match?
+                    //       It will require an additional cycle;
+                    //       we can do it with the ip checksum verification
+                end
+
+                // Check ip checksum
                 // TODO:
                 // ...
             end
@@ -623,7 +705,8 @@ module udp_ip
     assign debug_out = 32'hff00ff00 | (tx_state << 40) | (tx_fifo_pop_empty << 48) | (tx_state_next << 56);
 
     logic [31:0] drop_cnt_sync, rx_fifo_drop_sync, tx_fifo_drop_sync, dest_mac_error_cnt_sync,
-                 dest_ip_error_cnt_sync, protocol_id_err_cnt_sync, ip_version_err_cnt_sync;
+                 dest_ip_error_cnt_sync, protocol_id_err_cnt_sync, ip_version_err_cnt_sync,
+                 pckt_length_err_cnt_sync;
     logic [63:0] debug_out_sync;
     always_ff @(posedge clk) begin
         drop_cnt_sync <= drop_cnt;
@@ -633,6 +716,7 @@ module udp_ip
         dest_ip_error_cnt_sync <= dest_ip_error_cnt;
         protocol_id_err_cnt_sync <= protocol_id_err_cnt;
         ip_version_err_cnt_sync <= ip_version_err_cnt;
+        pckt_length_err_cnt_sync <= pckt_length_err_cnt;
         debug_out_sync <= debug_out;
     end
 
@@ -684,8 +768,13 @@ module udp_ip
                         pckt_drop_cnt_out[63:32] <= 32'b0;
                     end
 
+                    7: begin
+                        pckt_drop_cnt_out[31:0] <= pckt_length_err_cnt_sync;
+                        pckt_drop_cnt_out[63:32] <= 32'b0;
+                    end
+
                     // Debug output
-                    7: pckt_drop_cnt_out <= debug_out_sync;
+                    8: pckt_drop_cnt_out <= debug_out_sync;
 
                     default: pckt_drop_cnt_out <= 64'b0;
                 endcase

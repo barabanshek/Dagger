@@ -14,6 +14,7 @@ set_false_path -from [get_registers {*udp_*dest_mac_error_cnt*}] -to [get_regist
 set_false_path -from [get_registers {*udp_*dest_ip_error_cnt*}] -to [get_registers {*udp_*dest_ip_error_cnt_sync*}]
 set_false_path -from [get_registers {*udp_*protocol_id_err_cnt*}] -to [get_registers {*udp_*protocol_id_err_cnt_sync*}]
 set_false_path -from [get_registers {*udp_*ip_version_err_cnt*}] -to [get_registers {*udp_*ip_version_err_cnt_sync*}]
+set_false_path -from [get_registers {*udp_*pckt_length_err_cnt*}] -to [get_registers {*udp_*pckt_length_err_cnt_sync*}]
 set_false_path -from * -to [get_registers {*udp_*debug_out_sync*}]
 
 set_false_path -from * -to [get_registers {*udp_*host_phy_addr_sync_rx*}]
@@ -22,3 +23,4 @@ set_false_path -from * -to [get_registers {*udp_*host_phy_addr_sync_tx*}]
 set_false_path -from * -to [get_registers {*udp_*host_ipv4_addr_sync_tx*}]
 
 set_false_path -from * -to [get_registers {*udp_*reset_tx_clk_in*}]
+set_false_path -from * -to [get_registers {*udp_*reset_rx_clk_in*}]

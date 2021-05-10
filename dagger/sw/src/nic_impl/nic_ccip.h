@@ -69,7 +69,7 @@ public:
     static constexpr int iPhyNetDisabled        = 0;
     static constexpr int iPhyNetEnabled         = 1;
     static constexpr uint8_t iNumOfPckCnt       = 5;
-    static constexpr uint8_t iNumOfNetworkCnt   = 8;
+    static constexpr uint8_t iNumOfNetworkCnt   = 9;
 
     NicCCIP(uint64_t base_rf_addr, size_t num_of_flows, bool master_nic);
     virtual ~NicCCIP();

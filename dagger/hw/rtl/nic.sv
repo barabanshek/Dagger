@@ -771,6 +771,7 @@ module nic
             .clk(network_clk),
             .reset(reset),
             .network_tx_in(network_tx),
+            .network_tx_size_in(16'd64),
             .network_rx_out(network_rx),
 
             .tx_clk_in (tx_clk_in),
