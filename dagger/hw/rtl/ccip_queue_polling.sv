@@ -3,9 +3,10 @@
 // Module Name :    ccip_polling
 // Project :        F-NIC
 // Description :    implements bi-directional CPU-NIC interface
-//                    - CPU-NIC: polling based over UPI
+//                    - CPU-NIC: polling based over UPI, explicitly track CL updates
+//                               via dirty bits
 //                    - NIC-CPU: batched eREQ_WRLINE_I over PCIe
-//                    - book-keeping: TODO
+//                    - book-keeping: TODO: please, merge from the book-keeping branch!
 //
 // Known bugs:
 //                  1) Some requests are duplicated

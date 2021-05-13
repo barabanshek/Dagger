@@ -847,11 +847,14 @@ fpga_handle NicCCIP::connect_to_accel(const char *accel_uuid, int bus) const {
     assert(res == FPGA_OK);
 
     // Reset FPGA
-    res = fpgaReset(accel_handle);
-    if (res != FPGA_OK) {
-        FRPC_ERROR("Failed to reset FPGA\n");
-        return 0;
-    }
+    // Do NOT reset when running more than one Nic on the same FPGA or reset
+    // in the master Nic
+    // TODO: implement reseting by Master Nic
+//    res = fpgaReset(accel_handle);
+//    if (res != FPGA_OK) {
+//        FRPC_ERROR("Failed to reset FPGA\n");
+//        return 0;
+//    }
 
     return accel_handle;
 }
