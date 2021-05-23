@@ -16,6 +16,7 @@
 #include "rpc_client_pool.h"
 #include "rpc_types.h"
 #include "utils.h"
+#include "CLI11.hpp"
 
 // HW parameters
 #define NIC_ADDR 0x20000
@@ -33,7 +34,12 @@ void intHandler(int dummy) {
 static void shell_loop(const std::vector<frpc::RpcClient*>& rpc_clients);
 
 int main(int argc, char* argv[]) {
-    size_t num_of_threads = atoi(argv[1]);
+    // Parse input
+    CLI::App app{"KVS client"};
+    size_t num_of_threads;
+    app.add_option("-t, --threads", num_of_threads, "number of threads")->required();
+
+    CLI11_PARSE(app, argc, argv);
 
     frpc::RpcClientPool<frpc::RpcClient> rpc_client_pool(NIC_ADDR,
                                                          num_of_threads);

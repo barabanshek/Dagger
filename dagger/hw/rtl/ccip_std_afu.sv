@@ -80,10 +80,7 @@ module ccip_std_afu (
         `endif
     `endif
 
-    // Define default clock
-    `define SYS_CLOCK_200
-    //`define SYS_CLOCK_400
-
+    // Derive main clock
 `ifdef SYS_CLOCK_200
     // Run system with medium frequency: 200 and 100MHz
     $info("Building system with medium frequencies");

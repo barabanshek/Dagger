@@ -10,6 +10,7 @@
 #include "rpc_server_callback.h"
 #include "rpc_threaded_server.h"
 #include "rpc_types.h"
+#include "CLI11.hpp"
 
 // HW parameters
 #define NIC_ADDR 0x00000
@@ -38,8 +39,12 @@ void perf_callback(const std::vector<uint64_t>& counters) {
 }
 
 int main(int argc, char* argv[]) {
-    // Args
-    size_t num_of_threads = atoi(argv[1]);
+    // Parse input
+    CLI::App app{"MICA server"};
+    size_t num_of_threads;
+    app.add_option("-t, --threads", num_of_threads, "number of threads")->required();
+
+    CLI11_PARSE(app, argc, argv);
 
     // Set-up MICA KVS
     const size_t num_items = 16 * 1048576;  // 16.7M

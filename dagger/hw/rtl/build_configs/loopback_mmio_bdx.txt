@@ -1,3 +1,4 @@
++define+SYS_CLOCK_200
 +define+CCIP_MMIO
 
 ../ccip_std_afu.json

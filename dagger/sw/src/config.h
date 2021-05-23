@@ -58,7 +58,7 @@ namespace frpc {
 
             // Polling rate
             //   - only used with CCI-P polling mode enabled
-            //   - `30` is the empirical value when UPI demonstrates the lowest latency
+            //   - `20` - `30` is the empirical value when UPI demonstrates the lowest latency
             //   - if polling rate is low, requests need to wait until they get polled
             //   - if high, the UPI bus becomes congested and it negatively impacts the bus tail latency
             //   - TODO: think about an adaptive polling rate

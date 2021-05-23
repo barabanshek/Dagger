@@ -1,3 +1,4 @@
++define+SYS_CLOCK_200
 +define+PHY_NETWORK
 +define+PLATFORM_PAC_A10
 +define+CCIP_MMIO
