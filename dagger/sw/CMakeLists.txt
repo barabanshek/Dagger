@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 2.8)
 project(F-RPC)
 
 # Options
-option(WITH_PHY_NETWORK "With physical networking" ON)
-option(PLATFORM_BDX "Build for BDX platform" OFF)
+option(WITH_PHY_NETWORK "With physical networking" OFF)
+option(PLATFORM_BDX "Build for BDX platform" ON)
 
 set(CMAKE_CXX_COMPILER g++)
 
@@ -22,8 +22,8 @@ add_definitions(-D_FORTIFY_SOURCE=2)
 #add_definitions(-DENABLE_ASSERT=1)
 
 # CCI-P config
-#add_definitions(-DNIC_CCIP_POLLING)
-add_definitions(-DNIC_CCIP_MMIO)
+add_definitions(-DNIC_CCIP_POLLING)
+#add_definitions(-DNIC_CCIP_MMIO)
 #add_definitions(-DNIC_CCIP_DMA)
 
 # Networking config

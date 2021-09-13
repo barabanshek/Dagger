@@ -24,7 +24,7 @@
 
 #define FRPC_LOG_LEVEL_GLOBAL FRPC_LOG_LEVEL_INFO
 #define NUMBER_OF_THREADS 4
-#define NUM_OF_REQUESTS 20
+#define NUM_OF_REQUESTS 4
 
 static int run_server(std::promise<bool>& init_pr, std::future<bool>& cmpl_ft);
 static int run_client();
@@ -82,7 +82,7 @@ static int run_server(std::promise<bool>& init_pr, std::future<bool>& cmpl_ft) {
     if (res != 0)
         return res;
 
-    server.set_lb(1);
+    server.set_lb(0);
 
     // Register RPC functions
     std::vector<const void*> fn_ptr;
@@ -98,7 +98,7 @@ static int run_server(std::promise<bool>& init_pr, std::future<bool>& cmpl_ft) {
             std::cout << "Failed to open connection on server" << std::endl;
             exit(1);
         } else {
-            std::cout << "Connection is open on server" << std::endl;
+            std::cout << "Connection #" << i << " is open on server" << std::endl;
         }
     }
 
@@ -180,7 +180,8 @@ static int client(frpc::RpcClient* rpc_client, size_t thread_id, size_t num_of_r
         int res = rpc_client->loopback({thread_id*10 + i});
         assert(res == 0);
 
-        usleep(200000);
+        // Adjust this value based on your simulation speed
+        usleep(500000);
     }
 
     // Wait a bit
@@ -214,8 +215,7 @@ static int run_client() {
 
     // Get client
     std::vector<std::thread> threads;
-    //for (int i=0; i<NUMBER_OF_THREADS; ++i) {
-    for (int i=0; i<1; ++i) {
+    for (int i=0; i<NUMBER_OF_THREADS; ++i) {
         frpc::RpcClient* rpc_client = rpc_client_pool.pop();
         assert(rpc_client != nullptr);
 
