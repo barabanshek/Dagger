@@ -33,8 +33,10 @@ module ccip_queue_polling
         parameter LMAX_POLLING_RATE = 8,
         // log # of NIC flows
         parameter LMAX_NUM_OF_FLOWS = 1,
-        // log depth of queues in each flow
-        parameter LMAX_RX_QUEUE_SIZE = 1
+        // log depth of queues in each RX flow
+        parameter LMAX_RX_QUEUE_SIZE = 1,
+        // log depth of queues in each TX flow
+        parameter LMAX_TX_QUEUE_SIZE = 1
 
     )
     (
@@ -48,6 +50,7 @@ module ccip_queue_polling
         input logic[LMAX_RX_QUEUE_SIZE-1:0] rx_queue_size,
         input t_ccip_clAddr                 tx_base_addr,
         input logic[LMAX_CCIP_BATCH-1:0]  l_tx_batch_size,
+        input logic[LMAX_TX_QUEUE_SIZE:0]   tx_queue_size,
         input logic[LMAX_POLLING_RATE-1:0]  tx_polling_rate,
         input logic                         start,
 
@@ -320,7 +323,8 @@ module ccip_queue_polling
 
     ccip_transmitter #(
             .NIC_ID(NIC_ID),
-            .LMAX_NUM_OF_FLOWS(LMAX_NUM_OF_FLOWS)
+            .LMAX_NUM_OF_FLOWS(LMAX_NUM_OF_FLOWS),
+            .LMAX_TX_QUEUE_SIZE(LMAX_TX_QUEUE_SIZE)
         ) ccip_tx (
             .clk(clk),
             .reset(reset),
@@ -328,6 +332,7 @@ module ccip_queue_polling
             .number_of_flows(number_of_flows),
             .tx_base_addr(rx_base_addr),
             .l_tx_batch_size(l_tx_batch_size),
+            .tx_queue_size(tx_queue_size),
             .start(start),
 
             .initialize(initialize),

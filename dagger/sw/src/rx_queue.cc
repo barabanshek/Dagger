@@ -35,7 +35,7 @@ void RxQueue::init() {
     int page_size = getpagesize();
     assert(page_size == 4096);
 
-    rpc_id_set_ = reinterpret_cast<uint32_t*>(aligned_alloc(page_size, depth_*sizeof(uint8_t)));
+    rpc_id_set_ = reinterpret_cast<uint32_t*>(aligned_alloc(page_size, depth_*sizeof(uint32_t)));
     for (size_t i=0; i<depth_; ++i) {
         rpc_id_set_[i] = -1;
     }

@@ -23,8 +23,8 @@
 
 
 #define FRPC_LOG_LEVEL_GLOBAL FRPC_LOG_LEVEL_INFO
-#define NUMBER_OF_THREADS 4
-#define NUM_OF_REQUESTS 4
+#define NUMBER_OF_THREADS 1
+#define NUM_OF_REQUESTS 16
 
 static int run_server(std::promise<bool>& init_pr, std::future<bool>& cmpl_ft);
 static int run_client();
@@ -185,7 +185,7 @@ static int client(frpc::RpcClient* rpc_client, size_t thread_id, size_t num_of_r
     }
 
     // Wait a bit
-    sleep(60);
+    sleep(30);
 
     // Read completion queue
     size_t n_of_cq_entries = cq->get_number_of_completed_requests();

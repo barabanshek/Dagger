@@ -45,27 +45,30 @@ namespace frpc {
             // Log rx batch size
             //   - in MTUs
             //   - see NicCCIP for MTU definition
-            constexpr size_t l_rx_batch_size = 0;
+            constexpr size_t l_rx_batch_size = 2;
+            static_assert(l_rx_batch_size <= 2,
+                          "log rx batch size should not be more than 2");
 
             // Log rx queue size
             //   - in MTUs
             //   - see NicCCIP for MTU definition
             // Constraints:
             //   - must be equal to rx batch size
-            constexpr size_t l_rx_queue_size = 0;
-            static_assert(l_rx_queue_size == l_rx_batch_size,
-                          "rx queue size should be equal to rx batch size");
+            constexpr size_t l_rx_queue_size = 5;
+            static_assert(l_rx_queue_size >= l_rx_batch_size,
+                          "rx queue size should be more than rx batch size");
 
             // Polling rate
             //   - only used with CCI-P polling mode enabled
-            //   - `20` - `30` is the empirical value when UPI demonstrates the lowest latency
+            //   - `20` - `30` is the empirical value when UPI demonstrates the lowest latency with a single thread
+            //   - when running multiple threads, use lower polling rate (proportional to the number of threads)
             //   - if polling rate is low, requests need to wait until they get polled
             //   - if high, the UPI bus becomes congested and it negatively impacts the bus tail latency
             //   - TODO: think about an adaptive polling rate
             //   - TODO: better interconnects may allow to get rid of polling at all
             //   - TODO: CCI-P uMsg can be used here to avoid or reduce polling, but they are not supported on Broadwell;
             //           uMsg can essentially act as "interrupts", but for hardware, via Invalidation messages
-            constexpr size_t polling_rate = 30;
+            constexpr size_t polling_rate = 0;
 
         } // namespace nic
 

@@ -56,6 +56,7 @@ public:
     static constexpr uint8_t iRegIPv4NetAddr = 152; // hw: 38, W
     static constexpr uint8_t iRegNetDropCntRead = 160;  // hw: 40, W
     static constexpr uint8_t iRegNetDropCnt = 168;  // hw: 42, R
+    static constexpr uint8_t iRegTxQueueSize = 176;  // hw: 44, W
     static constexpr uint16_t iMMIOSpaceStart   = 256;  // hw: 64, -
 
     // Hardware register map constants
@@ -210,6 +211,7 @@ protected:
     // TODO: define a status enum instead
     bool connected_;
     bool initialized_;
+    bool dp_configured_;
     bool started_;
 
 private:

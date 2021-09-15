@@ -25,7 +25,9 @@ module ccip_mmio
         // NIC ID
         parameter NIC_ID = 0,
          // log # of NIC flows
-        parameter LMAX_NUM_OF_FLOWS = 1
+        parameter LMAX_NUM_OF_FLOWS = 1,
+        // log depth of queues in each TX flow
+        parameter LMAX_TX_QUEUE_SIZE = 1
     )
     (
         input logic clk,
@@ -128,7 +130,8 @@ module ccip_mmio
 
     ccip_transmitter #(
             .NIC_ID(NIC_ID),
-            .LMAX_NUM_OF_FLOWS(LMAX_NUM_OF_FLOWS)
+            .LMAX_NUM_OF_FLOWS(LMAX_NUM_OF_FLOWS),
+            .LMAX_TX_QUEUE_SIZE(LMAX_TX_QUEUE_SIZE)
         ) ccip_tx (
             .clk(clk),
             .reset(reset),
@@ -136,6 +139,7 @@ module ccip_mmio
             .number_of_flows(number_of_flows),
             .tx_base_addr(rx_base_addr),
             .l_tx_batch_size(l_tx_batch_size),
+            .tx_queue_size(tx_queue_size),
             .start(start),
 
             .initialize(initialize),

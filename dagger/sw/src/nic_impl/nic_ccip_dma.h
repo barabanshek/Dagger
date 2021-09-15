@@ -51,8 +51,6 @@ public:
     }
 
 private:
-    bool dp_configured_;
-
     // Number of Nic flows;
     // one flow = one CPU-NIC communication channel
     size_t num_of_flows_;

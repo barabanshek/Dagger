@@ -13,7 +13,6 @@ NicPollingCCIP::NicPollingCCIP(uint64_t base_nic_addr,
                                size_t num_of_flows,
                                bool master_nic = true):
     NicCCIP(base_nic_addr, num_of_flows, master_nic),
-    dp_configured_(false),
     num_of_flows_(num_of_flows),
     buf_(nullptr),
     tx_offset_bytes_(0),
@@ -34,7 +33,6 @@ NicPollingCCIP::~NicPollingCCIP() {
 
 int NicPollingCCIP::configure_data_plane() {
     assert(connected_ == true);
-    assert(initialized_ == true);
     assert(dp_configured_ == false);
 
     // Check the nic is polling-compatible
@@ -128,6 +126,19 @@ int NicPollingCCIP::configure_data_plane() {
         return 1;
     }
 
+    // Configure rx queue depth
+    // rx-queue from CPU size is tx-queue from Nic side
+    //   - rx-queue is configured by iRegTxQueueSize
+    res = fpgaWriteMMIO64(accel_handle_,
+                          0,
+                          base_nic_addr_ + iRegTxQueueSize,
+                          rx_queue_size_bytes_ / CL(1));
+    if (res != FPGA_OK) {
+        FRPC_ERROR("Nic configuration error, failed to configure tx queue depth,"
+                    "nic returned %d\n", res);
+        return 1;
+    }
+
     // Configure polling rate
     res = fpgaWriteMMIO64(accel_handle_,
                           0,
@@ -157,11 +168,13 @@ int NicPollingCCIP::configure_data_plane() {
 
 int NicPollingCCIP::start() {
   assert(dp_configured_ == true);
+  assert(initialized_ == true);
   return start_nic();
 }
 
 int NicPollingCCIP::stop() {
   assert(dp_configured_ == true);
+  assert(initialized_ == true);
   return stop_nic();
 }
 

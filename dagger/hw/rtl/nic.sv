@@ -78,8 +78,9 @@ module nic
     // =============================================================
     // General local config
     // =============================================================
-    // log number of NIC flows
+    // log number of max queue sizes
     localparam LMAX_RX_QUEUE_SIZE = 3;   // 2**3=8
+    localparam LMAX_TX_QUEUE_SIZE = 8;   // 2**8=256
     // CCI-P VCs
     localparam CCIP_FORWARD_VC       = eVC_VH0; // PCIe
     localparam CCIP_FORWARD_RD_TYPE  = eREQ_RDLINE_I;
@@ -161,6 +162,8 @@ module nic
                         = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 40);
     localparam t_ccip_mmioAddr addrNetDropCnt
                         = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 42);
+    localparam t_ccip_mmioAddr addrTxQueueSize
+                        = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 44);
 
     // Registers
     t_ccip_clAddr                  iRegMemTxAddr;
@@ -173,6 +176,7 @@ module nic
     logic[7:0]                     iRegGetPckCnt;
     logic[63:0]                    iRegPckCnt;
     logic[LMAX_RX_QUEUE_SIZE-1:0]  iRegRxQueueSize;  // iRegRxQueueSize = rx queue size - 1
+    logic[LMAX_TX_QUEUE_SIZE:0]    iRegTxQueueSize;
     logic[LMAX_CCIP_BATCH-1:0]     lRegTxBatchSize;
     logic[LMAX_CCIP_DMA_BATCH-1:0] iRegRxBatchSize;
     logic[LMAX_POLLING_RATE-1:0]   iRegPollingRate;
@@ -310,6 +314,10 @@ module nic
     assign is_rx_queue_size_csr_write = is_csr_write &&
                                         (mmio_req_hdr.address == addrRxQueueSize);
 
+    logic is_tx_queue_size_csr_write;
+    assign is_tx_queue_size_csr_write = is_csr_write &&
+                                        (mmio_req_hdr.address == addrTxQueueSize);
+
     logic is_tx_batch_size_csr_write;
     assign is_tx_batch_size_csr_write = is_csr_write &&
                                         (mmio_req_hdr.address == addrTxBatchSize);
@@ -381,6 +389,11 @@ module nic
         if (is_rx_queue_size_csr_write) begin
             $display("NIC%d: iRegRxQueueSize received: %08h", NIC_ID, sRx.c0.data);
             iRegRxQueueSize <= sRx.c0.data[LMAX_RX_QUEUE_SIZE-1:0] - 1;
+        end
+
+        if (is_tx_queue_size_csr_write) begin
+            $display("NIC%d: iRegTxQueueSize received: %08h", NIC_ID, sRx.c0.data);
+            iRegTxQueueSize <= sRx.c0.data[LMAX_TX_QUEUE_SIZE:0];
         end
 
         if (is_tx_batch_size_csr_write) begin
@@ -458,7 +471,8 @@ module nic
 
     ccip_mmio #(
         .NIC_ID(NIC_ID),
-        .LMAX_NUM_OF_FLOWS(LMAX_NUM_OF_FLOWS)
+        .LMAX_NUM_OF_FLOWS(LMAX_NUM_OF_FLOWS),
+        .LMAX_TX_QUEUE_SIZE(LMAX_TX_QUEUE_SIZE)
     ) ccip_mmio (
         .clk(ccip_clk),
         .reset(reset),
@@ -467,6 +481,7 @@ module nic
         .rx_base_addr(iRegMemRxAddr),
         .tx_base_addr(iRegMemTxAddr),
         .l_tx_batch_size(lRegTxBatchSize),
+        .tx_queue_size(iRegTxQueueSize),
         .start(iRegNicStart),
 
         .initialize(iRegNicInit),
@@ -595,7 +610,8 @@ module nic
         .NUM_SUB_AFUS(NUM_SUB_AFUS),
         .LMAX_POLLING_RATE(LMAX_POLLING_RATE),
         .LMAX_NUM_OF_FLOWS(LMAX_NUM_OF_FLOWS),
-        .LMAX_RX_QUEUE_SIZE(LMAX_RX_QUEUE_SIZE)
+        .LMAX_RX_QUEUE_SIZE(LMAX_RX_QUEUE_SIZE),
+        .LMAX_TX_QUEUE_SIZE(LMAX_TX_QUEUE_SIZE)
     ) ccip_queue_poll (
         .clk(ccip_clk),
         .reset(reset),
@@ -606,6 +622,7 @@ module nic
         .rx_queue_size(iRegRxQueueSize),
         .tx_base_addr(iRegMemTxAddr),
         .l_tx_batch_size(lRegTxBatchSize),
+        .tx_queue_size(iRegTxQueueSize),
         .tx_polling_rate(iRegPollingRate),
 
         .start(iRegNicStart),

@@ -60,11 +60,11 @@ int RpcThreadedServer::init_nic(int bus) {
     PhyAddr cl_phy_addr = {0x1A, 0x2B, 0x3C, 0x4D, 0x5E, 0xFF};
     IPv4 cl_ipv4_addr("192.168.0.2", 0);
 
-    res = nic_->initialize_nic(cl_phy_addr, cl_ipv4_addr);
+    res = nic_->configure_data_plane();
     if (res != 0)
         return res;
 
-    res = nic_->configure_data_plane();
+    res = nic_->initialize_nic(cl_phy_addr, cl_ipv4_addr);
     if (res != 0)
         return res;
 

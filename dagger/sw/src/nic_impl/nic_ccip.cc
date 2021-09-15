@@ -24,6 +24,7 @@ NicCCIP::NicCCIP(uint64_t base_nic_addr, size_t num_of_flows, bool master_nic = 
     hssi_h_(0),
     connected_(false),
     initialized_(false),
+    dp_configured_(false),
     started_(false),
     master_nic_(master_nic),
     phy_network_en_(false),
@@ -66,6 +67,7 @@ int NicCCIP::connect_to_nic(int bus) {
 
 int NicCCIP::initialize_nic(const PhyAddr& host_phy, const IPv4& host_ipv4) {
     assert(connected_ == true);
+    assert(dp_configured_ == true);
 
     // Assert initial hw state
     NicHwStatus status;
@@ -182,6 +184,7 @@ int NicCCIP::initialize_nic(const PhyAddr& host_phy, const IPv4& host_ipv4) {
 int NicCCIP::start_nic() {
     assert(connected_ == true);
     assert(initialized_ == true);
+    assert(dp_configured_ == true);
     assert(started_ == false);
 
     // Assert initial hw state
@@ -239,8 +242,6 @@ int NicCCIP::run_perf_thread(NicPerfMask perf_mask,
 }
 
 int NicCCIP::stop_nic() {
-    assert(connected_ == true);
-    assert(initialized_ == true);
     assert(started_ == true);
 
     // Assert initial hw state

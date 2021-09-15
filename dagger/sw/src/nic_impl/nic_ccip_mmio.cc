@@ -11,7 +11,6 @@ namespace frpc {
 
 NicMmioCCIP::NicMmioCCIP(uint64_t base_nic_addr, size_t num_of_flows, bool master_nic = true):
     NicCCIP(base_nic_addr, num_of_flows, master_nic),
-    dp_configured_(false),
     num_of_flows_(num_of_flows),
     buf_(nullptr),
     rx_cl_offset_(0),
@@ -28,7 +27,6 @@ NicMmioCCIP::~NicMmioCCIP() {
 
 int NicMmioCCIP::configure_data_plane() {
     assert(connected_ == true);
-    assert(initialized_ == true);
     assert(dp_configured_ == false);
 
     // Check the nic is mmio-compatible
@@ -133,11 +131,13 @@ int NicMmioCCIP::configure_data_plane() {
 
 int NicMmioCCIP::start() {
     assert(dp_configured_ == true);
+    assert(initialized_ == true);
     return start_nic();
 }
 
 int NicMmioCCIP::stop() {
     assert(dp_configured_ == true);
+    assert(initialized_ == true);
     return stop_nic();
 }
 

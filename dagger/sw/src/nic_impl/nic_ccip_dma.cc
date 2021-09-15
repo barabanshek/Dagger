@@ -13,7 +13,6 @@ namespace frpc {
 
 NicDmaCCIP::NicDmaCCIP(uint64_t base_nic_addr, size_t num_of_flows, bool master_nic = true):
     NicCCIP(base_nic_addr, num_of_flows, master_nic),
-    dp_configured_(false),
     num_of_flows_(num_of_flows),
     buf_(nullptr),
     tx_offset_bytes_(0),
@@ -34,7 +33,6 @@ NicDmaCCIP::~NicDmaCCIP() {
 
 int NicDmaCCIP::configure_data_plane() {
     assert(connected_ == true);
-    assert(initialized_ == true);
     assert(dp_configured_ == false);
 
     // Check the nic is dma-compatible
@@ -160,11 +158,13 @@ int NicDmaCCIP::notify_nic_of_new_dma(size_t flow, size_t bucket) const {
 
 int NicDmaCCIP::start() {
     assert(dp_configured_ == true);
+    assert(initialized_ == true);
     return start_nic();
 }
 
 int NicDmaCCIP::stop() {
     assert(dp_configured_ == true);
+    assert(initialized_ == true);
     return stop_nic();
 }
 
