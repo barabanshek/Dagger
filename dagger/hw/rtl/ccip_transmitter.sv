@@ -138,7 +138,7 @@ module ccip_transmitter
     //
     // Push logic
     //
-    FlowId rpc_flow_id_in_1d, rpc_flow_id_in_2d;
+    FlowId rpc_flow_id_in_d, rpc_flow_id_in_1d, rpc_flow_id_in_2d;
 
     logic [15:0] lb_flow_cnt;
 
@@ -150,17 +150,18 @@ module ccip_transmitter
             ff_push_en[i3] <= 1'b0;
         end
 
-        // Put request to request queue
+        // Put request to request queue (TODO: move bellow)
         rq_push_data <= rpc_in;
+        rpc_flow_id_in_d <= rpc_flow_id_in;
 
         if (start && rpc_in_valid) begin
-            $display("NIC%d: CCI-P transmitter, rpc_in requesed for flow= %d",
-                                        NIC_ID, rpc_flow_id_in);
+            $display("NIC%d: CCI-P transmitter, rpc_in requesed for flow= %d, rpc_data= %d",
+                                        NIC_ID, rpc_flow_id_in, rpc_in.rpc_data.argv);
             rq_push_en   <= 1'b1;
         end
 
         // Delay rpc_flow_id to align with rq look-up
-        rpc_flow_id_in_1d <= rpc_flow_id_in;
+        rpc_flow_id_in_1d <= rpc_flow_id_in_d;
         rpc_flow_id_in_2d <= rpc_flow_id_in_1d;
 
         // Put slot_id to corresponding flow FIFO
