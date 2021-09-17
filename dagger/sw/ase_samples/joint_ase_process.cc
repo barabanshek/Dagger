@@ -11,6 +11,7 @@
 #include <iostream>
 #include <vector>
 #include <thread>
+#include <unordered_set>
 
 #include <assert.h>
 #include <unistd.h>
@@ -23,8 +24,8 @@
 
 
 #define FRPC_LOG_LEVEL_GLOBAL FRPC_LOG_LEVEL_INFO
-#define NUMBER_OF_THREADS 1
-#define NUM_OF_REQUESTS 16
+#define NUMBER_OF_THREADS 4
+#define NUM_OF_REQUESTS 20
 
 static int run_server(std::promise<bool>& init_pr, std::future<bool>& cmpl_ft);
 static int run_client();
@@ -142,9 +143,10 @@ static int run_server(std::promise<bool>& init_pr, std::future<bool>& cmpl_ft) {
 }
 
 // RPC function #0
+static constexpr int loopback_add_const = 1;
 static RpcRetCode loopback(CallHandler handler, LoopBackArgs args, NumericalResult* ret) {
     std::cout << "loopback is called on thread " << handler.thread_id << " with data= " << args.data << std::endl;
-    ret->data = args.data + 1;
+    ret->data = args.data + loopback_add_const;
     return RpcRetCode::Success;
 }
 
@@ -176,8 +178,11 @@ static int client(frpc::RpcClient* rpc_client, size_t thread_id, size_t num_of_r
     assert(cq != nullptr);
 
     // Make an RPC call
+    std::unordered_set<int> data_sent;
     for (int i=0; i<num_of_requests; ++i) {
-        int res = rpc_client->loopback({thread_id*10 + i});
+        uint64_t arg = thread_id*NUM_OF_REQUESTS + i;
+        data_sent.insert(arg);
+        int res = rpc_client->loopback({arg});
         assert(res == 0);
 
         // Adjust this value based on your simulation speed
@@ -190,11 +195,23 @@ static int client(frpc::RpcClient* rpc_client, size_t thread_id, size_t num_of_r
     // Read completion queue
     size_t n_of_cq_entries = cq->get_number_of_completed_requests();
     std::cout << "Thread " << thread_id << ", CQ entries: " << n_of_cq_entries << std::endl;
+    size_t num_errors = 0;
     for (int i=0; i<n_of_cq_entries; ++i) {
+        uint64_t ret = reinterpret_cast<NumericalResult*>(cq->pop_response().argv)->data;
         std::cout << "Thread " << thread_id << ", RPC returned: "
-                  << reinterpret_cast<NumericalResult*>(cq->pop_response().argv)->data
-                  << std::endl;
+                  << ret << std::endl;
+
+        // Compare results
+        auto it = data_sent.find(ret - loopback_add_const);
+        if (it == data_sent.end())
+            ++num_errors;
+        else
+            data_sent.erase(it);
     }
+
+    // Print correctness results
+    std::cout << "Thread " << thread_id << ", correctness: number of wrong elements= " << num_errors << std::endl;
+    std::cout << "Thread " << thread_id << ", correctness: number of missing elements= " << data_sent.size() << std::endl;
 
     return 0;
 }
