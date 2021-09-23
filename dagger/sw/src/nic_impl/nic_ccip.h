@@ -118,6 +118,7 @@ protected:
     };
 
 private:
+    size_t get_page_size() const;
     size_t round_up_to_pagesize(size_t val) const;
     fpga_handle connect_to_accel(const char *accel_uuid, int bus) const;
 

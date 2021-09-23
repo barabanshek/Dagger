@@ -764,12 +764,17 @@ void NicCCIP::nic_perf_loop(NicPerfMask perf_mask,
     }
 }
 
-size_t NicCCIP::round_up_to_pagesize(size_t val) const {
-    size_t page_size_bytes = getpagesize();
-    size_t remainder = val % page_size_bytes;
+size_t NicCCIP::get_page_size() const {
+    if (cfg::sys::enable_hugepages)
+        return cfg::sys::hugepage_size;
+    else
+        return getpagesize();
+}
 
-    if (remainder == 0)
-        return val;
+size_t NicCCIP::round_up_to_pagesize(size_t val) const {
+    size_t page_size_bytes = get_page_size();
+    size_t remainder = val % page_size_bytes;
+    if (remainder == 0) return val;
 
     size_t res = val + page_size_bytes - remainder;
     assert(res % page_size_bytes == 0);
@@ -791,15 +796,29 @@ volatile void* NicCCIP::alloc_buffer(fpga_handle accel_handle, ssize_t size,
         m_flags = MAP_PRIVATE | MAP_ANONYMOUS;
     }
 
-    buf = mmap(NULL, round_up_to_pagesize(size), PROT_READ | PROT_WRITE, m_flags, -1, 0);
+    size_t mem_size = round_up_to_pagesize(size);
+    size_t page_size = get_page_size();
+    size_t mem_pages = mem_size / page_size;
+
+    if (mem_pages > 1) {
+        FRPC_ERROR("Can not correctly support multu-page buffer for now\n");
+        return nullptr;
+    }
+
+    buf = mmap(NULL, mem_size, PROT_READ | PROT_WRITE, m_flags, -1, 0);
     if (buf == nullptr) return nullptr;
 
-    res = fpgaPrepareBuffer(accel_handle,
-                            round_up_to_pagesize(size),
-                            const_cast<void**>(&buf), wsid, FPGA_BUF_PREALLOCATED);
-    if (res != FPGA_OK) return nullptr;
+    // fpgaPrepareBuffer only prepares the buffer for a single page per call, so we need to iterate over
+    for (size_t i=0; i<mem_pages; ++i) {
+        volatile void* buf_curr = reinterpret_cast<volatile void*>(reinterpret_cast<volatile uint8_t*>(buf) + i * page_size);
+        res = fpgaPrepareBuffer(accel_handle,
+                                page_size,
+                                const_cast<void**>(&buf_curr), wsid, FPGA_BUF_PREALLOCATED);
+        if (res != FPGA_OK) return nullptr;
+    }
 
     // Get the physical address of the buffer in the accelerator
+    // TODO: currentlty, it only works with a single page buffer
     res = fpgaGetIOAddress(accel_handle, *wsid, io_addr);
     assert(res == FPGA_OK);
 

@@ -22,6 +22,9 @@ namespace frpc {
             //   - when true, make sure hugepages are configures in the OS 
             constexpr bool enable_hugepages = false;
 
+            // Size of huge pages
+            constexpr size_t hugepage_size = 2048 * 1024;
+
         } // namespace sys
 
         namespace nic {
