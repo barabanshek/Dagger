@@ -42,10 +42,12 @@ namespace frpc {
             static_assert(l_tx_queue_size == 0, "tx queue size should be 0 for MMIO-based mode");
 #endif
 
-            // Log rx batch size
+            // Log rx batch size (depricated)
             //   - in MTUs
             //   - see NicCCIP for MTU definition
-            constexpr size_t l_rx_batch_size = 2;
+            //   - depricated: after implementing dynamic l_rx_queue_size setup, this does not have any throughput effects anymore,
+            //                 and has negative latency impact. So, keep always 0 unless it's a matter of experiments.
+            constexpr size_t l_rx_batch_size = 0;
             static_assert(l_rx_batch_size <= 2,
                           "log rx batch size should not be more than 2");
 
@@ -68,7 +70,7 @@ namespace frpc {
             //   - TODO: better interconnects may allow to get rid of polling at all
             //   - TODO: CCI-P uMsg can be used here to avoid or reduce polling, but they are not supported on Broadwell;
             //           uMsg can essentially act as "interrupts", but for hardware, via Invalidation messages
-            constexpr size_t polling_rate = 0;
+            constexpr size_t polling_rate = 30;
 
         } // namespace nic
 

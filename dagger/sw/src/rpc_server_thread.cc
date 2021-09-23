@@ -94,14 +94,14 @@ void RpcServerThread::_PullListen() {
 
     constexpr size_t batch_size = 1 << cfg::nic::l_rx_batch_size;
 
-    RpcPckt* req_pckt;
+    volatile RpcPckt* req_pckt;
 
     while(!stop_signal_) {
         RpcPckt req_pckt_1[batch_size] __attribute__ ((aligned (64)));
         for(int i=0; i<batch_size && !stop_signal_; ++i) {
             // wait response
             uint32_t rx_rpc_id;
-            req_pckt = reinterpret_cast<RpcPckt*>(rx_queue_.get_read_ptr(rx_rpc_id));
+            req_pckt = reinterpret_cast<volatile RpcPckt*>(rx_queue_.get_read_ptr(rx_rpc_id));
             while((req_pckt->hdr.ctl.valid == 0 ||
                    req_pckt->hdr.rpc_id == rx_rpc_id) &&
                   !stop_signal_) {
@@ -111,7 +111,7 @@ void RpcServerThread::_PullListen() {
 
             rx_queue_.update_rpc_id(req_pckt->hdr.rpc_id);
 
-            req_pckt_1[i] = *req_pckt;
+            req_pckt_1[i] = *const_cast<RpcPckt*>(req_pckt);
 
             //_mm256_store_si256(&req_pckt_1[i], *(reinterpret_cast<__m256i*>(req_pckt)));
             //_mm256_store_si256(reinterpret_cast<__m256i*>(&req_pckt_1[i] + 32),

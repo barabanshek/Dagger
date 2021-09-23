@@ -21,11 +21,11 @@ public:
 
     void init();
 
-    inline char* get_read_ptr(uint32_t& rpc_id) __attribute__((always_inline)) {
+    inline volatile char* get_read_ptr(uint32_t& rpc_id) __attribute__((always_inline)) {
         assert(rpc_id_set_ != nullptr);
         assert(rx_q_ != nullptr);
 
-        char* ptr = const_cast<char*>(rx_q_ + rx_q_tail_*bucket_size_);
+        volatile char* ptr = rx_q_ + rx_q_tail_*bucket_size_;
         rpc_id = rpc_id_set_[rx_q_tail_];
         return ptr;
     }

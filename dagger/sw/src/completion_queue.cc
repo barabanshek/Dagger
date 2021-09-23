@@ -38,12 +38,12 @@ void CompletionQueue::unbind() {
 void CompletionQueue::_PullListen() {
     FRPC_INFO("Completion queue is bound to RPC client %d\n", rpc_client_id_);
 
-    RpcPckt* resp_pckt;
+    volatile RpcPckt* resp_pckt;
 
     while (stop_signal_ == 0) {
         // wait response
         uint32_t rx_rpc_id;
-        resp_pckt = reinterpret_cast<RpcPckt*>(rx_queue_.get_read_ptr(rx_rpc_id));
+        resp_pckt = reinterpret_cast<volatile RpcPckt*>(rx_queue_.get_read_ptr(rx_rpc_id));
 
         while((resp_pckt->hdr.ctl.valid == 0 ||
                resp_pckt->hdr.rpc_id == rx_rpc_id) &&
@@ -64,7 +64,7 @@ void CompletionQueue::_PullListen() {
         // }
         // and it should be written with the current time stamp on the client when
         // issuing the request.
-        uint32_t issuing_timestamp = *reinterpret_cast<uint32_t*>(resp_pckt->argv);
+        uint32_t issuing_timestamp = *reinterpret_cast<volatile uint32_t*>(resp_pckt->argv);
         timestamps_.push_back(static_cast<uint32_t>(frpc::utils::rdtsc()) - issuing_timestamp);
 #endif
 
