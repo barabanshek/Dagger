@@ -1,5 +1,7 @@
 #include "nic_ccip.h"
 
+#include <sys/mman.h>
+
 #include <assert.h>
 #include <thread>
 #include <vector>
@@ -775,15 +777,26 @@ size_t NicCCIP::round_up_to_pagesize(size_t val) const {
     return res;
 }
 
-// Taken from Intel Corporation, OPAE example; modified by Nikita
 volatile void* NicCCIP::alloc_buffer(fpga_handle accel_handle, ssize_t size,
                                  uint64_t *wsid, uint64_t *io_addr) const {
     fpga_result res;
-    volatile void* buf;
+    volatile void* buf = nullptr;
+
+    int m_flags;
+    if (cfg::sys::enable_hugepages) {
+        FRPC_INFO("Allocating memory with hugepages\n");
+        m_flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB;
+    } else {
+        FRPC_INFO("Allocating memory with standard pages\n");
+        m_flags = MAP_PRIVATE | MAP_ANONYMOUS;
+    }
+
+    buf = mmap(NULL, round_up_to_pagesize(size), PROT_READ | PROT_WRITE, m_flags, -1, 0);
+    if (buf == nullptr) return nullptr;
 
     res = fpgaPrepareBuffer(accel_handle,
-                            size,
-                            const_cast<void**>(&buf), wsid, 0);
+                            round_up_to_pagesize(size),
+                            const_cast<void**>(&buf), wsid, FPGA_BUF_PREALLOCATED);
     if (res != FPGA_OK) return nullptr;
 
     // Get the physical address of the buffer in the accelerator

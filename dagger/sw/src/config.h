@@ -18,6 +18,10 @@ namespace frpc {
             //   - do not change unless the system has changed
             constexpr size_t cl_size_bytes = 64;
 
+            // Whether or nor use hugepages for the CPU/FPGA shared memory
+            //   - when true, make sure hugepages are configures in the OS 
+            constexpr bool enable_hugepages = false;
+
         } // namespace sys
 
         namespace nic {
@@ -56,7 +60,7 @@ namespace frpc {
             //   - see NicCCIP for MTU definition
             // Constraints:
             //   - must be equal to rx batch size
-            constexpr size_t l_rx_queue_size = 5;
+            constexpr size_t l_rx_queue_size = 4;
             static_assert(l_rx_queue_size >= l_rx_batch_size,
                           "rx queue size should be more than rx batch size");
 
