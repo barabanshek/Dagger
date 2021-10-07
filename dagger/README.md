@@ -32,14 +32,19 @@ This is a simple PoC HW-accelerated RPC framework primarily designed for efficie
 
 ### High-Level Overview
 
+#### System Architecture
+
 ![Top-Level Architecture](https://github.com/cornell-zhang/accelerated-cloud/blob/master/Resources/TopLevel.png)
 
 Dagger stack consists of software and hardware parts. The main design principle is to reduce the amount of CPU work required to transfer RPC objects, so the software is only responsible for writing/reding the objects in/from the specified memory locations where the hardware is then accessing them. The latter runs on an FPGA, inside the green region of the Intel HARP shell (https://wiki.intel-research.net/FPGA.html). The HW communicates with the SW over the shared memory abstraction provided by HARP and implemented via their CCI-P protocol stack (https://www.intel.com/content/www/us/en/programmable/documentation/buf1506187769663.html) which encapsulates both PCIe and UPI. The HW runs all the layers necessary for over-the-network transfer such as L1 - L3 networking, connection management, etc., as well as the auxiliary RPC-specific layers like request load balancer.
 
 For more information and technical details, please, read our ASPLOS'21 paper (https://www.csl.cornell.edu/~delimitrou/papers/2021.asplos.dagger.pdf), and also check out the recent slide deck on Dagger: https://github.com/cornell-zhang/accelerated-cloud/blob/master/Resources/Dagger_Slides.pdf.
 
+#### Abstraction
 
+![Abstraction](https://github.com/cornell-zhang/accelerated-cloud/blob/master/Resources/Abstraction.png)
 
+Dagger enables the high-level RPC-like abstraction. RPC calls are specified using our Interface Definition Language (IDL) which is compiler into RPC stubs. Applications are then linked with the stubs and the Dagger runtime library (libdagger.so) based on the Intel FPGA library libopae.so (OPAE) which provides interfaces with the FPGA.
 
 ### Showcase: in-Memory KVS Store
 
@@ -255,4 +260,4 @@ To run applications, please, check out the corresponding application folders as 
 
 
 ### Citation
-If you are using/evaluating this design for your research work, please, cite one of our papers listed above. Thanks!
+If you are using/evaluating this design for your research work, please, cite our papers listed above. Thanks!
