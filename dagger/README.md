@@ -5,10 +5,10 @@
 
 ### Introduction
 This is a simple PoC HW-accelerated RPC framework primarily designed for efficient transfer of millions of small (few cache lines) RPC requests. The following key design principles underlie in the concept:
- 1. abstraction: application-level RPC calls with Google Protobuf-like schema definition (limited support for the PoC)
- 2. hardware offload of networking and RPC layers onto an FPGA-based NIC;
- 3. direct zero-copy and CPU-free communication between HW flows on the NIC and applications;
- 4. exchange of ready-to-use RPC messages and objects between application threads and the NIC;
+ 1. **abstraction**: application-level RPC calls with Google Protobuf-like schema definition (limited support for the PoC)
+ 2. **hardware offload** of networking and RPC layers onto an FPGA-based NIC;
+ 3. direct zero-copy and **CPU-free communication** between HW flows on the NIC and applications;
+ 4. exchange of **ready-to-use RPC** messages and objects between application threads and the NIC;
  5. leveraging new **customized** and **flexible** CPU-NIC communication protocols based on coherent Intel UPI NUMA interconnect to reinforce 2 - 4:
     * supported CPU -> NIC mechanisms
         * commodity: strongly-ordered MMIO + DMA over PCIe
@@ -19,10 +19,10 @@ This is a simple PoC HW-accelerated RPC framework primarily designed for efficie
     * NIC -> CPU mechanisms
         *  commodity: strongly-ordered PCIe writes with DDIO
         *  weakly-ordered push-writes over UPI, refer: https://www.intel.com/content/www/us/en/programmable/documentation/buf1506187769663.html
- 6. supported modes if operation:
+ 6. **supported modes if operation**:
     * L1 loopback (NIC terminated) - to test end-to-end system excluding networking on a single machine
     * physical networking (requires multiple machines)
- 7. supported platforms:
+ 7. **supported platforms**:
     * Intel Broadwell CPU/FPGA Hybrid (loopback only), refer: https://wiki.intel-research.net/FPGA.html#fpga-system-classes
     * Intel Skylake CPU/FPGA Hybrid
     * Intel PAC A10 multi-FPGA system (PCIe only), refer: https://wiki.intel-research.net/FPGA.html#multi-fpga-config-label
@@ -37,12 +37,6 @@ This is a simple PoC HW-accelerated RPC framework primarily designed for efficie
 Dagger stack consists of software and hardware parts. The main design principle is to reduce the amount of CPU work required to transfer RPC objects, so the software is only responsible for writing/reding the objects in/from the specified memory locations where the hardware is then accessing them. The latter runs on an FPGA, inside the green region of the Intel HARP shell (https://wiki.intel-research.net/FPGA.html). The HW communicates with the SW over the shared memory abstraction provided by HARP and implemented via their CCI-P protocol stack (https://www.intel.com/content/www/us/en/programmable/documentation/buf1506187769663.html) which encapsulates both PCIe and UPI. The HW runs all the layers necessary for over-the-network transfer such as L1 - L3 networking, connection management, etc., as well as the auxiliary RPC-specific layers like request load balancer.
 
 For more information and technical details, please, read our ASPLOS'21 paper (https://www.csl.cornell.edu/~delimitrou/papers/2021.asplos.dagger.pdf), and also check out the recent slide deck on Dagger: https://github.com/cornell-zhang/accelerated-cloud/blob/master/Resources/Dagger_Slides.pdf.
-
-
-
-
-### Recent Performance Results
-TODO
 
 
 
@@ -128,25 +122,25 @@ int main() {
 We strongly encourage to run the design in the Intel vLab Academic Compute Environment: https://wiki.intel-research.net/Introduction.html. All the further instruction are based on this assumption, although the system should work in any HARP-enabled settings.
 
 #### Repository Structure
-* dagger/sw
-    * src: source code of the software part
-        * network_ctl: functions to control Intel HSSI MAC/PHY networking functions
-        * nic_impl: drivers for different types of supported Host-NIC interfaces
-        * utils: aux utils
-    * microbenchmarks: benchmarks of latency and throughput on idle requests
-    * codegen: python-based RPC stub generator
-    * ase_sample: Intel ASE-based simulation application
-    * apps: ported application
-        * kvs_client: KVS client for all types of KVS servers we implemented
-        * memcached KVS server: https://github.com/memcached/memcached
-        * MICA KVS server: https://github.com/efficient/mica
-        * microservices: synthetic microservices to showcase multitenancy
-    * tests: gTest-based unit and integration tests
-* dagger/hw
-    * rtl: SystemVerilog source code of the hardware part
-        * build_configs: configurations of the hardware build for different platforms and Host-NIC interfaces
-        * network: Intel HSSI MAC/PHY infrastructure
-        * testbenches: unit tests for some of the components
+* **dagger/sw**
+    * **src**: source code of the software part
+        * **network_ctl**: functions to control Intel HSSI MAC/PHY networking functions
+        * **nic_impl**: drivers for different types of supported Host-NIC interfaces
+        * **utils**: aux utils
+    * **microbenchmarks**: benchmarks of latency and throughput on idle requests
+    * **codegen**: python-based RPC stub generator
+    * **ase_sample**: Intel ASE-based simulation application
+    * **apps**: ported application
+        * **kvs_client**: KVS client for all types of KVS servers we implemented
+        * **memcached KVS server**: https://github.com/memcached/memcached
+        * **MICA KVS server**: https://github.com/efficient/mica
+        * **microservices**: synthetic microservices to showcase multitenancy
+    * **tests**: gTest-based unit and integration tests
+* **dagger/hw**
+    * **rtl**: SystemVerilog source code of the hardware part
+        * **build_configs**: configurations of the hardware build for different platforms and Host-NIC interfaces
+        * **network**: Intel HSSI MAC/PHY infrastructure
+        * **testbenches**: unit tests for some of the components
 
 
 #### Building Hardware
@@ -163,11 +157,11 @@ tail -f build.log
 
 Target platforms available in vLab and supported configuration:
 * <TARGET_PLATFORM> = fpga-bdx-opae (Intel Broadwell CPU/FPGA hybrid), supported configurations:
-    * loopback_mmio_bdx.txt: MMIO-based Host-NIC interface, loopback mode
-    * loopback_upi_bdx.txt: UPI-based Host-NIC interface, loopback mode
+    * **loopback_mmio_bdx.txt**: MMIO-based Host-NIC interface, loopback mode
+    * **loopback_upi_bdx.txt**: UPI-based Host-NIC interface, loopback mode
 * <TARGET_PLATFORM> = fpga-pac-a10 (Intel PAC A10 multi-FPGA system), supported configuration:
-    * loopback_mmio_pac_a10.txt: MMIO-based Host-NIC interface, loopback mode
-    * network_mmio_pac_a10.txt: MMIO-based Host-NIC interface, physical networking mode
+    * **loopback_mmio_pac_a10.txt**: MMIO-based Host-NIC interface, loopback mode
+    * **network_mmio_pac_a10.txt**: MMIO-based Host-NIC interface, physical networking mode
 
 Note: more supported platform/configuration combinations are on the way!
 Note: Intel Skylake CPU/FPGA Hybrid machines are not in the vLab, please, use your own local cluster for experiments.
@@ -261,4 +255,4 @@ To run applications, please, check out the corresponding application folders as 
 
 
 ### Citation
-If you are using/evaluating this design in your research work, please, cite one of our papers listed above. Thanks!
+If you are using/evaluating this design for your research work, please, cite one of our papers listed above. Thanks!
