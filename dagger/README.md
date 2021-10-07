@@ -19,10 +19,10 @@ This is a simple PoC HW-accelerated RPC framework primarily designed for efficie
     * NIC -> CPU mechanisms
         *  commodity: strongly-ordered PCIe writes with DDIO
         *  weakly-ordered push-writes over UPI, refer: https://www.intel.com/content/www/us/en/programmable/documentation/buf1506187769663.html
-  6. supported modes if operation:
+ 6. supported modes if operation:
     * L1 loopback (NIC terminated) - to test end-to-end system excluding networking on a single machine
     * physical networking (requires multiple machines)
-  7. supported platforms:
+ 7. supported platforms:
     * Intel Broadwell CPU/FPGA Hybrid (loopback only), refer: https://wiki.intel-research.net/FPGA.html#fpga-system-classes
     * Intel Skylake CPU/FPGA Hybrid
     * Intel PAC A10 multi-FPGA system (PCIe only), refer: https://wiki.intel-research.net/FPGA.html#multi-fpga-config-label
@@ -32,11 +32,11 @@ This is a simple PoC HW-accelerated RPC framework primarily designed for efficie
 
 ### High-Level Overview
 
-![Top-Level Architecture](https://octodex.github.com/images/yaktocat.png)
+![Top-Level Architecture](https://github.com/cornell-zhang/accelerated-cloud/blob/master/Resources/TopLevel.png)
 
 Dagger stack consists of software and hardware parts. The main design principle is to reduce the amount of CPU work required to transfer RPC objects, so the software is only responsible for writing/reding the objects in/from the specified memory locations where the hardware is then accessing them. The latter runs on an FPGA, inside the green region of the Intel HARP shell (https://wiki.intel-research.net/FPGA.html). The HW communicates with the SW over the shared memory abstraction provided by HARP and implemented via their CCI-P protocol stack (https://www.intel.com/content/www/us/en/programmable/documentation/buf1506187769663.html) which encapsulates both PCIe and UPI. The HW runs all the layers necessary for over-the-network transfer such as L1 - L3 networking, connection management, etc., as well as the auxiliary RPC-specific layers like request load balancer.
 
-For more information and technical details, please, read our ASPLOS'21 paper (https://www.csl.cornell.edu/~delimitrou/papers/2021.asplos.dagger.pdf), and also check out the recent slide deck on Dagger: https://octodex.github.com/images/yaktocat.png.
+For more information and technical details, please, read our ASPLOS'21 paper (https://www.csl.cornell.edu/~delimitrou/papers/2021.asplos.dagger.pdf), and also check out the recent slide deck on Dagger: https://github.com/cornell-zhang/accelerated-cloud/blob/master/Resources/Dagger_Slides.pdf.
 
 
 
@@ -49,7 +49,7 @@ TODO
 
 ### Showcase: in-Memory KVS Store
 
-At the application level, Dagger provides the standard RPC API as defined by the IDL shown bellow. The IDL is used to compile RPC client and server stubs for communication with the hardware. The stubs is nothing but the memory layout of RPC objects with a small amount of metadata. The showcase below is based on the KVS example in https://octodex.github.com/images/yaktocat.png, please, refer to the source code for the completed system.
+At the application level, Dagger provides the standard RPC API as defined by the IDL shown bellow. The IDL is used to compile RPC client and server stubs for communication with the hardware. The stubs is nothing but the memory layout of RPC objects with a small amount of metadata. The showcase below is based on the KVS example in https://github.com/cornell-zhang/accelerated-cloud/tree/master/dagger/sw/apps/kvs_client, please, refer to the source code for the completed system.
 
 #### Example of Interface Definition
 ```C++
@@ -251,11 +251,11 @@ To run applications, please, check out the corresponding application folders as 
 
 ### Papers and Talks
 * Papers:
-    * IEEE CAL paper
-    * ACM ASPLOS paper
+    * https://ieeexplore.ieee.org/document/9180035
+    * https://www.csl.cornell.edu/~delimitrou/papers/2021.asplos.dagger.pdf
 * Talks:
-    * ASPLOS talk
-* Recent slide deck
+    * https://www.youtube.com/watch?v=ONnR6Mg6t4E
+* https://github.com/cornell-zhang/accelerated-cloud/blob/master/Resources/Dagger_Slides.pdf
 
 
 
