@@ -19,7 +19,7 @@ This is a simple PoC HW-accelerated RPC framework primarily designed for efficie
     * NIC -> CPU mechanisms
         *  commodity: strongly-ordered PCIe writes with DDIO
         *  weakly-ordered push-writes over UPI, refer: https://www.intel.com/content/www/us/en/programmable/documentation/buf1506187769663.html
- 6. **supported modes if operation**:
+ 6. **supported modes of operation**:
     * L1 loopback (NIC terminated) - to test end-to-end system excluding networking on a single machine
     * physical networking (requires multiple machines)
  7. **supported platforms**:
@@ -168,7 +168,8 @@ Target platforms available in vLab and supported configuration:
     * **loopback_mmio_pac_a10.txt**: MMIO-based Host-NIC interface, loopback mode
     * **network_mmio_pac_a10.txt**: MMIO-based Host-NIC interface, physical networking mode
 
-Note: more supported platform/configuration combinations are on the way!
+Note: more supported platform/configuration combinations are on the way.
+
 Note: Intel Skylake CPU/FPGA Hybrid machines are not in the vLab, please, use your own local cluster for experiments.
 
 For more information on building on HARP, please, refer to the original documentation: https://wiki.intel-research.net/FPGA.html#.
@@ -242,7 +243,7 @@ rmux
 ./microbenchmarks/benchmark_latency_throughput/dagger_benchmark_client --threads=1 --requests=1000000000 --delay=20 --function=loopback
 ```
 
-For more information on the available benchmark runtime arguments, please, check out the README in the benchmark folder.
+For more information on the available runtime options, please, check out the README in the benchmark folder.
 To run applications, please, check out the corresponding application folders as the procedure might vary from application to application.
 
 
