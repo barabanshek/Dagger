@@ -1,0 +1,38 @@
+# Python
+__pycache__
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+
+# Libraries
+*.lib
+*.a
+*.la
+*.lo
+*.so
+*.dll
+
+# Cmake
+build
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Makefile
+Testing
+*.cmake
+.ninja_deps
+.ninja_log
+build.ninja
+
+# VScode
+.clang_complete
+.cache
+compile_commands.json
+
+# Folders
+sw/build
+hw/build_*
+
