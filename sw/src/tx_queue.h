@@ -1,3 +1,8 @@
+/**
+ * @file tx_queue.h
+ * @brief Implementation of the transmission queue.
+ * @author Nikita Lazarev
+ */
 #ifndef _TX_QUEUE_H_
 #define _TX_QUEUE_H_
 
@@ -7,62 +12,73 @@
 #include <bitset>
 #include <cassert>
 
-namespace frpc {
+namespace dagger {
 
-/// Tx queue implementation
-///
+/// TX queue implementation. The queue provides the critical path interface with
+/// the hardware for outgoing RPC requests.
 class alignas(4096) TxQueue {
-public:
-    TxQueue();
-    TxQueue(char* tx_flow_buff, size_t bucket_size_bytes, size_t l_depth);
-    TxQueue(const TxQueue&) = delete;
+ public:
+  /// Default instantiation.
+  TxQueue();
 
-    virtual ~TxQueue();
+  /// Instantiate the queue based on the @param tx_flow_buff shared memory
+  /// buffer.
+  TxQueue(char* tx_flow_buff, size_t bucket_size_bytes, size_t l_depth);
 
-    void init();
+  /// Forbid copying and assignment of the queue as the abstraction here is that
+  /// only a single queue might exist per hardware flow.
+  TxQueue(const TxQueue&) = delete;
 
-    inline char* get_write_ptr(uint8_t& change_bit) __attribute__((always_inline)) {
-        assert(tx_q_ != nullptr);
-        assert(change_bit_set_ != nullptr);
+  virtual ~TxQueue();
 
-        change_bit = change_bit_set_[tx_q_head_];
+  /// Initialize the queue.
+  void init();
 
-        char* ptr = tx_q_ + tx_q_head_*bucket_size_;
+  /// Critical path function to get the head location in the queue for the
+  /// upcoming write access.
+  inline char* get_write_ptr(uint8_t& change_bit)
+      __attribute__((always_inline)) {
+    assert(tx_q_ != nullptr);
+    assert(change_bit_set_ != nullptr);
 
-        // Incremet head and flip change bit
-        change_bit_set_[tx_q_head_] ^= 1;
-        //do {
-        tx_q_head_ += 1;
-        if (tx_q_head_ == depth_) {
-            tx_q_head_ = 0;
-        }
-        //} while (free_bit_[tx_q_head_] != 1);
+    change_bit = change_bit_set_[tx_q_head_];
 
-        return ptr;
+    char* ptr = tx_q_ + tx_q_head_ * bucket_size_;
+
+    // Incremet head and flip change bit.
+    change_bit_set_[tx_q_head_] ^= 1;
+    // do {
+    tx_q_head_ += 1;
+    if (tx_q_head_ == depth_) {
+      tx_q_head_ = 0;
     }
+    //} while (free_bit_[tx_q_head_] != 1);
 
-private:
-    // Underlying Nic buffer
-    char* tx_flow_buff_;
+    return ptr;
+  }
 
-    // Queue sizes
-    size_t bucket_size_;
-    size_t l_depth_;
-    size_t depth_;
+ private:
+  // Underlying nic buffer.
+  char* tx_flow_buff_;
 
-    // Tx queue
-    char* tx_q_;
-    size_t tx_q_head_;
-    size_t tx_q_tail_;
-    // To allow hw to track updates
-    //   - used only with polling hw
-    uint8_t* change_bit_set_;
-    //uint8_t* free_bit_;
+  // Queue sizes.
+  size_t bucket_size_;
+  size_t l_depth_;
+  size_t depth_;
 
-    // Completion queue
-    char* cq_;
+  // Tx queue.
+  char* tx_q_;
+  size_t tx_q_head_;
+  size_t tx_q_tail_;
+  // To allow hw to track updates
+  //   - used only with polling hw
+  uint8_t* change_bit_set_;
+  // uint8_t* free_bit_;
+
+  // Completion queue.
+  char* cq_;
 };
 
-}  // namespace frpc
+}  // namespace dagger
 
 #endif

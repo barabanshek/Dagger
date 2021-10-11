@@ -5,7 +5,4 @@
 #include "nic.h"
 #include "nic_ccip_polling.h"
 
-namespace frpc {
-
-
-}  // namespace frpc
+namespace dagger {}  // namespace dagger

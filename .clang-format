@@ -1,3 +1,5 @@
 BasedOnStyle: Google
 AllowShortCaseLabelsOnASingleLine: true
-
+IndentPPDirectives: AfterHash
+CompactNamespaces: false
+NamespaceIndentation: Inner

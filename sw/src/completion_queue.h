@@ -1,66 +1,72 @@
+/**
+ * @file completion_queue.h
+ * @brief Completion queue for non-blocking RPCs.
+ * @author Nikita Lazarev
+ */
 #ifndef _COMPLETION_QUEUE_H
 #define _COMPLETION_QUEUE_H
 
 #include <atomic>
 #include <mutex>
 #include <thread>
-#include <vector>
 #include <utility>
+#include <vector>
 
 #include "rpc_header.h"
 #include "rx_queue.h"
 
-namespace frpc {
+namespace dagger {
 
-/// Completion queue for non-blocking RPCs
-/// Currently requires a separate management thread
-///
+/// Completion queue for non-blocking RPCs. Currently requires a separate
+/// management thread.
 class CompletionQueue {
-public:
-    CompletionQueue();
-    CompletionQueue(size_t rpc_client_id, volatile char* rx_buff, size_t mtu_size_bytes);
-    ~CompletionQueue();
+ public:
+  CompletionQueue();
 
-    void bind();
-    void unbind();
+  /// Construct a new completion queue based on the rx buffer @param rx_buff
+  CompletionQueue(size_t rpc_client_id, volatile char* rx_buff,
+                  size_t mtu_size_bytes);
+  ~CompletionQueue();
 
-    size_t get_number_of_completed_requests() const;
+  /// Bind/Unbind completion queue to the thread
+  void bind();
+  void unbind();
 
-    RpcPckt pop_response();
+  size_t get_number_of_completed_requests() const;
 
-    void clear_queue();
+  RpcPckt pop_response();
 
-#ifdef PROFILE_LATENCY
-    const std::vector<uint32_t>& get_latency_records() const;
-    void clear_latency_records();
-#endif
-
-private:
-    void _PullListen();
-
-private:
-    size_t rpc_client_id_;
-
-    // Rx queue
-    RxQueue rx_queue_;
-
-    // Thread
-    std::thread thread_;
-    std::atomic<bool> stop_signal_;
-
-    // CQ
-    std::vector<RpcPckt> cq_;
+  void clear_queue();
 
 #ifdef PROFILE_LATENCY
-    // Timestamps
-    std::vector<uint32_t> timestamps_;
+  const std::vector<uint32_t>& get_latency_records() const;
+  void clear_latency_records();
 #endif
 
-    // Sync
-    std::mutex cq_lock_;
+ private:
+  void _PullListen();
 
+ private:
+  size_t rpc_client_id_;
+
+  RxQueue rx_queue_;
+
+  // Thread
+  std::thread thread_;
+  std::atomic<bool> stop_signal_;
+
+  // CQ
+  std::vector<RpcPckt> cq_;
+
+#ifdef PROFILE_LATENCY
+  // Timestamps
+  std::vector<uint32_t> timestamps_;
+#endif
+
+  // Sync
+  std::mutex cq_lock_;
 };
 
-}  // namespace frpc
+}  // namespace dagger
 
 #endif

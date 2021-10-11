@@ -31,6 +31,7 @@ build.ninja
 .clang_complete
 .cache
 compile_commands.json
+.vscode
 
 # Folders
 sw/build
