@@ -34,21 +34,21 @@ This is a simple PoC HW-accelerated RPC framework primarily designed for efficie
 
 #### System Architecture
 
-![Top-Level Architecture](https://github.com/cornell-zhang/accelerated-cloud/blob/master/Resources/TopLevel.png)
+![Top-Level Architecture](resources/TopLevel.png)
 
 Dagger stack consists of software and hardware parts. The main design principle is to reduce the amount of CPU work required to transfer RPC objects, so the software is only responsible for writing/reding the objects in/from the specified memory locations where the hardware is then accessing them. The latter runs on an FPGA, inside the green region of the Intel HARP shell (https://wiki.intel-research.net/FPGA.html). The HW communicates with the SW over the shared memory abstraction provided by HARP and implemented via their CCI-P protocol stack (https://www.intel.com/content/www/us/en/programmable/documentation/buf1506187769663.html) which encapsulates both PCIe and UPI. The HW runs all the layers necessary for over-the-network transfer such as L1 - L3 networking, connection management, etc., as well as the auxiliary RPC-specific layers like request load balancer.
 
-For more information and technical details, please, read our ASPLOS'21 paper (https://www.csl.cornell.edu/~delimitrou/papers/2021.asplos.dagger.pdf), and also check out the recent slide deck on Dagger: https://github.com/cornell-zhang/accelerated-cloud/blob/master/Resources/Dagger_Slides.pdf.
+For more information and technical details, read our ASPLOS'21 paper (https://www.csl.cornell.edu/~delimitrou/papers/2021.asplos.dagger.pdf), and also check out the recent slide deck on Dagger: https://github.com/barabanshek/Dagger/blob/master/resources/Dagger_Slides.pdf.
 
 #### Abstraction
 
-![Abstraction](https://github.com/cornell-zhang/accelerated-cloud/blob/master/Resources/Abstraction.png)
+![Abstraction](resources/Abstraction.png)
 
 Dagger enables the high-level RPC-like abstraction. RPC calls are specified using our Interface Definition Language (IDL) which is compiler into RPC stubs. Applications are then linked with the stubs and the Dagger runtime library (libdagger.so) based on the Intel FPGA library libopae.so (OPAE) which provides interfaces with the FPGA.
 
 ### Showcase: in-Memory KVS Store
 
-At the application level, Dagger provides the standard RPC API as defined by the IDL shown bellow. The IDL is used to compile RPC client and server stubs for communication with the hardware. The stubs is nothing but the memory layout of RPC objects with a small amount of metadata. The showcase below is based on the KVS example in https://github.com/cornell-zhang/accelerated-cloud/tree/master/dagger/sw/apps/kvs_client, please, refer to the source code for the completed system.
+At the application level, Dagger provides the standard RPC API as defined by the IDL shown bellow. The IDL is used to compile RPC client and server stubs for communication with the hardware. The stubs is nothing but the memory layout of RPC objects with a small amount of metadata. The showcase below is based on the KVS example in https://github.com/barabanshek/Dagger/tree/master/sw/apps/kvs_client, please, refer to the source code for the completed system.
 
 #### Example of Interface Definition
 ```C++
@@ -170,9 +170,9 @@ Target platforms available in vLab and supported configuration:
 
 Note: more supported platform/configuration combinations are on the way.
 
-Note: Intel Skylake CPU/FPGA Hybrid machines are not in the vLab, please, use your own local cluster for experiments.
+Note: Intel Skylake CPU/FPGA Hybrid machines are not in the vLab, use your own cluster for experiments.
 
-For more information on building on HARP, please, refer to the original documentation: https://wiki.intel-research.net/FPGA.html#.
+For more information on building on HARP, refer to the original documentation: https://wiki.intel-research.net/FPGA.html#.
 
 
 #### Running in Simulation
@@ -204,8 +204,7 @@ make -j
 ./ase_samples/dagger_ase_sample
 ```
 
-Check for error logs during the simulation phase and after.
-Please, feel free to experiment with any arbitrary numbers of threads and request by modifying the corresponding variables in the dagger/sw/ase_samples/joint_ase_process.cc.
+Check for error logs during the simulation phase and after. Feel free to experiment with any arbitrary numbers of threads and request by modifying the corresponding variables in the dagger/sw/ase_samples/joint_ase_process.cc.
 
 
 #### Running on Real Hardware: Configuring FPGA and Building Software on the Target Platform
@@ -243,8 +242,7 @@ rmux
 ./microbenchmarks/benchmark_latency_throughput/dagger_benchmark_client --threads=1 --requests=1000000000 --delay=20 --function=loopback
 ```
 
-For more information on the available runtime options, please, check out the README in the benchmark folder.
-To run applications, please, check out the corresponding application folders as the procedure might vary from application to application.
+For more information on the available runtime options, check out the README in the benchmark folder. To run applications, check out the corresponding application folders as the procedure might vary from application to application.
 
 
 
@@ -255,7 +253,7 @@ To run applications, please, check out the corresponding application folders as 
     * https://www.csl.cornell.edu/~delimitrou/papers/2021.asplos.dagger.pdf
 * Talks:
     * https://www.youtube.com/watch?v=ONnR6Mg6t4E
-* https://github.com/cornell-zhang/accelerated-cloud/blob/master/Resources/Dagger_Slides.pdf
+* https://github.com/barabanshek/Dagger/blob/master/resources/Dagger_Slides.pdf
 
 
 
