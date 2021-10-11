@@ -247,6 +247,14 @@ For more information on the available runtime options, check out the README in t
 
 
 
+### Authors and Contributors
+* Nikita Lazarev
+* Shaojie Xiang
+* Neil Adit
+
+
+
+
 ### Papers and Talks
 * Papers:
     * https://ieeexplore.ieee.org/document/9180035
