@@ -8,10 +8,10 @@
 #include <iostream>
 #include <vector>
 
-static frpc::RpcThreadedServer server(0x00000, 4);
+static dagger::RpcThreadedServer server(0x00000, 4);
 
 static std::vector<const void*> fn_ptr;
-static std::unique_ptr<frpc::RpcServerCallBack> server_callback;
+static std::unique_ptr<dagger::RpcServerCallBack> server_callback;
 
 void perf_callback(const std::vector<uint64_t>& counters) {
     uint64_t rps_in = counters[1];
@@ -44,7 +44,7 @@ int memcached_wrapper_init_and_start_server() {
 int memcached_wrapper_open_connection(const char* client_ip,
                                       uint16_t client_port,
                                       uint32_t c_id) {
-    frpc::IPv4 client_addr(client_ip, client_port);
+    dagger::IPv4 client_addr(client_ip, client_port);
     if (server.connect(client_addr, c_id, c_id) != 0) {
         std::cout << "Failed to open connection on server" << std::endl;
         return 1;
@@ -66,8 +66,8 @@ int memcached_wrapper_register_functions(int (*set)(struct CallHandler,
     fn_ptr.push_back(reinterpret_cast<const void*>(set));
     fn_ptr.push_back(reinterpret_cast<const void*>(get));
     fn_ptr.push_back(reinterpret_cast<const void*>(populate));
-    server_callback = std::unique_ptr<frpc::RpcServerCallBack>(
-                                                new frpc::RpcServerCallBack(fn_ptr));
+    server_callback = std::unique_ptr<dagger::RpcServerCallBack>(
+                                                new dagger::RpcServerCallBack(fn_ptr));
 
     return 0;
 }

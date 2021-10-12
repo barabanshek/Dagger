@@ -80,7 +80,7 @@ int main(int argc, char* argv[]) {
     }
 
     // Set-up Dagger
-    frpc::RpcThreadedServer server(NIC_ADDR, num_of_threads);
+    dagger::RpcThreadedServer server(NIC_ADDR, num_of_threads);
 
     // Init
     int res = server.init_nic();
@@ -99,7 +99,7 @@ int main(int argc, char* argv[]) {
 
     // Open connections
     for (int i=0; i<num_of_threads; ++i) {
-        frpc::IPv4 client_addr("192.168.0.2", 3136);
+        dagger::IPv4 client_addr("192.168.0.2", 3136);
         if (server.connect(client_addr, i, i) != 0) {
             std::cout << "Failed to open connection on server" << std::endl;
             exit(1);
@@ -114,7 +114,7 @@ int main(int argc, char* argv[]) {
     fn_ptr.push_back(reinterpret_cast<const void*>(&get));
     fn_ptr.push_back(reinterpret_cast<const void*>(&populate));
 
-    frpc::RpcServerCallBack server_callback(fn_ptr);
+    dagger::RpcServerCallBack server_callback(fn_ptr);
 
     for (int i=0; i<num_of_threads; ++i) {
         res = server.run_new_listening_thread(&server_callback);

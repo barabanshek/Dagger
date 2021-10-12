@@ -5,10 +5,10 @@
 #include "rpc_client.h"
 #include "rpc_types.h"
 
-int benchmark(const std::vector<frpc::RpcClient*>& rpc_clients,
+int benchmark(const std::vector<dagger::RpcClient*>& rpc_clients,
                      const std::vector<std::string>& param);
 
-int run_set_get_benchmark(frpc::RpcClient* rpc_client,
+int run_set_get_benchmark(dagger::RpcClient* rpc_client,
 	                             const std::vector<std::pair<std::string, std::string>>& dataset,
                                  int thread_id,
                                  size_t num_iterations,

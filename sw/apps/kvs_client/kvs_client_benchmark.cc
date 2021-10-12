@@ -18,7 +18,7 @@
 // HW parameters
 #define NIC_ADDR 0x20000
 
-static int run_set_benchmark(frpc::RpcClient* rpc_client,
+static int run_set_benchmark(dagger::RpcClient* rpc_client,
                              int thread_id,
                              size_t num_iterations,
                              size_t req_delay,
@@ -29,9 +29,9 @@ static int run_set_benchmark(frpc::RpcClient* rpc_client,
                              size_t set_get_req_delay);
 
 static double rdtsc_in_ns() {
-    uint64_t a = frpc::utils::rdtsc();
+    uint64_t a = dagger::utils::rdtsc();
     sleep(1);
-    uint64_t b = frpc::utils::rdtsc();
+    uint64_t b = dagger::utils::rdtsc();
 
     return (b - a)/1000000000.0;
 }
@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
     size_t set_get_fraction = atoi(argv[5]);
     size_t set_get_req_delay = atoi(argv[6]);
 
-    frpc::RpcClientPool<frpc::RpcClient> rpc_client_pool(NIC_ADDR,
+    dagger::RpcClientPool<dagger::RpcClient> rpc_client_pool(NIC_ADDR,
                                                          num_of_threads);
 
     // Init client pool
@@ -65,11 +65,11 @@ int main(int argc, char* argv[]) {
     // Run client threads
     std::vector<std::thread> threads;
     for (int thread_id=0; thread_id<num_of_threads; ++thread_id) {
-        frpc::RpcClient* rpc_client = rpc_client_pool.pop();
+        dagger::RpcClient* rpc_client = rpc_client_pool.pop();
         assert(rpc_client != nullptr);
 
         // Open connection
-        frpc::IPv4 server_addr("192.168.0.1", 3136);
+        dagger::IPv4 server_addr("192.168.0.1", 3136);
         if (rpc_client->connect(server_addr, thread_id) != 0) {
             std::cout << "Failed to open connection on client" << std::endl;
             exit(1);
@@ -132,7 +132,7 @@ static void print_latency(std::vector<uint64_t>& latency_records,
               << " ns" << std::endl;
 }
 
-static int run_set_benchmark(frpc::RpcClient* rpc_client,
+static int run_set_benchmark(dagger::RpcClient* rpc_client,
                          int thread_id,
                          size_t num_iterations,
                          size_t req_delay,
@@ -148,7 +148,7 @@ static int run_set_benchmark(frpc::RpcClient* rpc_client,
     for(int i=0; i<warm_up_iterations; ++i) {
         // Set <key, value> <i, i+10>
         SetRequest req;
-        req.timestamp = frpc::utils::rdtsc();
+        req.timestamp = dagger::utils::rdtsc();
         sprintf(req.key, "key=%d", starting_key + i);
         sprintf(req.value, "val=%d", starting_key + i);
         rpc_client->set(req);
@@ -167,7 +167,7 @@ static int run_set_benchmark(frpc::RpcClient* rpc_client,
     for(int i=0; i<num_iterations; ++i) {
         // Set <key, value> <i, i+10>
         SetRequest req;
-        req.timestamp = frpc::utils::rdtsc();
+        req.timestamp = dagger::utils::rdtsc();
         sprintf(req.key, "key=%d", starting_key + i);
         sprintf(req.value, "val=%d", starting_key + i);
         rpc_client->set(req);
@@ -218,12 +218,12 @@ static int run_set_benchmark(frpc::RpcClient* rpc_client,
             }
 
             GetRequest req;
-            req.timestamp = frpc::utils::rdtsc();
+            req.timestamp = dagger::utils::rdtsc();
             sprintf(req.key, "key=%d", starting_key + d_val);
             rpc_client->get(req);
         } else {
             SetRequest req;
-            req.timestamp = frpc::utils::rdtsc();
+            req.timestamp = dagger::utils::rdtsc();
             sprintf(req.key, "new_key=%d", starting_key + i);
             sprintf(req.value, "new_val=%d", starting_key + i);
             rpc_client->set(req);

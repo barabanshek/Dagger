@@ -11,9 +11,9 @@
 #include "utils.h"
 
 double rdtsc_in_ns() {
-    uint64_t a = frpc::utils::rdtsc();
+    uint64_t a = dagger::utils::rdtsc();
     sleep(1);
-    uint64_t b = frpc::utils::rdtsc();
+    uint64_t b = dagger::utils::rdtsc();
 
     return (b - a)/1000000000.0;
 }
@@ -41,7 +41,7 @@ void print_latency(std::vector<uint32_t>& latency_records,
               << " ns" << std::endl;
 }
 
-int benchmark(const std::vector<frpc::RpcClient*>& rpc_clients,
+int benchmark(const std::vector<dagger::RpcClient*>& rpc_clients,
                      const std::vector<std::string>& param) {
     if (param.size() != 7) {
         std::cout << "wrong format of the `benchmark` comand" << std::endl;
@@ -166,7 +166,7 @@ int benchmark(const std::vector<frpc::RpcClient*>& rpc_clients,
     return 0;
 }
 
-int run_set_get_benchmark(frpc::RpcClient* rpc_client,
+int run_set_get_benchmark(dagger::RpcClient* rpc_client,
                           const std::vector<std::pair<std::string, std::string>>& dataset,
                           int thread_id,
                           size_t num_iterations,
@@ -183,13 +183,13 @@ int run_set_get_benchmark(frpc::RpcClient* rpc_client,
 //    for(int i=0; i<warm_up_iterations; ++i) {
 //        if (i%5 == 0) {
 //            SetRequest req;
-//            req.timestamp = frpc::utils::rdtsc();
+//            req.timestamp = dagger::utils::rdtsc();
 //            sprintf(req.key, dataset[i].first.c_str());
 //            sprintf(req.value, dataset[i].second.c_str());
 //            rpc_client->set(req);
 //        } else {
 //            GetRequest req;
-//            req.timestamp = frpc::utils::rdtsc();
+//            req.timestamp = dagger::utils::rdtsc();
 //            sprintf(req.key, dataset[i].first.c_str());
 //            rpc_client->get(req);
 //        }
@@ -210,14 +210,14 @@ int run_set_get_benchmark(frpc::RpcClient* rpc_client,
     for(int i=0; i<num_iterations; ++i) {
         if (i%set_get_fraction != 0) {
             GetRequest req;
-            req.timestamp = frpc::utils::rdtsc();
+            req.timestamp = dagger::utils::rdtsc();
            // sprintf(req.key, dataset[set_get_distr[i%50000000]+1000*thread_id].first.c_str());
             size_t data = set_get_distr[i%10000000]+1000000*thread_id;
             memcpy(req.key, &data, 8);
             rpc_client->get(req);
         } else {
             SetRequest req;
-            req.timestamp = frpc::utils::rdtsc();
+            req.timestamp = dagger::utils::rdtsc();
             //sprintf(req.key, dataset[set_get_distr[i%50000000]+1000*thread_id].first.c_str());
             //sprintf(req.value, dataset[set_get_distr[i%50000000]+1000*thread_id].second.c_str());
             size_t data = set_get_distr[i%10000000]+1000000*thread_id;

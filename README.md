@@ -78,11 +78,11 @@ message GetResponse {
 #### Example client
 ```C++
 int main() {
-    frpc::RpcClientPool rpc_client_pool(NIC_ADDR, NUMBER_OF_THREADS);
+    dagger::RpcClientPool rpc_client_pool(NIC_ADDR, NUMBER_OF_THREADS);
     rpc_client_pool.init_nic();
     rpc_client_pool.start_nic();
 
-    frpc::RpcClient* rpc_client = rpc_client_pool.pop();
+    dagger::RpcClient* rpc_client = rpc_client_pool.pop();
     assert(rpc_client != nullptr);
 
     // Call remote procedure
@@ -101,7 +101,7 @@ static RpcRetCode set(CallHandler handler, SetRequest args, SetResponse* ret);
 static RpcRetCode get(CallHandler handler, GetRequest args, GetResponse* ret);
 
 int main() {
-    frpc::RpcThreadedServer rpc_server(NIC_ADDR, NUMBER_OF_THREADS);
+    dagger::RpcThreadedServer rpc_server(NIC_ADDR, NUMBER_OF_THREADS);
     rpc_server.init_nic();
     rpc_server.start_nic();
 

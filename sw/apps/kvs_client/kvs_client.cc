@@ -31,7 +31,7 @@ void intHandler(int dummy) {
     keepRunning = 0;
 }
 
-static void shell_loop(const std::vector<frpc::RpcClient*>& rpc_clients);
+static void shell_loop(const std::vector<dagger::RpcClient*>& rpc_clients);
 
 int main(int argc, char* argv[]) {
     // Parse input
@@ -41,7 +41,7 @@ int main(int argc, char* argv[]) {
 
     CLI11_PARSE(app, argc, argv);
 
-    frpc::RpcClientPool<frpc::RpcClient> rpc_client_pool(NIC_ADDR,
+    dagger::RpcClientPool<dagger::RpcClient> rpc_client_pool(NIC_ADDR,
                                                          num_of_threads);
 
     // Init client pool
@@ -58,15 +58,15 @@ int main(int argc, char* argv[]) {
 
     // Provision RPC clients/threads
     // Open connections on each client
-    std::vector<frpc::RpcClient*> rpc_clients;
+    std::vector<dagger::RpcClient*> rpc_clients;
     for (int i=0; i<num_of_threads; ++i) {
-        frpc::RpcClient* rpc_client = rpc_client_pool.pop();
+        dagger::RpcClient* rpc_client = rpc_client_pool.pop();
         assert(rpc_client != nullptr);
 
         rpc_clients.push_back(rpc_client);
 
         // Open connection
-        frpc::IPv4 server_addr("192.168.0.1", 3136);
+        dagger::IPv4 server_addr("192.168.0.1", 3136);
         if (rpc_client->connect(server_addr, i) != 0) {
             std::cout << "Failed to open connection on client" << std::endl;
             exit(1);
@@ -93,10 +93,10 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-static void shell_loop(const std::vector<frpc::RpcClient*>& rpc_clients) {
+static void shell_loop(const std::vector<dagger::RpcClient*>& rpc_clients) {
     std::cout << "Welcome to Dagger KVS shell" << std::endl;
 
-    size_t batch_size = 1 << frpc::cfg::nic::l_rx_batch_size;
+    size_t batch_size = 1 << dagger::cfg::nic::l_rx_batch_size;
     size_t dummy_requests = batch_size - 1;
 
     std::cout << "Nic is configured with the batch of " << batch_size
@@ -135,7 +135,7 @@ static void shell_loop(const std::vector<frpc::RpcClient*>& rpc_clients) {
             }
 
             SetRequest set_req;
-            set_req.timestamp = static_cast<uint32_t>(frpc::utils::rdtsc());
+            set_req.timestamp = static_cast<uint32_t>(dagger::utils::rdtsc());
             memset(set_req.key, 0, 16);
             sprintf(set_req.key, key.c_str());
             memset(set_req.value, 0, 32);
@@ -173,7 +173,7 @@ static void shell_loop(const std::vector<frpc::RpcClient*>& rpc_clients) {
             }
 
             GetRequest get_req;
-            get_req.timestamp = static_cast<uint32_t>(frpc::utils::rdtsc());
+            get_req.timestamp = static_cast<uint32_t>(dagger::utils::rdtsc());
             memset(get_req.key, 0, 16);
             sprintf(get_req.key, key.c_str());
             rpc_clients[client_id]->get(get_req);
@@ -215,7 +215,7 @@ static void shell_loop(const std::vector<frpc::RpcClient*>& rpc_clients) {
 
                 for(size_t i=0; i<dummy_requests; ++i) {
                     GetRequest get_req;
-                    get_req.timestamp = static_cast<uint32_t>(frpc::utils::rdtsc());
+                    get_req.timestamp = static_cast<uint32_t>(dagger::utils::rdtsc());
                     sprintf(get_req.key, "");
                     rpc_clients[client_id]->get(get_req);
                     usleep(1000);
