@@ -8,7 +8,7 @@
 #  ifdef NIC_PHY_NETWORK
 // Allocate FPGA on bus_1 for the client when running on PAC_A10 with physical
 // networking
-static constexpr int fpga_bus = frpc::cfg::platform::pac_a10_fpga_bus_1;
+static constexpr int fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
 
 // If physical networking, running on different FPGAs, so NIC is placed by
 // 0x20000 for both client and server
@@ -17,7 +17,7 @@ static constexpr uint64_t nic_address = 0x20000;
 #  else
 // Allocate FPGA on bus_1 for the client when running on PAC_A10 with loopback
 // networking
-static constexpr int fpga_bus = frpc::cfg::platform::pac_a10_fpga_bus_1;
+static constexpr int fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
 
 // If loopback, running on the same FPGA, so NIC is placed by 0x00000 for client
 // and 0x20000 for server
@@ -31,7 +31,7 @@ static constexpr uint64_t nic_address = 0x00000;
 
 #endif
 
-namespace frpc {
+namespace dagger {
 
 TEST(ClientPoolTest, ClientPopTest_1) {
   uint64_t base_nic_addr = 0x000000;
@@ -80,4 +80,4 @@ TEST(ClientPoolTest, ClientPopTest_2) {
   ASSERT_EQ(res, 0);
 }
 
-}  // namespace frpc
+}  // namespace dagger

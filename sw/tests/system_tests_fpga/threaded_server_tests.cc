@@ -10,7 +10,7 @@
 #  ifdef NIC_PHY_NETWORK
 // Allocate FPGA on bus_1 for the client when running on PAC_A10 with physical
 // networking
-static constexpr int fpga_bus = frpc::cfg::platform::pac_a10_fpga_bus_1;
+static constexpr int fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
 
 // If physical networking, running on different FPGAs, so NIC is placed by
 // 0x20000 for both client and server
@@ -19,7 +19,7 @@ static constexpr uint64_t nic_address = 0x20000;
 #  else
 // Allocate FPGA on bus_1 for the client when running on PAC_A10 with loopback
 // networking
-static constexpr int fpga_bus = frpc::cfg::platform::pac_a10_fpga_bus_1;
+static constexpr int fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
 
 // If loopback, running on the same FPGA, so NIC is placed by 0x00000 for client
 // and 0x20000 for server
@@ -33,7 +33,7 @@ static constexpr uint64_t nic_address = 0x00000;
 
 #endif
 
-namespace frpc {
+namespace dagger {
 
 static uint64_t loopback1(uint64_t a) { return a; }
 
@@ -50,7 +50,7 @@ TEST(ThreadedServerTest, ListenSingleThreadTest) {
 
   std::vector<const void*> fn_ptr;
   fn_ptr.push_back(reinterpret_cast<const void*>(&loopback1));
-  frpc::RpcServerCallBack server_callback(fn_ptr);
+  dagger::RpcServerCallBack server_callback(fn_ptr);
 
   res = rpc_server.run_new_listening_thread(&server_callback);
   EXPECT_EQ(res, 0);
@@ -81,7 +81,7 @@ TEST(ThreadedServerTest, ListenSingleThreadTwoRequestedTest) {
 
   std::vector<const void*> fn_ptr;
   fn_ptr.push_back(reinterpret_cast<const void*>(&loopback1));
-  frpc::RpcServerCallBack server_callback(fn_ptr);
+  dagger::RpcServerCallBack server_callback(fn_ptr);
 
   res = rpc_server.run_new_listening_thread(&server_callback);
   EXPECT_EQ(res, 0);
@@ -115,7 +115,7 @@ TEST(ThreadedServerTest, ListenMultipleThreadsTest) {
 
   std::vector<const void*> fn_ptr;
   fn_ptr.push_back(reinterpret_cast<const void*>(&loopback1));
-  frpc::RpcServerCallBack server_callback(fn_ptr);
+  dagger::RpcServerCallBack server_callback(fn_ptr);
 
   for (int i = 0; i < 8; ++i) {
     res = rpc_server.run_new_listening_thread(&server_callback);
@@ -148,7 +148,7 @@ TEST(ThreadedServerTest, ListenMultipleThreadsStartStopTest) {
 
   std::vector<const void*> fn_ptr;
   fn_ptr.push_back(reinterpret_cast<const void*>(&loopback1));
-  frpc::RpcServerCallBack server_callback(fn_ptr);
+  dagger::RpcServerCallBack server_callback(fn_ptr);
 
   for (int i = 0; i < 8; ++i) {
     res = rpc_server.run_new_listening_thread(&server_callback);
@@ -185,4 +185,4 @@ TEST(ThreadedServerTest, ListenMultipleThreadsStartStopTest) {
   EXPECT_EQ(res, 0);
 }
 
-}  // namespace frpc
+}  // namespace dagger

@@ -20,7 +20,7 @@
 #include <ctime>
 #include <string>
 
-namespace frpc {
+namespace dagger {
 
 // Log levels: higher means more verbose
 #define FRPC_LOG_LEVEL_OFF 0
@@ -101,4 +101,4 @@ static void output_log_header(FILE *stream, int level) {
   fprintf(stream, "%s %s: ", formatted_time.c_str(), type);
 }
 
-}  // namespace frpc
+}  // namespace dagger

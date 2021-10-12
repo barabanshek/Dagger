@@ -6,7 +6,7 @@
 #ifndef _UTILS_H_
 #define _UTILS_H_
 
-namespace frpc {
+namespace dagger {
 namespace utils {
   // Perf counter
   static uint64_t rdtsc() {
@@ -17,6 +17,6 @@ namespace utils {
 
 }  // namespace utils
 
-}  // namespace frpc
+}  // namespace dagger
 
 #endif

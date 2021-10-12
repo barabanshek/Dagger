@@ -2,7 +2,7 @@
 
 #include "connection_manager.h"
 
-namespace frpc {
+namespace dagger {
 
 TEST(ConnectionManagerTest, TestOpenConnection) {
   ConnectionManager cm(2);
@@ -111,4 +111,4 @@ TEST(ConnectionManagerTest, TestManyConnections) {
   }
 }
 
-}  // namespace frpc
+}  // namespace dagger

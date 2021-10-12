@@ -2,7 +2,7 @@
 
 #include <unistd.h>
 
-namespace frpc {
+namespace dagger {
 
 RxQueue::RxQueue()
     : rx_flow_buff_(nullptr),
@@ -41,4 +41,4 @@ void RxQueue::init() {
   }
 }
 
-}  // namespace frpc
+}  // namespace dagger

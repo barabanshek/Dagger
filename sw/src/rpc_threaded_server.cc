@@ -144,7 +144,8 @@ int RpcThreadedServer::disconnect(ConnectionId c_id) {
 }
 
 int RpcThreadedServer::run_perf_thread(
-    NicPerfMask perf_mask, void (*callback)(const std::vector<uint64_t>&)) {
+    Nic::NicPerfMask perf_mask,
+    void (*callback)(const std::vector<uint64_t>&)) {
   return nic_->run_perf_thread(perf_mask, callback);
 }
 

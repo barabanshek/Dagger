@@ -161,7 +161,7 @@ class RpcClientPool {
   /// The perf_thread runs periodically, reads hardware performance counters and
   /// calls the callback function to perform all sort of processing on the
   /// performance data.
-  int run_perf_thread(NicPerfMask perf_mask,
+  int run_perf_thread(Nic::NicPerfMask perf_mask,
                       void (*callback)(const std::vector<uint64_t>&)) {
     return nic_->run_perf_thread(perf_mask, callback);
   }

@@ -226,7 +226,7 @@ class RPCGenerator:
 #include <cstring>
 #include <immintrin.h>
 
-namespace frpc {
+namespace dagger {
 
 class RpcServerCallBack: public RpcServerCallBack_Base {
 public:
@@ -310,7 +310,7 @@ public:
 
 };
 
-}  // namespace frpc
+}  // namespace dagger
 
 #endif // _RPC_SERVER_CALLBACK_H_
 """
@@ -376,7 +376,7 @@ public:
 #include <cstring>
 #include <immintrin.h>
 
-namespace frpc {
+namespace dagger {
 
 class RpcClient: public RpcClientNonBlock_Base {
 public:
@@ -472,7 +472,7 @@ public:
 """
 };
 
-}  // namespace frpc
+}  // namespace dagger
 
 #endif // _RPC_CLIENT_NONBLOCKING_H_
 """

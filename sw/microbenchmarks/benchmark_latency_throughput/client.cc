@@ -21,7 +21,7 @@
 #ifdef PLATFORM_PAC_A10
     #ifdef NIC_PHY_NETWORK
         // Allocate FPGA on bus_1 for the client when running on PAC_A10 with physical networking
-        static constexpr int fpga_bus = frpc::cfg::platform::pac_a10_fpga_bus_1;
+        static constexpr int fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
 
         // If physical networking, running on different FPGAs, so NIC is placed by 0x20000
         // for both client and server
@@ -29,7 +29,7 @@
 
     #else
         // Allocate FPGA on bus_1 for the client when running on PAC_A10 with loopback networking
-        static constexpr int fpga_bus = frpc::cfg::platform::pac_a10_fpga_bus_1;
+        static constexpr int fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
 
         // If loopback, running on the same FPGA, so NIC is placed by 0x00000 for client
         // and 0x20000 for server
@@ -43,7 +43,7 @@
 
 #endif
 
-static int run_benchmark(frpc::RpcClient* rpc_client,
+static int run_benchmark(dagger::RpcClient* rpc_client,
                              int thread_id,
                              size_t num_iterations,
                              size_t req_delay,
@@ -51,9 +51,9 @@ static int run_benchmark(frpc::RpcClient* rpc_client,
                              int function_to_call);
 
 static double rdtsc_in_ns() {
-    uint64_t a = frpc::utils::rdtsc();
+    uint64_t a = dagger::utils::rdtsc();
     sleep(1);
-    uint64_t b = frpc::utils::rdtsc();
+    uint64_t b = dagger::utils::rdtsc();
 
     return (b - a)/1000000000.0;
 }
@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Cycles in ns: " << cycles_in_ns << std::endl;
 
     // RClient
-    frpc::RpcClientPool<frpc::RpcClient> rpc_client_pool(nic_address,
+    dagger::RpcClientPool<dagger::RpcClient> rpc_client_pool(nic_address,
                                                          num_of_threads);
 
     // Init client pool
@@ -120,11 +120,11 @@ int main(int argc, char* argv[]) {
     // Run client threads
     std::vector<std::thread> threads;
     for (int thread_id=0; thread_id<num_of_threads; ++thread_id) {
-        frpc::RpcClient* rpc_client = rpc_client_pool.pop();
+        dagger::RpcClient* rpc_client = rpc_client_pool.pop();
         assert(rpc_client != nullptr);
 
         // Open connection
-        frpc::IPv4 server_addr("192.168.0.2", 3136);
+        dagger::IPv4 server_addr("192.168.0.2", 3136);
         if (rpc_client->connect(server_addr, thread_id) != 0) {
             std::cout << "Failed to open connection on client" << std::endl;
             exit(1);
@@ -165,7 +165,7 @@ static bool sortbysec(const uint64_t &a, const uint64_t &b) {
     return a < b;
 }
 
-static int run_benchmark(frpc::RpcClient* rpc_client,
+static int run_benchmark(dagger::RpcClient* rpc_client,
                          int thread_id,
                          size_t num_iterations,
                          size_t req_delay,
@@ -174,21 +174,21 @@ static int run_benchmark(frpc::RpcClient* rpc_client,
     // Make an RPC call
     for(int i=0; i<num_iterations; ++i) {
         switch (function_to_call) {
-            case 0: rpc_client->loopback({frpc::utils::rdtsc(), i}); break;
+            case 0: rpc_client->loopback({dagger::utils::rdtsc(), i}); break;
 
-            case 1: rpc_client->add({frpc::utils::rdtsc(), i, i+1}); break;
+            case 1: rpc_client->add({dagger::utils::rdtsc(), i, i+1}); break;
 
-            case 2: rpc_client->sign({frpc::utils::rdtsc(),
+            case 2: rpc_client->sign({dagger::utils::rdtsc(),
                                      0xaabbccdd,
                                      0x11223344,
                                      i, i+1, i+2, i+3}); break;
 
-            case 3: rpc_client->xor_({frpc::utils::rdtsc(),
+            case 3: rpc_client->xor_({dagger::utils::rdtsc(),
                                      i, i+1, i+2, i+3, i+4, i+5}); break;
 
             case 4: {
                 UserName request;
-                request.timestamp = frpc::utils::rdtsc();
+                request.timestamp = dagger::utils::rdtsc();
                 sprintf(request.first_name, "Buffalo");
                 sprintf(request.given_name, "Bill");
 

@@ -18,8 +18,8 @@
 #  ifdef NIC_PHY_NETWORK
 // Allocate FPGA on bus_1 for the client when running on PAC_A10 with physical
 // networking
-static constexpr int client_fpga_bus = frpc::cfg::platform::pac_a10_fpga_bus_1;
-static constexpr int server_fpga_bus = frpc::cfg::platform::pac_a10_fpga_bus_2;
+static constexpr int client_fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
+static constexpr int server_fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_2;
 
 // If physical networking, running on different FPGAs, so NIC is placed by
 // 0x20000 for both client and server
@@ -29,8 +29,8 @@ static constexpr uint64_t client_nic_mmio_base = 0x20000;
 #  else
 // Allocate FPGA on bus_1 for the client when running on PAC_A10 with loopback
 // networking
-static constexpr int client_fpga_bus = frpc::cfg::platform::pac_a10_fpga_bus_1;
-static constexpr int server_fpga_bus = frpc::cfg::platform::pac_a10_fpga_bus_1;
+static constexpr int client_fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
+static constexpr int server_fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
 
 // If loopback, running on the same FPGA, so NIC is placed by 0x00000 for client
 // and 0x20000 for server
@@ -54,15 +54,15 @@ class ClientServerPair : public ::testing::Test {
   static constexpr uint64_t loopback1_const = 10;
 
   virtual void SetUp(size_t num_of_threads_, bool with_stat = false) {
-    ASSERT_EQ(frpc::cfg::nic::l_rx_batch_size, 0);
+    ASSERT_EQ(dagger::cfg::nic::l_rx_batch_size, 0);
 
     num_of_threads = num_of_threads_;
 
-    server = std::unique_ptr<frpc::RpcThreadedServer>(
-        new frpc::RpcThreadedServer(server_nic_mmio_base, num_of_threads));
+    server = std::unique_ptr<dagger::RpcThreadedServer>(
+        new dagger::RpcThreadedServer(server_nic_mmio_base, num_of_threads));
 
-    client_pool = std::unique_ptr<frpc::RpcClientPool<frpc::RpcClient>>(
-        new frpc::RpcClientPool<frpc::RpcClient>(client_nic_mmio_base,
+    client_pool = std::unique_ptr<dagger::RpcClientPool<dagger::RpcClient>>(
+        new dagger::RpcClientPool<dagger::RpcClient>(client_nic_mmio_base,
                                                  num_of_threads));
 
     // Setup server
@@ -86,8 +86,8 @@ class ClientServerPair : public ::testing::Test {
         reinterpret_cast<const void*>(&ClientServerPair::loopback4));
     fn_ptr.push_back(
         reinterpret_cast<const void*>(&ClientServerPair::loopback5));
-    server_callback = std::unique_ptr<frpc::RpcServerCallBack>(
-        new frpc::RpcServerCallBack(fn_ptr));
+    server_callback = std::unique_ptr<dagger::RpcServerCallBack>(
+        new dagger::RpcServerCallBack(fn_ptr));
 
     for (int i = 0; i < num_of_threads; ++i) {
       res = server->run_new_listening_thread(server_callback.get());
@@ -95,7 +95,7 @@ class ClientServerPair : public ::testing::Test {
     }
 
     // Open-up connections
-    frpc::IPv4 client_addr("192.168.0.1", 3136);
+    dagger::IPv4 client_addr("192.168.0.1", 3136);
     for (int i = 0; i < num_of_threads; ++i) {
       ASSERT_EQ(server->connect(client_addr, i, i), 0);
     }
@@ -171,11 +171,11 @@ class ClientServerPair : public ::testing::Test {
 
   size_t num_of_threads;
 
-  std::unique_ptr<frpc::RpcThreadedServer> server;
+  std::unique_ptr<dagger::RpcThreadedServer> server;
   std::vector<const void*> fn_ptr;
-  std::unique_ptr<frpc::RpcServerCallBack> server_callback;
+  std::unique_ptr<dagger::RpcServerCallBack> server_callback;
 
-  std::unique_ptr<frpc::RpcClientPool<frpc::RpcClient>> client_pool;
+  std::unique_ptr<dagger::RpcClientPool<dagger::RpcClient>> client_pool;
 };
 
 #endif  // _CLIENT_SERVER_PAIR_H_

@@ -13,7 +13,7 @@
 // NIC's JSON file, extracted using OPAE's afu_json_mgr script.
 #include "afu_json_info.h"
 
-namespace frpc {
+namespace dagger {
 
 // Timeout values.
 #define NIC_INIT_DELAY_S 1
@@ -933,4 +933,4 @@ int NicCCIP::initialize_phy_network(int channel) {
   return 0;
 }
 
-}  // namespace frpc
+}  // namespace dagger

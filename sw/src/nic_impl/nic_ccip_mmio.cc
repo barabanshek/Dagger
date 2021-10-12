@@ -6,7 +6,7 @@
 #include "config.h"
 #include "logger.h"
 
-namespace frpc {
+namespace dagger {
 
 NicMmioCCIP::NicMmioCCIP(uint64_t base_nic_addr, size_t num_of_flows,
                          bool master_nic = true)
@@ -138,4 +138,4 @@ int NicMmioCCIP::stop() {
   return stop_nic();
 }
 
-}  // namespace frpc
+}  // namespace dagger

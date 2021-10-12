@@ -10,7 +10,7 @@
 #  ifdef NIC_PHY_NETWORK
 // Allocate FPGA on bus_1 for the client when running on PAC_A10 with physical
 // networking
-static constexpr int fpga_bus = frpc::cfg::platform::pac_a10_fpga_bus_1;
+static constexpr int fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
 
 // If physical networking, running on different FPGAs, so NIC is placed by
 // 0x20000 for both client and server
@@ -19,7 +19,7 @@ static constexpr uint64_t nic_address = 0x20000;
 #  else
 // Allocate FPGA on bus_1 for the client when running on PAC_A10 with loopback
 // networking
-static constexpr int fpga_bus = frpc::cfg::platform::pac_a10_fpga_bus_1;
+static constexpr int fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
 
 // If loopback, running on the same FPGA, so NIC is placed by 0x00000 for client
 // and 0x20000 for server
@@ -33,15 +33,15 @@ static constexpr uint64_t nic_address = 0x00000;
 
 #endif
 
-namespace frpc {
+namespace dagger {
 
 class NicTests : public ::testing::Test {
  protected:
   virtual void SetUp() override {
     uint64_t num_of_flows = 1;
 
-    auto nic_ = std::unique_ptr<frpc::Nic>(
-        new frpc::NicPollingCCIP(nic_address, num_of_flows, true));
+    auto nic_ = std::unique_ptr<dagger::Nic>(
+        new dagger::NicPollingCCIP(nic_address, num_of_flows, true));
     nic = std::move(nic_);
 
     int res = nic->connect_to_nic(fpga_bus);
@@ -70,13 +70,13 @@ class NicTests : public ::testing::Test {
     ASSERT_EQ(res, 0);
   }
 
-  std::unique_ptr<frpc::Nic> nic;
+  std::unique_ptr<dagger::Nic> nic;
 };
 
 TEST_F(NicTests, OpenCloseConnectionTest) {
   ConnectionId c_id;
   ConnectionFlowId c_f_id = 2;
-  frpc::IPv4 c_addr("192.168.0.1", 3136);
+  dagger::IPv4 c_addr("192.168.0.1", 3136);
 
   // Open connection
   int res = nic->open_connection(c_id, c_addr, c_f_id);
@@ -91,7 +91,7 @@ TEST_F(NicTests, OpenCloseConnectionTest) {
 TEST_F(NicTests, OpenCloseMultipleConnectionsWithSameFlowTest) {
   ConnectionId c_id;
   ConnectionFlowId c_f_id = 2;
-  frpc::IPv4 c_addr("192.168.0.1", 3136);
+  dagger::IPv4 c_addr("192.168.0.1", 3136);
 
   // Open connections
   for (int i = 0; i < 4; ++i) {
@@ -110,7 +110,7 @@ TEST_F(NicTests, OpenCloseMultipleConnectionsWithSameFlowTest) {
 TEST_F(NicTests, OpenCloseMultipleConnectionsWithDifferentFlowTest) {
   ConnectionId c_id;
   ConnectionFlowId c_f_id = 2;
-  frpc::IPv4 c_addr("192.168.0.1", 3136);
+  dagger::IPv4 c_addr("192.168.0.1", 3136);
 
   // Open connections
   for (int i = 0; i < 4; ++i) {
@@ -129,7 +129,7 @@ TEST_F(NicTests, OpenCloseMultipleConnectionsWithDifferentFlowTest) {
 TEST_F(NicTests, AddCloseConnectionTest) {
   ConnectionId c_id = 1;
   ConnectionFlowId c_f_id = 2;
-  frpc::IPv4 c_addr("192.168.0.1", 3136);
+  dagger::IPv4 c_addr("192.168.0.1", 3136);
 
   // Add connection
   int res = nic->add_connection(c_id, c_addr, c_f_id);
@@ -143,7 +143,7 @@ TEST_F(NicTests, AddCloseConnectionTest) {
 TEST_F(NicTests, ErroneousOpenConnectionsTest) {
   ConnectionId c_id = 999999;
   ConnectionFlowId c_f_id = 2;
-  frpc::IPv4 c_addr("192.168.0.1", 3136);
+  dagger::IPv4 c_addr("192.168.0.1", 3136);
 
   // Add connection
   int res = nic->add_connection(c_id, c_addr, c_f_id);
@@ -153,7 +153,7 @@ TEST_F(NicTests, ErroneousOpenConnectionsTest) {
 TEST_F(NicTests, ErroneousCloseConnectionsTest) {
   ConnectionId c_id;
   ConnectionFlowId c_f_id = 2;
-  frpc::IPv4 c_addr("192.168.0.1", 3136);
+  dagger::IPv4 c_addr("192.168.0.1", 3136);
 
   // Open connection
   int res = nic->open_connection(c_id, c_addr, c_f_id);
@@ -168,7 +168,7 @@ TEST_F(NicTests, ErroneousCloseConnectionsTest) {
 TEST_F(NicTests, ErroneousAddConnectionsTest) {
   ConnectionId c_id = 0;
   ConnectionFlowId c_f_id = 2;
-  frpc::IPv4 c_addr("192.168.0.1", 3136);
+  dagger::IPv4 c_addr("192.168.0.1", 3136);
 
   // Open connection
   int res = nic->add_connection(c_id, c_addr, c_f_id);
@@ -184,4 +184,4 @@ TEST_F(NicTests, ErroneousAddConnectionsTest) {
   EXPECT_EQ(res, 0);
 }
 
-}  // namespace frpc
+}  // namespace dagger

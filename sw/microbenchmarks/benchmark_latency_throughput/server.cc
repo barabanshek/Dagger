@@ -15,7 +15,7 @@
 #ifdef PLATFORM_PAC_A10
     #ifdef NIC_PHY_NETWORK
         // Allocate FPGA on bus_2 for the server when running on PAC_A10 with physical networking
-        static constexpr int fpga_bus = frpc::cfg::platform::pac_a10_fpga_bus_2;
+        static constexpr int fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_2;
 
         // If physical networking, running on different FPGAs, so NIC is placed by 0x20000
         // for both client and server
@@ -23,7 +23,7 @@
 
     #else
         // Allocate FPGA on bus_1 for the server when running on PAC_A10 with loopback networking
-        static constexpr int fpga_bus = frpc::cfg::platform::pac_a10_fpga_bus_1;
+        static constexpr int fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
 
         // If loopback, running on the same FPGA, so NIC is placed by 0x00000 for client
         // and 0x20000 for server
@@ -67,7 +67,7 @@ int main(int argc, char* argv[]) {
     CLI11_PARSE(app, argc, argv);
 
     // Server
-    frpc::RpcThreadedServer server(nic_address, num_of_threads);
+    dagger::RpcThreadedServer server(nic_address, num_of_threads);
 
     // Init
     int res = server.init_nic(fpga_bus);
@@ -86,7 +86,7 @@ int main(int argc, char* argv[]) {
 
     // Open connections
     for (int i=0; i<num_of_threads; ++i) {
-        frpc::IPv4 client_addr("192.168.0.1", 3136);
+        dagger::IPv4 client_addr("192.168.0.1", 3136);
         if (server.connect(client_addr, i, i) != 0) {
             std::cout << "Failed to open connection on server" << std::endl;
             exit(1);
@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
     fn_ptr.push_back(reinterpret_cast<const void*>(&xor_));
     fn_ptr.push_back(reinterpret_cast<const void*>(&getUserData));
 
-    frpc::RpcServerCallBack server_callback(fn_ptr);
+    dagger::RpcServerCallBack server_callback(fn_ptr);
 
     for (int i=0; i<num_of_threads; ++i) {
         res = server.run_new_listening_thread(&server_callback);

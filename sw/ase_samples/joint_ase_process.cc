@@ -71,7 +71,7 @@ static RpcRetCode loopback(CallHandler handler, LoopBackArgs args, NumericalResu
 static RpcRetCode add(CallHandler handler, AddArgs args, NumericalResult* ret);
 
 static int run_server(std::promise<bool>& init_pr, std::future<bool>& cmpl_ft) {
-    frpc::RpcThreadedServer server(SERVER_NIC_ADDR, NUMBER_OF_THREADS);
+    dagger::RpcThreadedServer server(SERVER_NIC_ADDR, NUMBER_OF_THREADS);
 
     // Init
     int res = server.init_nic(-1);
@@ -90,11 +90,11 @@ static int run_server(std::promise<bool>& init_pr, std::future<bool>& cmpl_ft) {
     fn_ptr.push_back(reinterpret_cast<const void*>(&loopback));
     fn_ptr.push_back(reinterpret_cast<const void*>(&add));
 
-    frpc::RpcServerCallBack server_callback(fn_ptr);
+    dagger::RpcServerCallBack server_callback(fn_ptr);
 
     // Open connections
     for (int i=0; i<NUMBER_OF_THREADS; ++i) {
-        frpc::IPv4 client_addr("192.168.0.1", 3136);
+        dagger::IPv4 client_addr("192.168.0.1", 3136);
         if (server.connect(client_addr, i, i) != 0) {
             std::cout << "Failed to open connection on server" << std::endl;
             exit(1);
@@ -163,9 +163,9 @@ static RpcRetCode add(CallHandler handler, AddArgs args, NumericalResult* ret) {
 //
 #define CLIENT_NIC_ADDR 0x00000
 
-static int client(frpc::RpcClient* rpc_client, size_t thread_id, size_t num_of_requests) {
+static int client(dagger::RpcClient* rpc_client, size_t thread_id, size_t num_of_requests) {
     // Open connection
-    frpc::IPv4 server_addr("192.168.0.2", 3136);
+    dagger::IPv4 server_addr("192.168.0.2", 3136);
     if (rpc_client->connect(server_addr, thread_id) != 0) {
         std::cout << "Failed to open connection on client" << std::endl;
         exit(1);
@@ -174,7 +174,7 @@ static int client(frpc::RpcClient* rpc_client, size_t thread_id, size_t num_of_r
     }
 
     // Get completion queue
-    frpc::CompletionQueue* cq = rpc_client->get_completion_queue();
+    dagger::CompletionQueue* cq = rpc_client->get_completion_queue();
     assert(cq != nullptr);
 
     // Make an RPC call
@@ -217,7 +217,7 @@ static int client(frpc::RpcClient* rpc_client, size_t thread_id, size_t num_of_r
 }
 
 static int run_client() {
-    frpc::RpcClientPool<frpc::RpcClient> rpc_client_pool(CLIENT_NIC_ADDR,
+    dagger::RpcClientPool<dagger::RpcClient> rpc_client_pool(CLIENT_NIC_ADDR,
                                                          NUMBER_OF_THREADS);
 
     // Init client pool
@@ -233,7 +233,7 @@ static int run_client() {
     // Get client
     std::vector<std::thread> threads;
     for (int i=0; i<NUMBER_OF_THREADS; ++i) {
-        frpc::RpcClient* rpc_client = rpc_client_pool.pop();
+        dagger::RpcClient* rpc_client = rpc_client_pool.pop();
         assert(rpc_client != nullptr);
 
         std::thread thr = std::thread(&client,

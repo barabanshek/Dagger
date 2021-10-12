@@ -14,8 +14,8 @@ TEST_F(ClientServerTestMultithreaded, SingleSameCallSingleThreadTest) {
   SetUp(num_of_threads);
 
   // Run multiple clients
-  std::vector<frpc::RpcClient*> clients;
-  std::vector<frpc::CompletionQueue*> cqueues;
+  std::vector<dagger::RpcClient*> clients;
+  std::vector<dagger::CompletionQueue*> cqueues;
   for (int i = 0; i < num_of_threads; ++i) {
     auto c = client_pool->pop();
     ASSERT_NE(c, nullptr);
@@ -28,7 +28,7 @@ TEST_F(ClientServerTestMultithreaded, SingleSameCallSingleThreadTest) {
   }
 
   // Open connections
-  frpc::IPv4 server_addr("192.168.0.2", 3136);
+  dagger::IPv4 server_addr("192.168.0.2", 3136);
   for (int i = 0; i < num_of_threads; ++i) {
     int res = clients[i]->connect(server_addr, i);
     ASSERT_EQ(res, 0);
@@ -78,8 +78,8 @@ TEST_F(ClientServerTestMultithreaded, SingleDifferentCallsSingleThreadTest) {
   SetUp(num_of_threads);
 
   // Run multiple clients
-  std::vector<frpc::RpcClient*> clients;
-  std::vector<frpc::CompletionQueue*> cqueues;
+  std::vector<dagger::RpcClient*> clients;
+  std::vector<dagger::CompletionQueue*> cqueues;
   for (int i = 0; i < num_of_threads; ++i) {
     auto c = client_pool->pop();
     ASSERT_NE(c, nullptr);
@@ -92,7 +92,7 @@ TEST_F(ClientServerTestMultithreaded, SingleDifferentCallsSingleThreadTest) {
   }
 
   // Open connections
-  frpc::IPv4 server_addr("192.168.0.2", 3136);
+  dagger::IPv4 server_addr("192.168.0.2", 3136);
   for (int i = 0; i < num_of_threads; ++i) {
     int res = clients[i]->connect(server_addr, i);
     ASSERT_EQ(res, 0);
@@ -160,8 +160,8 @@ TEST_F(ClientServerTestMultithreaded, MultipleDifferentCallsSingleThreadTest) {
   constexpr size_t num_of_wait_us = 100;
 
   // Run multiple clients
-  std::vector<frpc::RpcClient*> clients;
-  std::vector<frpc::CompletionQueue*> cqueues;
+  std::vector<dagger::RpcClient*> clients;
+  std::vector<dagger::CompletionQueue*> cqueues;
   for (int i = 0; i < num_of_threads; ++i) {
     auto c = client_pool->pop();
     ASSERT_NE(c, nullptr);
@@ -174,7 +174,7 @@ TEST_F(ClientServerTestMultithreaded, MultipleDifferentCallsSingleThreadTest) {
   }
 
   // Open connections
-  frpc::IPv4 server_addr("192.168.0.2", 3136);
+  dagger::IPv4 server_addr("192.168.0.2", 3136);
   for (int i = 0; i < num_of_threads; ++i) {
     int res = clients[i]->connect(server_addr, i);
     ASSERT_EQ(res, 0);
@@ -296,7 +296,7 @@ TEST_F(ClientServerTestMultithreaded, MultipleDifferentCallsSingleThreadTest) {
 
 typedef std::set<std::pair<uint64_t, uint64_t>> ExpectedSet;
 
-static void test_thread(frpc::RpcClient* client, size_t num_of_it,
+static void test_thread(dagger::RpcClient* client, size_t num_of_it,
                         size_t thread_id, ExpectedSet& expected) {
   constexpr size_t num_of_wait_us = 100;
 
@@ -318,8 +318,8 @@ TEST_F(ClientServerTestMultithreaded,
   constexpr size_t num_of_it = 1000;
 
   // Run multiple clients
-  std::vector<frpc::RpcClient*> clients;
-  std::vector<frpc::CompletionQueue*> cqueues;
+  std::vector<dagger::RpcClient*> clients;
+  std::vector<dagger::CompletionQueue*> cqueues;
   for (int i = 0; i < num_of_threads; ++i) {
     auto c = client_pool->pop();
     ASSERT_NE(c, nullptr);
@@ -332,7 +332,7 @@ TEST_F(ClientServerTestMultithreaded,
   }
 
   // Open connections
-  frpc::IPv4 server_addr("192.168.0.2", 3136);
+  dagger::IPv4 server_addr("192.168.0.2", 3136);
   for (int i = 0; i < num_of_threads; ++i) {
     int res = clients[i]->connect(server_addr, i);
     ASSERT_EQ(res, 0);

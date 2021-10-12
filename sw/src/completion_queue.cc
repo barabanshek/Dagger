@@ -63,7 +63,7 @@ void CompletionQueue::_PullListen() {
     // issuing the request.
     uint32_t issuing_timestamp =
         *reinterpret_cast<volatile uint32_t*>(resp_pckt->argv);
-    timestamps_.push_back(static_cast<uint32_t>(frpc::utils::rdtsc()) -
+    timestamps_.push_back(static_cast<uint32_t>(dagger::utils::rdtsc()) -
                           issuing_timestamp);
 #endif
 
