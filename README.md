@@ -167,10 +167,12 @@ Target platforms available in vLab and supported configuration:
 * <TARGET_PLATFORM> = fpga-pac-a10 (Intel PAC A10 multi-FPGA system), supported configuration:
     * **loopback_mmio_pac_a10.txt**: MMIO-based Host-NIC interface, loopback mode
     * **network_mmio_pac_a10.txt**: MMIO-based Host-NIC interface, physical networking mode
+* <TARGET_PLATFORM> = skylake-sdp (Intel Skylake CPU/FPGA hybrid), supported configuration:
+    * **loopback_upi_sdp.txt**: UPI-based Host-NIC interface, loopback mode
 
 Note: more supported platform/configuration combinations are on the way.
 
-Note: Intel Skylake CPU/FPGA Hybrid machines are not in the vLab, use your own cluster for experiments.
+Note: Intel Skylake CPU/FPGA Hybrid machines are not in the vLab, use your own cluster for experiments. Setting <TARGET_PLATFORM> = skylake-sdp will not have any effect on vLab.
 
 For more information on building on HARP, refer to the original documentation: https://wiki.intel-research.net/FPGA.html#.
 
