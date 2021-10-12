@@ -23,7 +23,7 @@ class alignas(4096) TxQueue {
 
   /// Instantiate the queue based on the @param tx_flow_buff shared memory
   /// buffer.
-  TxQueue(char* tx_flow_buff, size_t bucket_size_bytes, size_t l_depth);
+  TxQueue(volatile char* tx_flow_buff, size_t bucket_size_bytes, size_t l_depth);
 
   /// Forbid copying and assignment of the queue as the abstraction here is that
   /// only a single queue might exist per hardware flow.
@@ -36,14 +36,14 @@ class alignas(4096) TxQueue {
 
   /// Critical path function to get the head location in the queue for the
   /// upcoming write access.
-  inline char* get_write_ptr(uint8_t& change_bit)
+  inline volatile char* get_write_ptr(uint8_t& change_bit)
       __attribute__((always_inline)) {
     assert(tx_q_ != nullptr);
     assert(change_bit_set_ != nullptr);
 
     change_bit = change_bit_set_[tx_q_head_];
 
-    char* ptr = tx_q_ + tx_q_head_ * bucket_size_;
+    volatile char* ptr = tx_q_ + tx_q_head_ * bucket_size_;
 
     // Incremet head and flip change bit.
     change_bit_set_[tx_q_head_] ^= 1;
@@ -59,7 +59,7 @@ class alignas(4096) TxQueue {
 
  private:
   // Underlying nic buffer.
-  char* tx_flow_buff_;
+  volatile char* tx_flow_buff_;
 
   // Queue sizes.
   size_t bucket_size_;
@@ -67,7 +67,7 @@ class alignas(4096) TxQueue {
   size_t depth_;
 
   // Tx queue.
-  char* tx_q_;
+  volatile char* tx_q_;
   size_t tx_q_head_;
   size_t tx_q_tail_;
   // To allow hw to track updates
@@ -76,7 +76,7 @@ class alignas(4096) TxQueue {
   // uint8_t* free_bit_;
 
   // Completion queue.
-  char* cq_;
+  volatile char* cq_;
 };
 
 }  // namespace dagger

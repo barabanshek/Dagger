@@ -15,7 +15,7 @@ TxQueue::TxQueue()
       change_bit_set_(nullptr),
       cq_(nullptr) {}
 
-TxQueue::TxQueue(char* tx_flow_buff, size_t bucket_size_bytes, size_t l_depth)
+TxQueue::TxQueue(volatile char* tx_flow_buff, size_t bucket_size_bytes, size_t l_depth)
     : tx_flow_buff_(tx_flow_buff),
       bucket_size_(bucket_size_bytes),
       l_depth_(l_depth),

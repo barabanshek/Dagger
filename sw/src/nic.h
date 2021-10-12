@@ -70,7 +70,7 @@ class Nic {
 
   /// Get a pointer to the beginning of the tx buffer for the given hardware
   /// flow @param flow.
-  virtual char* get_tx_flow_buffer(size_t flow) const = 0;
+  virtual volatile char* get_tx_flow_buffer(size_t flow) const = 0;
 
   /// Get a pointer to the beginning of the rx buffer for the given hardware
   /// flow @param flow.

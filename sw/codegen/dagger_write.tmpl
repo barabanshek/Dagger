@@ -1,6 +1,6 @@
         // Send data
     #ifdef NIC_CCIP_POLLING
-        RpcPckt* tx_ptr_casted = reinterpret_cast<RpcPckt*>(tx_ptr);
+        volatile RpcPckt* tx_ptr_casted = reinterpret_cast<volatile RpcPckt*>(tx_ptr);
 
         tx_ptr_casted->hdr.c_id        = <CONN_ID>;
         tx_ptr_casted->hdr.rpc_id      = <RPC_ID>;

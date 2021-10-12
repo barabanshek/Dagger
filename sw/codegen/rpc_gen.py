@@ -272,7 +272,7 @@ public:
 		skeleton_change_bit = \
 """
 		uint8_t change_bit;
-		char* tx_ptr = tx_queue.get_write_ptr(change_bit);
+		volatile char* tx_ptr = tx_queue.get_write_ptr(change_bit);
 
 """
 		c_codegen.append_snippet(skeleton_change_bit)
@@ -301,7 +301,7 @@ public:
 			c_codegen.remove_token('/*DATA_LAYOUT*/')
 			c_codegen.append(
 				self.__new_line(
-				self.__memcpy('tx_ptr_casted->argv', 'ret_buff', 'ret_size'), 2)
+				self.__memcpy(self.__const_cast(self.__make_ptr("uint8_t"),'tx_ptr_casted->argv'), 'ret_buff', 'ret_size'), 2)
 			)
 
 		skeleton_footer = \
@@ -412,7 +412,7 @@ public:
 """
 	    // Get current buffer pointer
 	    uint8_t change_bit;
-	    char* tx_ptr = tx_queue_.get_write_ptr(change_bit);
+	    volatile char* tx_ptr = tx_queue_.get_write_ptr(change_bit);
 	    if (tx_ptr >= nic_->get_tx_buff_end()) {
 	        FRPC_ERROR("Nic tx buffer overflow \\n");
 	        assert(false);
@@ -452,7 +452,7 @@ public:
 									 self.__dereference(
 									 self.__reinterpret_cast(
 									 	self.__make_ptr(arg_name),
-									 	'tx_ptr_casted->argv')),
+									 	self.__const_cast(self.__make_ptr("uint8_t"),'tx_ptr_casted->argv'))),
 									 'args'), 2)
 				)
 
@@ -505,7 +505,10 @@ public:
 		return data + ' + ' + str(offset)
 
 	def __reinterpret_cast(self, type_, data):
-		return 'reinterpret_cast<' + type_ + '>(' + data + ')';
+		return 'reinterpret_cast<' + type_ + '>(' + data + ')'
+
+	def __const_cast(self, type_, data):
+		return 'const_cast<' + type_ + '>(' + data + ')'
 
 	def __dereference(self, expr):
 		return '*' + expr
@@ -533,6 +536,9 @@ public:
 
 	def __make_const(self, expr):
 		return 'const ' + expr
+
+	def __make_volatile(self, expr):
+		return 'volatile ' + expr
 
 	def __var_def(self, type_, name):
 		return type_ + ' ' + name

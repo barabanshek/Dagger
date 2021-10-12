@@ -39,7 +39,7 @@ class NicMmioCCIP : public NicCCIP {
     return 0;
   }
 
-  virtual char* get_tx_flow_buffer(size_t flow) const final {
+  virtual volatile char* get_tx_flow_buffer(size_t flow) const final {
     return reinterpret_cast<char*>(tx_mmio_buf_) + tx_cl_offset_ + CL(flow);
   }
 

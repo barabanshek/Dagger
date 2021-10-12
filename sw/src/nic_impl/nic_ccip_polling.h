@@ -39,7 +39,7 @@ class NicPollingCCIP : public NicCCIP {
     return 0;
   }
 
-  virtual char* get_tx_flow_buffer(size_t flow) const final {
+  virtual volatile char* get_tx_flow_buffer(size_t flow) const final {
     return const_cast<char*>(buf_) + tx_offset_bytes_ +
            flow * tx_queue_size_bytes_;
   }

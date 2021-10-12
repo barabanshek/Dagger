@@ -39,7 +39,7 @@ class NicDmaCCIP : public NicCCIP {
   // Make sure to sync memory before calling this function.
   virtual int notify_nic_of_new_dma(size_t flow, size_t bucket) const final;
 
-  virtual char* get_tx_flow_buffer(size_t flow) const final {
+  virtual volatile char* get_tx_flow_buffer(size_t flow) const final {
     return const_cast<char*>(buf_) + tx_offset_bytes_ +
            flow * tx_queue_size_bytes_;
   }
