@@ -36,6 +36,10 @@
         static constexpr uint64_t nic_address = 0x00000;
 
     #endif
+#elif PLATFORM_SDP
+    // Only loopback is possible here, so -1 for bus and 0x00000 for address
+    static constexpr int fpga_bus = dagger::cfg::platform::skylake_fpga_bus_1;
+    static constexpr uint64_t nic_address = 0x00000;
 #else
     // Only loopback is possible here, so -1 for bus and 0x00000 for address
     static constexpr int fpga_bus = -1;

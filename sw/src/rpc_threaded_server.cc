@@ -56,7 +56,7 @@ int RpcThreadedServer::init_nic(int bus) {
   // (2) Connect to nic.
   int res = nic_->connect_to_nic(bus);
   if (res != 0) return res;
-  FRPC_INFO("Connected to NIC\n");
+  FRPC_INFO("Connected to NIC on the bus %x\n", bus);
 
   // (3) Configure the nic dataplane. Of course, all the clients in this pool
   // share the same configuration.

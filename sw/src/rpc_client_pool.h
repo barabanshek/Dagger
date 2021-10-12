@@ -100,17 +100,9 @@ class RpcClientPool {
 #endif
 
     // (2) Connect to nic.
-#ifdef PLATFORM_PAC_A10
-    // This is multi-FPGA system, so we need to explicitely set the bus.
     int res = nic_->connect_to_nic(bus);
-#elif PLATFORM_BDX
-    // Single-FPGSA system.
-    int res = nic_->connect_to_nic();
-#else
-#  error Platform is not specified
-#endif
     if (res != 0) return res;
-    FRPC_INFO("Connected to NIC\n");
+    FRPC_INFO("Connected to NIC on the bus %x\n", bus);
 
     // (3) Configure the nic dataplane. Of course, all the clients in this pool
     // share the same configuration.

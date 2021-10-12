@@ -3,7 +3,8 @@ project(F-RPC)
 
 # Options
 option(WITH_PHY_NETWORK "With physical networking" OFF)
-option(PLATFORM_BDX "Build for BDX platform" ON)
+option(PLATFORM_BDX "Build for BDX platform" OFF)
+option(PLATFORM_SDP "Build for Skylake platform" ON)
 
 set(CMAKE_CXX_COMPILER g++)
 
@@ -29,7 +30,7 @@ add_definitions(-DNIC_CCIP_POLLING)
 # Networking config
 if (WITH_PHY_NETWORK)
     message(STATUS "Bulding WITH physical networking enabled" )
-    if (PLATFORM_BDX)
+    if (PLATFORM_BDX or PLATFORM_SDP)
         message(FATAL_ERROR "Physical networking can only be enabled on the PAC_A10 platform" )
     else()
         add_definitions(-DNIC_PHY_NETWORK)
@@ -40,6 +41,9 @@ endif()
 if (PLATFORM_BDX)
     message(STATUS "Bulding for BDX platform" )
     add_definitions(-DPLATFORM_BDX)
+elseif(PLATFORM_SDP)
+    message(STATUS "Bulding for Skylake platform" )
+    add_definitions(-DPLATFORM_SDP)
 else()
     message(STATUS "Bulding for PAC_A10 platform" )
     add_definitions(-DPLATFORM_PAC_A10)

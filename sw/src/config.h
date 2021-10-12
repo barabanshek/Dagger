@@ -96,6 +96,12 @@ namespace cfg {
     // Bus ID of the second FPGA on PAC_A10
     constexpr uint8_t pac_a10_fpga_bus_2 = 0xaf;
 
+    // Bus ID of the first FPGA on Skylake
+    constexpr uint8_t skylake_fpga_bus_1 = 0x5e;
+
+    // Bus ID of the second FPGA on Skylake
+    constexpr uint8_t skylake_fpga_bus_2 = 0xbe;
+
   }  // namespace platform
 
 }  // namespace cfg
