@@ -234,13 +234,15 @@ make -j
 rmux
 ^b%
 # Run server
-# ./microbenchmarks/benchmark_latency_throughput/dagger_benchmark_server --threads=<NUM_OF_THREADS> --load-balancer=<LOAD_BALANCER_ID>
-./microbenchmarks/benchmark_latency_throughput/dagger_benchmark_server --threads=1 --load-balancer=0
+# <OPTIONAL[taskset]> ./microbenchmarks/benchmark_latency_throughput/dagger_benchmark_server --threads=<NUM_OF_THREADS> --load-balancer=<LOAD_BALANCER_ID>
+taskset -c 11,12,13,14 ./microbenchmarks/benchmark_latency_throughput/dagger_benchmark_server --threads=1 --load-balancer=0
 # Switch to the other tmux panel
 # Run client
-# ./microbenchmarks/benchmark_latency_throughput/dagger_benchmark_client --threads=<NUM_OF_THREADS> --requests=<NUM_OF_REQUESTS> --delay=<DELAY_BETWEEN_REQUESTS> --function=<RPC_F_TO_CALL>
-./microbenchmarks/benchmark_latency_throughput/dagger_benchmark_client --threads=1 --requests=1000000000 --delay=20 --function=loopback
+# <OPTIONAL[taskset]> ./microbenchmarks/benchmark_latency_throughput/dagger_benchmark_client --threads=<NUM_OF_THREADS> --requests=<NUM_OF_REQUESTS> --delay=<DELAY_BETWEEN_REQUESTS> --function=<RPC_F_TO_CALL>
+taskset -c 6,7,8,9 ./microbenchmarks/benchmark_latency_throughput/dagger_benchmark_client --threads=1 --requests=1000000000 --delay=20 --function=loopback
 ```
+
+**Important:** use carefully configured taskset to make sure that (1) no client/server threads are scheduled to the same physical core, and (2) in a multi-node NUMA system, the applications are ran on the same NUMA node with the corresponding FPGAs. Failure to meet these requirements might cause dramatic performance degradation.
 
 For more information on the available runtime options, check out the README in the benchmark folder. To run applications, check out the corresponding application folders as the procedure might vary from application to application.
 
