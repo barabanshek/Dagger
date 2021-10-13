@@ -1,54 +1,65 @@
+/**
+ * @file server.cc
+ * @brief Latency/throughput benchmarking server.
+ * @author Nikita Lazarev
+ */
 #include <unistd.h>
 
 #include <csignal>
 #include <cstdlib>
 #include <iostream>
 
+#include "CLI11.hpp"
 #include "config.h"
 #include "rpc_call.h"
 #include "rpc_server_callback.h"
 #include "rpc_threaded_server.h"
 #include "rpc_types.h"
-#include "CLI11.hpp"
 
-// HW parameters
+/// HW parameters.
 #ifdef PLATFORM_PAC_A10
-    #ifdef NIC_PHY_NETWORK
-        // Allocate FPGA on bus_2 for the server when running on PAC_A10 with physical networking
-        static constexpr int fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_2;
+#  ifdef NIC_PHY_NETWORK
+/// Allocate FPGA on bus_2 for the server when running on PAC_A10 with physical
+/// networking.
+static constexpr int kFpgaBus = dagger::cfg::platform::pac_a10_fpga_bus_2;
 
-        // If physical networking, running on different FPGAs, so NIC is placed by 0x20000
-        // for both client and server
-        static constexpr uint64_t nic_address = 0x20000;
+/// If physical networking, running on different FPGAs, so NIC is placed by
+/// 0x20000 for both client and server.
+static constexpr uint64_t kNicAddress = 0x20000;
 
-    #else
-        // Allocate FPGA on bus_1 for the server when running on PAC_A10 with loopback networking
-        static constexpr int fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
+#  else
+/// Allocate FPGA on bus_1 for the server when running on PAC_A10 with loopback
+/// networking.
+static constexpr int kFpgaBus = dagger::cfg::platform::pac_a10_fpga_bus_1;
 
-        // If loopback, running on the same FPGA, so NIC is placed by 0x00000 for client
-        // and 0x20000 for server
-        static constexpr uint64_t nic_address = 0x20000;
+/// If loopback, running on the same FPGA, so NIC is placed by 0x00000 for
+/// client and 0x20000 for server.
+static constexpr uint64_t kNicAddress = 0x20000;
 
-    #endif
+#  endif
 #elif PLATFORM_SDP
-    // Only loopback is possible here, so -1 for bus and 0x20000 for address
-    static constexpr int fpga_bus = dagger::cfg::platform::skylake_fpga_bus_1;
-    static constexpr uint64_t nic_address = 0x20000;
+/// Only loopback is possible here, use skylake_fpga_bus_1 for bus and 0x20000
+/// for NIC address.
+static constexpr int kFpgaBus = dagger::cfg::platform::skylake_fpga_bus_1;
+static constexpr uint64_t kNicAddress = 0x20000;
 #else
-    // Only loopback is possible here, so -1 for bus and 0x20000 for address
-    static constexpr int fpga_bus = -1;
-    static constexpr uint64_t nic_address = 0x20000;
+/// Only loopback is possible here, so -1 for bus and 0x20000 for address.
+static constexpr int kFpgaBus = -1;
+static constexpr uint64_t kNicAddress = 0x20000;
 
 #endif
 
-// Ctl-C handler
-static volatile int keepRunning = 1;
-void intHandler(int dummy) {
-    keepRunning = 0;
-}
+/// Networking configuration.
+static constexpr char* kClientIP = "192.168.0.1";
+static constexpr uint16_t kPort = 3136;
 
-// RPC functions
-static RpcRetCode loopback(CallHandler handler, LoopBackArgs args, NumericalResult* ret);
+/// Ctl-C handler.
+static volatile int keepRunning = 1;
+void intHandler(int dummy) { keepRunning = 0; }
+
+// RPC handlers.
+static RpcRetCode loopback(CallHandler handler, LoopBackArgs args,
+                           NumericalResult* ret);
 
 static RpcRetCode add(CallHandler handler, AddArgs args, NumericalResult* ret);
 
@@ -56,146 +67,150 @@ static RpcRetCode sign(CallHandler handler, SigningArgs args, Signature* ret);
 
 static RpcRetCode xor_(CallHandler handler, XorArgs args, NumericalResult* ret);
 
-static RpcRetCode getUserData(CallHandler handler, UserName args, UserData* ret);
+static RpcRetCode getUserData(CallHandler handler, UserName args,
+                              UserData* ret);
 
 // <max number of threads, run duration>
 int main(int argc, char* argv[]) {
-    // Parse input
-    CLI::App app{"Benchmark Server"};
+  // Parse input.
+  CLI::App app{"Benchmark Server"};
 
-    size_t num_of_threads;
-    app.add_option("-t, --threads", num_of_threads, "number of threads")->required();
-    int load_balancer;
-    app.add_option("-l, --load-balancer", load_balancer, "load balancer")->required();
+  size_t num_of_threads;
+  app.add_option("-t, --threads", num_of_threads, "number of threads")
+      ->required();
 
-    CLI11_PARSE(app, argc, argv);
+  int load_balancer;
+  app.add_option("-l, --load-balancer", load_balancer, "load balancer")
+      ->required();
 
-    // Server
-    dagger::RpcThreadedServer server(nic_address, num_of_threads);
+  CLI11_PARSE(app, argc, argv);
 
-    // Init
-    int res = server.init_nic(fpga_bus);
-    if (res != 0)
-        return res;
+  // Instantiate the server.
+  dagger::RpcThreadedServer server(kNicAddress, num_of_threads);
 
-    // Start server
-    res = server.start_nic();
-    if (res != 0)
-        return res;
+  // Initialize the server.
+  int res = server.init_nic(kFpgaBus);
+  if (res != 0) return res;
 
-    // Enable perf
-    res = server.run_perf_thread({true, true, true, true}, nullptr);
-    if (res != 0)
-        return res;
+  // Start the server.
+  res = server.start_nic();
+  if (res != 0) return res;
 
-    // Open connections
-    for (int i=0; i<num_of_threads; ++i) {
-        dagger::IPv4 client_addr("192.168.0.1", 3136);
-        if (server.connect(client_addr, i, i) != 0) {
-            std::cout << "Failed to open connection on server" << std::endl;
-            exit(1);
-        } else {
-            std::cout << "Connection is open on server" << std::endl;
-        }
+  // Enable perf thread on the nic.
+  res = server.run_perf_thread({true, true, true, true}, nullptr);
+  if (res != 0) return res;
+
+  // Open connections.
+  for (size_t i = 0; i < num_of_threads; ++i) {
+    dagger::IPv4 client_addr(kClientIP, kPort);
+    if (server.connect(client_addr, i, i) != 0) {
+      std::cout << "Failed to open connection on server" << std::endl;
+      exit(1);
+    } else {
+      std::cout << "Connection is open on server" << std::endl;
     }
+  }
 
-    // Select
-    server.set_lb(load_balancer);
+  // Select the load balancer.
+  server.set_lb(load_balancer);
 
-    // Register RPC functions
-    std::vector<const void*> fn_ptr;
-    fn_ptr.push_back(reinterpret_cast<const void*>(&loopback));
-    fn_ptr.push_back(reinterpret_cast<const void*>(&add));
-    fn_ptr.push_back(reinterpret_cast<const void*>(&sign));
-    fn_ptr.push_back(reinterpret_cast<const void*>(&xor_));
-    fn_ptr.push_back(reinterpret_cast<const void*>(&getUserData));
+  // Register the RPC handlres.
+  std::vector<const void*> fn_ptr;
+  fn_ptr.push_back(reinterpret_cast<const void*>(&loopback));
+  fn_ptr.push_back(reinterpret_cast<const void*>(&add));
+  fn_ptr.push_back(reinterpret_cast<const void*>(&sign));
+  fn_ptr.push_back(reinterpret_cast<const void*>(&xor_));
+  fn_ptr.push_back(reinterpret_cast<const void*>(&getUserData));
 
-    dagger::RpcServerCallBack server_callback(fn_ptr);
+  dagger::RpcServerCallBack server_callback(fn_ptr);
 
-    for (int i=0; i<num_of_threads; ++i) {
-        res = server.run_new_listening_thread(&server_callback);
-        if (res != 0)
-            return res;
-    }
+  // Run listening on all the threads.
+  for (size_t i = 0; i < num_of_threads; ++i) {
+    res = server.run_new_listening_thread(&server_callback);
+    if (res != 0) return res;
+  }
 
-    std::cout << "------- Server is running... -------" << std::endl;
+  std::cout << "------- Server is running... -------" << std::endl;
 
-    std::cout << "Press Ctrl+C to stop..." << std::endl;
-    signal(SIGINT, intHandler);
+  std::cout << "Press Ctrl+C to stop..." << std::endl;
+  signal(SIGINT, intHandler);
 
-    while (keepRunning) {
-        sleep(1);
-    }
+  // Wait for the stop signal.
+  while (keepRunning) {
+    sleep(1);
+  }
 
-    res = server.stop_all_listening_threads();
-    if (res != 0)
-        return res;
+  res = server.stop_all_listening_threads();
+  if (res != 0) return res;
 
-    std::cout << "------- Server is stopped. -------" << std::endl;
+  std::cout << "------- Server is stopped. -------" << std::endl;
 
-    // Check for HW errors
-    res = server.check_hw_errors();
-    if (res != 0)
-        std::cout << "HW errors found, check error log" << std::endl;
-    else
-        std::cout << "No HW errors found" << std::endl;
+  // Check for HW errors on the nic.
+  res = server.check_hw_errors();
+  if (res != 0)
+    std::cout << "HW errors found, check error log" << std::endl;
+  else
+    std::cout << "No HW errors found" << std::endl;
 
-    // Stop NIC
-    res = server.stop_nic();
-    if (res != 0)
-        return res;
+  // Stop the nic.
+  res = server.stop_nic();
+  if (res != 0) return res;
 
-    return 0;
+  return 0;
 }
 
-static RpcRetCode loopback(CallHandler handler, LoopBackArgs args, NumericalResult* ret) {
+/// Implementation of the RPC handlers.
+static RpcRetCode loopback(CallHandler handler, LoopBackArgs args,
+                           NumericalResult* ret) {
 #ifdef VERBOSE_RPCS
-    std::cout << "loopback is called on thread " << handler.thread_id << " with "
-                                                 << args.data << std::endl;
+  std::cout << "loopback is called on thread " << handler.thread_id << " with "
+            << args.data << std::endl;
 #endif
-    ret->ret_val = args.timestamp;
-    return RpcRetCode::Success;
+  ret->ret_val = args.timestamp;
+  return RpcRetCode::Success;
 }
 
 static RpcRetCode add(CallHandler handler, AddArgs args, NumericalResult* ret) {
 #ifdef VERBOSE_RPCS
-    std::cout << "add is called on thread " << handler.thread_id << " with "
-                                            << args.a << ", " << args.b << std::endl;
+  std::cout << "add is called on thread " << handler.thread_id << " with "
+            << args.a << ", " << args.b << std::endl;
 #endif
-    ret->ret_val = args.timestamp;
-    return RpcRetCode::Success;
+  ret->ret_val = args.timestamp;
+  return RpcRetCode::Success;
 }
 
 static RpcRetCode sign(CallHandler handler, SigningArgs args, Signature* ret) {
 #ifdef VERBOSE_RPCS
-    std::cout << "sign is called on thread " << handler.thread_id << " with "
-              << args.hash_lsb << ", " << args.hash_msb << ": <"
-              << args.key_0 << " " << args.key_1 << " " << args.key_2 << " "
-              << args.key_3 << ">" << std::endl;
+  std::cout << "sign is called on thread " << handler.thread_id << " with "
+            << args.hash_lsb << ", " << args.hash_msb << ": <" << args.key_0
+            << " " << args.key_1 << " " << args.key_2 << " " << args.key_3
+            << ">" << std::endl;
 #endif
-    ret->result = args.timestamp;
-    return RpcRetCode::Success;
+  ret->result = args.timestamp;
+  return RpcRetCode::Success;
 }
 
-static RpcRetCode xor_(CallHandler handler, XorArgs args, NumericalResult* ret) {
+static RpcRetCode xor_(CallHandler handler, XorArgs args,
+                       NumericalResult* ret) {
 #ifdef VERBOSE_RPCS
-    std::cout << "xor_ is called on thread " << handler.thread_id << " with "
-              << args.a << " " << args.b << " "
-              << args.c << " " << args.d << " " << args.e << " "
-              << args.f << std::endl;
+  std::cout << "xor_ is called on thread " << handler.thread_id << " with "
+            << args.a << " " << args.b << " " << args.c << " " << args.d << " "
+            << args.e << " " << args.f << std::endl;
 #endif
-    ret->ret_val = args.timestamp;
-    return RpcRetCode::Success;
+  ret->ret_val = args.timestamp;
+  return RpcRetCode::Success;
 }
 
-static RpcRetCode getUserData(CallHandler handler, UserName args, UserData* ret) {
+static RpcRetCode getUserData(CallHandler handler, UserName args,
+                              UserData* ret) {
 #ifdef VERBOSE_RPCS
-    std::cout << "getUserData is called on thread " << handler.thread_id << " with "
-              << args.first_name << " " << args.given_name << " " << std::endl;
+  std::cout << "getUserData is called on thread " << handler.thread_id
+            << " with " << args.first_name << " " << args.given_name << " "
+            << std::endl;
 #endif
 
-    ret->timestamp = args.timestamp;
-    sprintf(ret->data, "some data");
+  ret->timestamp = args.timestamp;
+  sprintf(ret->data, "some data");
 
-    return RpcRetCode::Success;
+  return RpcRetCode::Success;
 }
