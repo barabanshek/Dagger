@@ -247,7 +247,7 @@ static int run_benchmark(dagger::RpcClient* rpc_client, int thread_id,
   }
 #endif
 
-  // Get and dump the atency profile.
+  // Get and dump the latency profile.
   auto latency_records = cq->get_latency_records();
 
   std::sort(latency_records.begin(), latency_records.end(),
