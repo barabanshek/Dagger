@@ -173,8 +173,6 @@ int main(int argc, char* argv[]) {
   return 0;
 }
 
-static bool sortbysec(const uint64_t& a, const uint64_t& b) { return a < b; }
-
 static int run_benchmark(dagger::RpcClient* rpc_client, int thread_id,
                          size_t num_iterations, size_t req_delay,
                          double cycles_in_ns, int function_to_call) {
@@ -252,7 +250,8 @@ static int run_benchmark(dagger::RpcClient* rpc_client, int thread_id,
   // Get and dump the atency profile.
   auto latency_records = cq->get_latency_records();
 
-  std::sort(latency_records.begin(), latency_records.end(), sortbysec);
+  std::sort(latency_records.begin(), latency_records.end(),
+            [](const uint64_t& a, const uint64_t& b) { return a < b; });
 
   if (latency_records.size() != 0) {
     std::cout << "***** latency results for thread #" << thread_id << " *****"

@@ -804,7 +804,7 @@ volatile void* NicCCIP::alloc_buffer(fpga_handle accel_handle, ssize_t size,
   size_t mem_pages = mem_size / page_size;
 
   if (mem_pages > 1) {
-    FRPC_ERROR("Can not correctly support multu-page buffer for now\n");
+    FRPC_ERROR("Can not correctly support multy-page buffer for now\n");
     return nullptr;
   }
 
