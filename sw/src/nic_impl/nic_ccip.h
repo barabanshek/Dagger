@@ -63,6 +63,7 @@ class NicCCIP : public Nic {
   static constexpr uint8_t iRegNetDropCntRead = 160;  // hw: 40, W
   static constexpr uint8_t iRegNetDropCnt = 168;      // hw: 42, R
   static constexpr uint8_t iRegTxQueueSize = 176;     // hw: 44, W
+  static constexpr uint8_t iRegDebug_0 = 184;         // hw: 46, W
   static constexpr uint16_t iMMIOSpaceStart = 256;    // hw: 64, -
 
   // Hardware register map constants.
@@ -105,7 +106,7 @@ class NicCCIP : public Nic {
 
   // CCI-P implementation dependent functionality. These APIs are implemented in
   // the inherited classes.
-  virtual int configure_data_plane() = 0;
+  virtual int configure_data_plane(size_t llc_anti_aliasing = 0) = 0;
   virtual int start() = 0;
   virtual int stop() = 0;
   virtual int notify_nic_of_new_dma(size_t flow, size_t bucket) const = 0;
@@ -118,7 +119,7 @@ class NicCCIP : public Nic {
  protected:
   /// Low-level API to allocate shared with the FPGA buffers.
   volatile void* alloc_buffer(fpga_handle accel_handle, ssize_t size,
-                              uint64_t* wsid, uint64_t* io_addr) const;
+                              uint64_t* wsid, uint64_t* io_addr, size_t llc_anti_aliasing = 0) const;
 
   /// Implementation of the nic start/stop functionality.
   int start_nic();
@@ -225,8 +226,11 @@ class NicCCIP : public Nic {
   void get_packet_counters(
       void (*callback)(const std::vector<uint64_t>&)) const;
 
-  /// Sump network counters.
+  /// Dump network counters.
   void get_network_counters() const;
+
+  /// Dump debug ports
+  void get_debug_ports() const;
 
  protected:
   uint64_t base_nic_addr_;

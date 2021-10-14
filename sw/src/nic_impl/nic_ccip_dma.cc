@@ -29,7 +29,7 @@ NicDmaCCIP::~NicDmaCCIP() {
   }
 }
 
-int NicDmaCCIP::configure_data_plane() {
+int NicDmaCCIP::configure_data_plane(size_t llc_anti_aliasing) {
   assert(connected_ == true);
   assert(dp_configured_ == false);
 
@@ -63,7 +63,7 @@ int NicDmaCCIP::configure_data_plane() {
 
   size_t buff_size_bytes = tx_buff_size_bytes_ + rx_buff_size_bytes_;
   buf_ = (volatile char *)alloc_buffer(accel_handle_, buff_size_bytes, &wsid_,
-                                       &buf_pa_);
+                                       &buf_pa_, llc_anti_aliasing);
   if (buf_ == nullptr) {
     FRPC_ERROR("Failed to allocate shared buffer\n");
     return 1;

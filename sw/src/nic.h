@@ -43,7 +43,7 @@ class Nic {
 
   /// Run dataplane configuration process. This implementation-dependent method
   /// configures hardware RX and TX paths of the nic.
-  virtual int configure_data_plane() = 0;
+  virtual int configure_data_plane(size_t llc_anti_aliasing = 0) = 0;
 
   /// Comand the hardware to start and stop the nic.
   virtual int start() = 0;
@@ -100,6 +100,7 @@ class Nic {
     bool status;
     bool packet_counters;
     bool network_counters;
+    bool debug_ports;
   };
 
   virtual int run_perf_thread(

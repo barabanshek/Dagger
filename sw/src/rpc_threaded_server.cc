@@ -7,6 +7,9 @@
 
 namespace dagger {
 
+/// We always apply rx/tx LLC anti-alizasing for the server when using huge pages.
+static constexpr size_t rx_tx_anti_aliasing = 1;//dagger::cfg::sys::enable_hugepages? 1 : 0;
+
 RpcThreadedServer::RpcThreadedServer(uint64_t base_nic_addr,
                                      size_t max_num_of_threads)
     : max_num_of_threads_(max_num_of_threads),
@@ -63,7 +66,7 @@ int RpcThreadedServer::init_nic(int bus) {
   PhyAddr cl_phy_addr = {0x1A, 0x2B, 0x3C, 0x4D, 0x5E, 0xFF};
   IPv4 cl_ipv4_addr("192.168.0.2", 0);
 
-  res = nic_->configure_data_plane();
+  res = nic_->configure_data_plane(rx_tx_anti_aliasing);
   if (res != 0) return res;
 
   // (4) Run hardware initialization.

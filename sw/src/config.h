@@ -66,7 +66,7 @@ namespace cfg {
     //   - see NicCCIP for MTU definition
     // Constraints:
     //   - must be equal to rx batch size
-    constexpr size_t l_rx_queue_size = 4;
+    constexpr size_t l_rx_queue_size = 3;
     static_assert(l_rx_queue_size >= l_rx_batch_size,
                   "rx queue size should be more than rx batch size");
 
@@ -86,6 +86,14 @@ namespace cfg {
     //           uMsg can essentially act as "interrupts", but for hardware, via
     //           Invalidation messages
     constexpr size_t polling_rate = 30;
+
+    // RX/TX buffer offset
+    //  - memory for RX/TX buffers is page-aligned
+    //  - when pages are huge (2MB, 1GB, etc.), the beginning of the physical memory for each buffer is "nicely" alligned and has the long zero LSB part (e.g. 0xaf000000)
+    //  - sometimes, this increases LLC way contention due to the features of the LLC indexing, this causes dramatic performance drop
+    //  - in this cases, it might be helpful to access RX/TX buffers by some offset rather than from the beginning
+    //  - this constant specifies the offset pitch (in Bytes) in the RX/TX buffers to avoid "nice" cache alliasing
+    constexpr size_t llc_anti_aliasing_offset = 4*1024; // 4 KB
 
   }  // namespace nic
 
