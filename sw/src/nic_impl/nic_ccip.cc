@@ -749,13 +749,13 @@ void NicCCIP::get_network_counters() const {
 void NicCCIP::get_debug_ports() const {
   uint64_t debug_port_0 = 0;
   int res = fpgaReadMMIO64(accel_handle_, 0, base_nic_addr_ + iRegDebug_0,
-                          &debug_port_0);
+                           &debug_port_0);
   if (res != FPGA_OK) {
     FRPC_ERROR(
-      "Nic configuration error, failed to read debug ports"
-      "nic returned: %d\n",
-      res);
-  }       
+        "Nic configuration error, failed to read debug ports"
+        "nic returned: %d\n",
+        res);
+  }
 
   FRPC_INFO("Debug port #0, value=%llx\n", debug_port_0);
 }
@@ -803,7 +803,8 @@ size_t NicCCIP::round_up_to_pagesize(size_t val) const {
 }
 
 volatile void* NicCCIP::alloc_buffer(fpga_handle accel_handle, ssize_t size,
-                                     uint64_t* wsid, uint64_t* io_addr, size_t llc_anti_aliasing) const {
+                                     uint64_t* wsid, uint64_t* io_addr,
+                                     size_t llc_anti_aliasing) const {
   fpga_result res;
   volatile void* buf = nullptr;
 
@@ -821,7 +822,9 @@ volatile void* NicCCIP::alloc_buffer(fpga_handle accel_handle, ssize_t size,
   size_t mem_pages = mem_size / page_size;
 
   if (mem_pages > 1) {
-    FRPC_ERROR("Can not correctly support multi-page buffer for now. Please, use huge pages for now.\n");
+    FRPC_ERROR(
+        "Can not correctly support multi-page buffer for now. Please, use huge "
+        "pages for now.\n");
     return nullptr;
   }
 
@@ -841,18 +844,24 @@ volatile void* NicCCIP::alloc_buffer(fpga_handle accel_handle, ssize_t size,
 
   // Get the physical address of the buffer in the accelerator.
   // TODO: currentlty, it only works with a single page buffer.
-  // Either implement a multi-page managment unit in hardware, or simply use huge pages.
+  // Either implement a multi-page managment unit in hardware, or simply use
+  // huge pages.
   res = fpgaGetIOAddress(accel_handle, *wsid, io_addr);
   assert(res == FPGA_OK);
 
   // Apply LLC anti-aliasing.
   //  - memory for RX/TX buffers is page-aligned.
-  //  - when pages are huge (2MB, 1GB, etc.), the beginning of the physical memory for each buffer is "nicely" alligned and has the long zero LSB part (e.g. 0xaf000000).
-  //  - sometimes, this increases LLC way contention due to the features of the LLC indexing, this causes dramatic performance drop.
-  //  - in this cases, it might be helpful to access RX/TX buffers by some offset rather than from the beginning.
+  //  - when pages are huge (2MB, 1GB, etc.), the beginning of the physical
+  //  memory for each buffer is "nicely" alligned and has the long zero LSB part
+  //  (e.g. 0xaf000000).
+  //  - sometimes, this increases LLC way contention due to the features of the
+  //  LLC indexing, this causes dramatic performance drop.
+  //  - in this cases, it might be helpful to access RX/TX buffers by some
+  //  offset rather than from the beginning.
   //
   // Make sure, the buffer has enough of space for the anti-alizasing offset.
-  size_t aa_offset_bytes = llc_anti_aliasing * dagger::cfg::nic::llc_anti_aliasing_offset;
+  size_t aa_offset_bytes =
+      llc_anti_aliasing * dagger::cfg::nic::llc_anti_aliasing_offset;
   if (size + aa_offset_bytes > mem_size) {
     FRPC_ERROR("Not enough space in the buffer for LLC anti-aliasing\n");
     return nullptr;

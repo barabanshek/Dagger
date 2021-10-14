@@ -119,7 +119,8 @@ class NicCCIP : public Nic {
  protected:
   /// Low-level API to allocate shared with the FPGA buffers.
   volatile void* alloc_buffer(fpga_handle accel_handle, ssize_t size,
-                              uint64_t* wsid, uint64_t* io_addr, size_t llc_anti_aliasing = 0) const;
+                              uint64_t* wsid, uint64_t* io_addr,
+                              size_t llc_anti_aliasing = 0) const;
 
   /// Implementation of the nic start/stop functionality.
   int start_nic();

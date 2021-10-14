@@ -32,7 +32,7 @@ class NicPollingCCIP : public NicCCIP {
   virtual int start() final;
   virtual int stop() final;
 
-  virtual int configure_data_plane(size_t llc_anti_aliasing=0) final;
+  virtual int configure_data_plane(size_t llc_anti_aliasing = 0) final;
 
   virtual int notify_nic_of_new_dma(size_t flow, size_t bucket) const final {
     // No needs to explicitly notify nic.

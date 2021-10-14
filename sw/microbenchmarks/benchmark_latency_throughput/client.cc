@@ -127,7 +127,8 @@ int main(int argc, char* argv[]) {
   if (res != 0) return res;
 
   // Enable perf thread on the nic.
-  res = rpc_client_pool.run_perf_thread({true, true, true, true, true}, nullptr);
+  res =
+      rpc_client_pool.run_perf_thread({true, true, true, true, true}, nullptr);
   if (res != 0) return res;
 
   sleep(1);
@@ -270,3 +271,4 @@ static int run_benchmark(dagger::RpcClient* rpc_client, int thread_id,
 
   return 0;
 }
+ß
