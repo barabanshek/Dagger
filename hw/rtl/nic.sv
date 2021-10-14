@@ -164,6 +164,8 @@ module nic
                         = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 42);
     localparam t_ccip_mmioAddr addrTxQueueSize
                         = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 44);
+    localparam t_ccip_mmioAddr addrRegDebug_1
+                        = t_ccip_mmioAddr'(SRF_BASE_MMIO_ADDRESS + 46);
 
     // Registers
     t_ccip_clAddr                  iRegMemTxAddr;
@@ -190,6 +192,7 @@ module nic
     logic[4:0]                     iRegReadNetDropCnt;
     logic[63:0]                    iRegNetDropCnt;
     NicMode                        iNicMode;
+    logic[63:0]                    iRegDebug;
 
     // CSR read logic
     logic is_csr_read;
@@ -267,6 +270,10 @@ module nic
 
             addrNetDropCnt: begin
                 sTx.c2.data <= iRegNetDropCnt;
+            end
+
+            addrRegDebug_1: begin
+                sTx.c2.data <= iRegDebug;
             end
 
             default: sTx.c2.data <= t_ccip_mmioData'(0);
@@ -648,7 +655,8 @@ module nic
         .rpc_in_valid(to_ccip_valid),
         .rpc_flow_id_in(to_ccip.flow_id),
 
-        .pdrop_tx_flows_out(pdrop_tx_flows)
+        .pdrop_tx_flows_out(pdrop_tx_flows),
+        .debug_out(iRegDebug)
     );
 
     // Set NIC mode infrmation register

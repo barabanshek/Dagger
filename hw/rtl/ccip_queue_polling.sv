@@ -79,7 +79,10 @@ module ccip_queue_polling
         input logic[LMAX_NUM_OF_FLOWS-1:0] rpc_flow_id_in,
 
         // Statistics
-        output logic pdrop_tx_flows_out
+        output logic pdrop_tx_flows_out,
+
+        // Debug output
+        output logic[63:0] debug_out
     );
 
 
@@ -349,7 +352,8 @@ module ccip_queue_polling
             .rpc_in_valid(rpc_in_valid),
             .rpc_flow_id_in(rpc_flow_id_in),
 
-            .pdrop_tx_flows_out(pdrop_tx_flows_out)
+            .pdrop_tx_flows_out(pdrop_tx_flows_out),
+            .debug_out(debug_out)
         );
 
 

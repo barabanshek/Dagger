@@ -52,7 +52,10 @@ module ccip_transmitter
         input logic[LMAX_NUM_OF_FLOWS-1:0] rpc_flow_id_in,
 
         // Statistics
-        output logic pdrop_tx_flows_out
+        output logic pdrop_tx_flows_out,
+
+        // Debug output
+        output logic[63:0] debug_out
     );
 
     // Parameters
@@ -435,5 +438,8 @@ module ccip_transmitter
 
     // Assign status
     assign initialized = rq_initialized & (tx_queue_addr_table_init_state == TxTblInitialized);
+
+    // Assign debug output
+    assign debug_out = tx_state | (rpc_flow_id_in_2d << 8);
 
 endmodule
