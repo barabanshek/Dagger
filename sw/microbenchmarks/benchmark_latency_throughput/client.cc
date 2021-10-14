@@ -271,4 +271,3 @@ static int run_benchmark(dagger::RpcClient* rpc_client, int thread_id,
 
   return 0;
 }
-ß
