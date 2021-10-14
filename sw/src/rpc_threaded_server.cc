@@ -8,7 +8,7 @@
 namespace dagger {
 
 /// We always apply rx/tx LLC anti-alizasing for the server when using huge pages.
-static constexpr size_t rx_tx_anti_aliasing = 1;//dagger::cfg::sys::enable_hugepages? 1 : 0;
+static constexpr size_t rx_tx_anti_aliasing = dagger::cfg::sys::enable_hugepages? 1 : 0;
 
 RpcThreadedServer::RpcThreadedServer(uint64_t base_nic_addr,
                                      size_t max_num_of_threads)
