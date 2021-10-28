@@ -69,7 +69,7 @@ class ClientServerPair : public ::testing::Test {
 
     client_pool = std::unique_ptr<dagger::RpcClientPool<dagger::RpcClient>>(
         new dagger::RpcClientPool<dagger::RpcClient>(kClientNicMmioBase,
-                                                 num_of_threads));
+                                                     num_of_threads));
 
     // Setup server
     int res = server->init_nic(kServerFpgaBus);

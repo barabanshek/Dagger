@@ -39,4 +39,4 @@ In addition, the hardware configuration should also meet certain requirements:
 - *min connection capacity on the nic should be at least 32* (for the connection test to pass)
 - tests work stability with the *pooling* and *mmio* based Host-Nic interfaces as of now; no DMA/Doorbell mode was tested in the recent branch
 
-**IMPORTANT** As the current system implements undeliable transport and certain other structures, it is OK for tests to fail sometimes. An actual indication of errors is when the same tests keep failing across multiple runs. Sometimes, tests can fail due to scheduling issues, more careful core pinning might help. But again, tests should not **keep** failing all the time!
+**IMPORTANT:** As the current system implements undeliable transport and certain other structures, it is OK for tests to fail sometimes. An actual indication of errors is when the same tests keep failing across multiple runs. Sometimes, tests can fail due to scheduling issues, more careful core pinning might help. But again, tests should not **keep** failing all the time!
