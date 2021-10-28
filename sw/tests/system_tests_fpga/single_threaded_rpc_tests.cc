@@ -48,7 +48,7 @@ TEST_F(ClientServerTest, MultipleLoopback1CallTest) {
   SetUp(num_of_threads);
 
   constexpr size_t num_of_it = 1000;
-  constexpr size_t num_of_wait_us = 100;
+  constexpr size_t num_of_wait_us = 500;
 
   auto c = client_pool->pop();
   ASSERT_NE(c, nullptr);
@@ -136,7 +136,7 @@ TEST_F(ClientServerTest, MultipleLoopback2CallTest) {
   SetUp(num_of_threads);
 
   constexpr size_t num_of_it = 1000;
-  constexpr size_t num_of_wait_us = 100;
+  constexpr size_t num_of_wait_us = 500;
 
   auto c = client_pool->pop();
   ASSERT_NE(c, nullptr);
@@ -189,7 +189,7 @@ TEST_F(ClientServerTest, MultipleLoopback5CallTest) {
   SetUp(num_of_threads);
 
   constexpr size_t num_of_it = 1000;
-  constexpr size_t num_of_wait_us = 100;
+  constexpr size_t num_of_wait_us = 500;
 
   auto c = client_pool->pop();
   ASSERT_NE(c, nullptr);
@@ -244,7 +244,7 @@ TEST_F(ClientServerTest, MixedCallTest) {
   SetUp(num_of_threads);
 
   constexpr size_t num_of_it = 1000;
-  constexpr size_t num_of_wait_us = 100;
+  constexpr size_t num_of_wait_us = 500;
 
   auto c = client_pool->pop();
   ASSERT_NE(c, nullptr);

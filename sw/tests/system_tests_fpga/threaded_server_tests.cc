@@ -10,26 +10,30 @@
 #  ifdef NIC_PHY_NETWORK
 // Allocate FPGA on bus_1 for the client when running on PAC_A10 with physical
 // networking
-static constexpr int fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
+static constexpr int kFpgaBus = dagger::cfg::platform::pac_a10_fpga_bus_1;
 
 // If physical networking, running on different FPGAs, so NIC is placed by
 // 0x20000 for both client and server
-static constexpr uint64_t nic_address = 0x20000;
+static constexpr uint64_t kNicAddress = 0x20000;
 
 #  else
 // Allocate FPGA on bus_1 for the client when running on PAC_A10 with loopback
 // networking
-static constexpr int fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
+static constexpr int kFpgaBus = dagger::cfg::platform::pac_a10_fpga_bus_1;
 
 // If loopback, running on the same FPGA, so NIC is placed by 0x00000 for client
 // and 0x20000 for server
-static constexpr uint64_t nic_address = 0x00000;
+static constexpr uint64_t kNicAddress = 0x00000;
 
 #  endif
+#elif PLATFORM_SDP
+/// Only loopback is possible here, use skylake_fpga_bus_1 for bus
+static constexpr int kFpgaBus = dagger::cfg::platform::skylake_fpga_bus_1;
+static constexpr uint64_t kNicAddress = 0x00000;
 #else
 // Only loopback is possible here, so -1 for bus and 0x00000 for address
-static constexpr int fpga_bus = -1;
-static constexpr uint64_t nic_address = 0x00000;
+static constexpr int kFpgaBus = -1;
+static constexpr uint64_t kNicAddress = 0x00000;
 
 #endif
 
@@ -40,9 +44,9 @@ static uint64_t loopback1(uint64_t a) { return a; }
 TEST(ThreadedServerTest, ListenSingleThreadTest) {
   uint64_t max_number_of_threads = 1;
 
-  RpcThreadedServer rpc_server(nic_address, max_number_of_threads);
+  RpcThreadedServer rpc_server(kNicAddress, max_number_of_threads);
 
-  int res = rpc_server.init_nic(fpga_bus);
+  int res = rpc_server.init_nic(kFpgaBus);
   ASSERT_EQ(res, 0);
 
   res = rpc_server.start_nic();
@@ -71,9 +75,9 @@ TEST(ThreadedServerTest, ListenSingleThreadTest) {
 TEST(ThreadedServerTest, ListenSingleThreadTwoRequestedTest) {
   uint64_t max_number_of_threads = 1;
 
-  RpcThreadedServer rpc_server(nic_address, max_number_of_threads);
+  RpcThreadedServer rpc_server(kNicAddress, max_number_of_threads);
 
-  int res = rpc_server.init_nic(fpga_bus);
+  int res = rpc_server.init_nic(kFpgaBus);
   ASSERT_EQ(res, 0);
 
   res = rpc_server.start_nic();
@@ -105,9 +109,9 @@ TEST(ThreadedServerTest, ListenSingleThreadTwoRequestedTest) {
 TEST(ThreadedServerTest, ListenMultipleThreadsTest) {
   uint64_t max_number_of_threads = 8;
 
-  RpcThreadedServer rpc_server(nic_address, max_number_of_threads);
+  RpcThreadedServer rpc_server(kNicAddress, max_number_of_threads);
 
-  int res = rpc_server.init_nic(fpga_bus);
+  int res = rpc_server.init_nic(kFpgaBus);
   ASSERT_EQ(res, 0);
 
   res = rpc_server.start_nic();
@@ -138,9 +142,9 @@ TEST(ThreadedServerTest, ListenMultipleThreadsTest) {
 TEST(ThreadedServerTest, ListenMultipleThreadsStartStopTest) {
   uint64_t max_number_of_threads = 8;
 
-  RpcThreadedServer rpc_server(nic_address, max_number_of_threads);
+  RpcThreadedServer rpc_server(kNicAddress, max_number_of_threads);
 
-  int res = rpc_server.init_nic(fpga_bus);
+  int res = rpc_server.init_nic(kFpgaBus);
   ASSERT_EQ(res, 0);
 
   res = rpc_server.start_nic();

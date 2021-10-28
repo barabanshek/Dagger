@@ -157,7 +157,7 @@ TEST_F(ClientServerTestMultithreaded, MultipleDifferentCallsSingleThreadTest) {
   SetUp(num_of_threads);
 
   constexpr size_t num_of_it = 1000;
-  constexpr size_t num_of_wait_us = 100;
+  constexpr size_t num_of_wait_us = 500;
 
   // Run multiple clients
   std::vector<dagger::RpcClient*> clients;
@@ -298,7 +298,7 @@ typedef std::set<std::pair<uint64_t, uint64_t>> ExpectedSet;
 
 static void test_thread(dagger::RpcClient* client, size_t num_of_it,
                         size_t thread_id, ExpectedSet& expected) {
-  constexpr size_t num_of_wait_us = 100;
+  constexpr size_t num_of_wait_us = 500;
 
   // Make calls
   for (int i = 0; i < num_of_it; ++i) {

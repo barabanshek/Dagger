@@ -18,33 +18,39 @@
 #  ifdef NIC_PHY_NETWORK
 // Allocate FPGA on bus_1 for the client when running on PAC_A10 with physical
 // networking
-static constexpr int client_fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
-static constexpr int server_fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_2;
+static constexpr int kClientFpgaBus = dagger::cfg::platform::pac_a10_fpga_bus_1;
+static constexpr int kServerFpgaBus = dagger::cfg::platform::pac_a10_fpga_bus_2;
 
 // If physical networking, running on different FPGAs, so NIC is placed by
 // 0x20000 for both client and server
-static constexpr uint64_t server_nic_mmio_base = 0x20000;
-static constexpr uint64_t client_nic_mmio_base = 0x20000;
+static constexpr uint64_t kServerNicMmioBase = 0x20000;
+static constexpr uint64_t kClientNicMmioBase = 0x20000;
 
 #  else
 // Allocate FPGA on bus_1 for the client when running on PAC_A10 with loopback
 // networking
-static constexpr int client_fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
-static constexpr int server_fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
+static constexpr int kClientFpgaBus = dagger::cfg::platform::pac_a10_fpga_bus_1;
+static constexpr int kServerFpgaBus = dagger::cfg::platform::pac_a10_fpga_bus_1;
 
 // If loopback, running on the same FPGA, so NIC is placed by 0x00000 for client
 // and 0x20000 for server
-static constexpr uint64_t server_nic_mmio_base = 0x20000;
-static constexpr uint64_t client_nic_mmio_base = 0x00000;
+static constexpr uint64_t kServerNicMmioBase = 0x20000;
+static constexpr uint64_t kClientNicMmioBase = 0x00000;
 
 #  endif
+#elif PLATFORM_SDP
+/// Only loopback is possible here, use skylake_fpga_bus_1 for buses
+static constexpr int kClientFpgaBus = dagger::cfg::platform::skylake_fpga_bus_1;
+static constexpr int kServerFpgaBus = dagger::cfg::platform::skylake_fpga_bus_1;
+static constexpr uint64_t kServerNicMmioBase = 0x20000;
+static constexpr uint64_t kClientNicMmioBase = 0x00000;
 #else
 // Only loopback is possible here, so -1 for bus and 0x00000/0x20000 for
 // client/server address
-static constexpr int client_fpga_bus = -1;
-static constexpr int server_fpga_bus = -1;
-static constexpr uint64_t server_nic_mmio_base = 0x20000;
-static constexpr uint64_t client_nic_mmio_base = 0x00000;
+static constexpr int kClientFpgaBus = -1;
+static constexpr int kServerFpgaBus = -1;
+static constexpr uint64_t kServerNicMmioBase = 0x20000;
+static constexpr uint64_t kClientNicMmioBase = 0x00000;
 
 #endif
 
@@ -59,14 +65,14 @@ class ClientServerPair : public ::testing::Test {
     num_of_threads = num_of_threads_;
 
     server = std::unique_ptr<dagger::RpcThreadedServer>(
-        new dagger::RpcThreadedServer(server_nic_mmio_base, num_of_threads));
+        new dagger::RpcThreadedServer(kServerNicMmioBase, num_of_threads));
 
     client_pool = std::unique_ptr<dagger::RpcClientPool<dagger::RpcClient>>(
-        new dagger::RpcClientPool<dagger::RpcClient>(client_nic_mmio_base,
+        new dagger::RpcClientPool<dagger::RpcClient>(kClientNicMmioBase,
                                                  num_of_threads));
 
     // Setup server
-    int res = server->init_nic(server_fpga_bus);
+    int res = server->init_nic(kServerFpgaBus);
     ASSERT_EQ(res, 0);
 
     res = server->start_nic();
@@ -101,7 +107,7 @@ class ClientServerPair : public ::testing::Test {
     }
 
     // Setup clients
-    res = client_pool->init_nic(client_fpga_bus);
+    res = client_pool->init_nic(kClientFpgaBus);
     ASSERT_EQ(res, 0);
 
     res = client_pool->start_nic();

@@ -10,26 +10,31 @@
 #  ifdef NIC_PHY_NETWORK
 // Allocate FPGA on bus_1 for the client when running on PAC_A10 with physical
 // networking
-static constexpr int fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
+static constexpr int kFpgaBus = dagger::cfg::platform::pac_a10_fpga_bus_1;
 
 // If physical networking, running on different FPGAs, so NIC is placed by
 // 0x20000 for both client and server
-static constexpr uint64_t nic_address = 0x20000;
+static constexpr uint64_t kNicAddress = 0x20000;
 
 #  else
 // Allocate FPGA on bus_1 for the client when running on PAC_A10 with loopback
 // networking
-static constexpr int fpga_bus = dagger::cfg::platform::pac_a10_fpga_bus_1;
+static constexpr int kFpgaBus = dagger::cfg::platform::pac_a10_fpga_bus_1;
 
 // If loopback, running on the same FPGA, so NIC is placed by 0x00000 for client
 // and 0x20000 for server
-static constexpr uint64_t nic_address = 0x00000;
+static constexpr uint64_t kNicAddress = 0x00000;
 
 #  endif
+#elif PLATFORM_SDP
+/// Only loopback is possible here, use skylake_fpga_bus_1 for bus and 0x20000
+/// for NIC address.
+static constexpr int kFpgaBus = dagger::cfg::platform::skylake_fpga_bus_1;
+static constexpr uint64_t kNicAddress = 0x00000;
 #else
 // Only loopback is possible here, so -1 for bus and 0x00000 for address
-static constexpr int fpga_bus = -1;
-static constexpr uint64_t nic_address = 0x00000;
+static constexpr int kFpgaBus = -1;
+static constexpr uint64_t kNicAddress = 0x00000;
 
 #endif
 
@@ -41,18 +46,19 @@ class NicTests : public ::testing::Test {
     uint64_t num_of_flows = 1;
 
     auto nic_ = std::unique_ptr<dagger::Nic>(
-        new dagger::NicPollingCCIP(nic_address, num_of_flows, true));
+        new dagger::NicPollingCCIP(kNicAddress, num_of_flows, true));
     nic = std::move(nic_);
 
-    int res = nic->connect_to_nic(fpga_bus);
+    int res = nic->connect_to_nic(kFpgaBus);
     ASSERT_EQ(res, 0);
 
     PhyAddr cl_phy_addr = {0x1A, 0x2B, 0x3C, 0x4D, 0x5E, 0x6D};
     IPv4 cl_ipv4_addr("192.168.0.1", 0);
-    res = nic->initialize_nic(cl_phy_addr, cl_ipv4_addr);
-    ASSERT_EQ(res, 0);
 
     res = nic->configure_data_plane();
+    ASSERT_EQ(res, 0);
+
+    res = nic->initialize_nic(cl_phy_addr, cl_ipv4_addr);
     ASSERT_EQ(res, 0);
 
     res = nic->start();

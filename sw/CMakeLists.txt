@@ -2,9 +2,13 @@ cmake_minimum_required(VERSION 2.8)
 project(F-RPC)
 
 # Options
-option(WITH_PHY_NETWORK "With physical networking" OFF)
 option(PLATFORM_BDX "Build for BDX platform" OFF)
 option(PLATFORM_SDP "Build for Skylake platform" ON)
+option(PLATFORM_ASE "Build for the ASE simulation environment" ON)
+option(BUILD_WITH_PHY_NETWORK "With physical networking" OFF)
+option(BUILD_TESTS "Build with unit and system tests" ON)
+option(BUILD_MICROBENCHMARKS "Build microbenchmarks" ON)
+option(BUILD_APPLICATIONS "Build end-to-end applications" ON)
 
 set(CMAKE_CXX_COMPILER g++)
 
@@ -28,7 +32,7 @@ add_definitions(-DNIC_CCIP_POLLING)
 #add_definitions(-DNIC_CCIP_DMA)
 
 # Networking config
-if (WITH_PHY_NETWORK)
+if (BUILD_WITH_PHY_NETWORK)
     message(STATUS "Bulding WITH physical networking enabled" )
     if (PLATFORM_BDX or PLATFORM_SDP)
         message(FATAL_ERROR "Physical networking can only be enabled on the PAC_A10 platform" )
@@ -55,8 +59,10 @@ set(LIBRARIES ${LIBRARIES} pthread -pie)
 set(LIBRARIES ${LIBRARIES} -luuid)
 
 # Testing
-enable_testing()
-find_package(GTest REQUIRED)
+if (BUILD_TESTS)
+    enable_testing()
+    find_package(GTest REQUIRED)
+endif()
 
 # FPGA OPAE
 set(FPGA_LIBS -lopae-c)
@@ -92,7 +98,7 @@ set(PHY_NET_SRC
     )
 
 # Prepare afu_json_info.h
-if (WITH_PHY_NETWORK)
+if (BUILD_WITH_PHY_NETWORK)
     set(JSON_FILENAME ${CMAKE_SOURCE_DIR}/../hw/rtl/ccip_std_afu_hssi.json)
 else()
     set(JSON_FILENAME ${CMAKE_SOURCE_DIR}/../hw/rtl/ccip_std_afu.json)
@@ -127,14 +133,6 @@ target_link_libraries(dagger-phy-network ${LIBRARIES} -shared)
 set(LIBRARIES ${LIBRARIES} -ldagger-phy-network)
 
 #
-# Build ASE Dagger as a shared library
-#
-add_library(dagger_ase SHARED ${SOURCES})
-add_dependencies(dagger_ase dagger-phy-network)
-target_compile_definitions(dagger_ase PRIVATE -DASE_SIMULATION)
-target_link_libraries(dagger_ase ${ASE_LIBS} ${LIBRARIES} -shared)
-
-#
 # Build FPGA Dagger as a shared library
 #
 add_library(dagger SHARED ${SOURCES})
@@ -143,21 +141,39 @@ target_compile_definitions(dagger PRIVATE PROFILE_LATENCY=1)
 target_link_libraries(dagger ${FPGA_LIBS} ${LIBRARIES} -shared)
 
 #
+# Build ASE Dagger as a shared library
+#
+if (PLATFORM_ASE)
+    add_library(dagger_ase SHARED ${SOURCES})
+    add_dependencies(dagger_ase dagger-phy-network)
+    target_compile_definitions(dagger_ase PRIVATE -DASE_SIMULATION)
+    target_link_libraries(dagger_ase ${ASE_LIBS} ${LIBRARIES} -shared)
+endif()
+
+#
 # Build tests
 #
-add_subdirectory(tests)
+if (BUILD_TESTS)
+    add_subdirectory(tests)
+endif()
 
 #
 # Build ASE samples
 #
-add_subdirectory(ase_samples)
+if (PLATFORM_ASE)
+    add_subdirectory(ase_samples)
+endif()
 
 #
 # Build microbenchmarks
 #
-add_subdirectory(microbenchmarks)
+if (BUILD_MICROBENCHMARKS)
+    add_subdirectory(microbenchmarks)
+endif()
 
 #
 # Build end-to-end applications
 #
-#add_subdirectory(apps)
+if (BUILD_APPLICATIONS)
+    add_subdirectory(apps)
+endif()
